@@ -1,3 +1,4 @@
+use pscontrols;
 SET foreign_key_checks = 0;
 drop table if exists ims_motor_name_map;
 drop table if exists ims_motor;
@@ -65,8 +66,8 @@ create table ims_motor_tpl (
 	PV_REV__MEANS varchar(16),  -- Name of reverse direction --
 
 	-- constraints --
-	primary key (pk_ims_motor_tpl) /* , */
-	/* foreign key (fk_ims_motor_tpl) references ims_motor(pk_ims_motor) */
+	primary key (pk_ims_motor_tpl),
+	foreign key (fk_ims_motor_tpl) references ims_motor_tpl(pk_ims_motor_tpl)
 );
 
 create table ims_motor_name_map (
@@ -92,7 +93,3 @@ create table ims_motor (
 	primary key (pk_ims_motor),
 	foreign key (fk_ims_motor_tpl) references ims_motor_tpl(pk_ims_motor_tpl)
 );
-
-alter table ims_motor_tpl 
-	add foreign key (fk_ims_motor_tpl) references ims_motor(pk_ims_motor)
-;
