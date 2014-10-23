@@ -1,12 +1,14 @@
+SET foreign_key_checks = 0;
 drop table if exists ims_motor_name_map;
 drop table if exists ims_motor;
 drop table if exists ims_motor_tpl;
+SET foreign_key_checks = 1;
 
 create table ims_motor_tpl (
 	-- boilerplate --
-	pk_ims_motor_tpl int unsigned auto_increment,
+	pk_ims_motor_tpl int auto_increment,
 	name varchar(15) not null unique, -- name or serial number --
-	fk_ims_motor_tpl int unsigned,  -- recursive fk (parent) --
+	fk_ims_motor_tpl int,  -- recursive fk (parent) --
 	-- pvs and fields --
 	FLD_ACCL  double,  -- Acceleration (seconds from SBAS to S) --
 	FLD_BACC  double,  -- Backlash Accel (seconds from SBAS to S) --
@@ -63,8 +65,8 @@ create table ims_motor_tpl (
 	PV_REV__MEANS varchar(16),  -- Name of reverse direction --
 
 	-- constraints --
-	primary key (pk_ims_motor_tpl),
-	foreign key (fk_ims_motor_tpl) references ims_motor(pk_ims_motor_tpl)
+	primary key (pk_ims_motor_tpl) /* , */
+	/* foreign key (fk_ims_motor_tpl) references ims_motor(pk_ims_motor) */
 );
 
 create table ims_motor_name_map (
@@ -90,3 +92,7 @@ create table ims_motor (
 	primary key (pk_ims_motor),
 	foreign key (fk_ims_motor_tpl) references ims_motor_tpl(pk_ims_motor_tpl)
 );
+
+alter table ims_motor_tpl 
+	add foreign key (fk_ims_motor_tpl) references ims_motor(pk_ims_motor)
+;
