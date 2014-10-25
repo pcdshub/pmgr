@@ -1,15 +1,16 @@
 use pscontrols;
-SET foreign_key_checks = 0;
+
 drop table if exists ims_motor_name_map;
 drop table if exists ims_motor;
 drop table if exists ims_motor_tpl;
-SET foreign_key_checks = 1;
+drop procedure if exists init_pcds;
+drop procedure if exists find_parents;
 
 create table ims_motor_tpl (
 	-- boilerplate --
-	pk_ims_motor_tpl int auto_increment,
+	id int auto_increment,
 	name varchar(15) not null unique, -- name or serial number --
-	fk_ims_motor_tpl int,  -- recursive fk (parent) --
+	link int,  -- recursive fk (parent) --
 	-- pvs and fields --
 	FLD_ACCL  double,  -- Acceleration (seconds from SBAS to S) --
 	FLD_BACC  double,  -- Backlash Accel (seconds from SBAS to S) --
@@ -66,8 +67,8 @@ create table ims_motor_tpl (
 	PV_REV__MEANS varchar(16),  -- Name of reverse direction --
 
 	-- constraints --
-	primary key (pk_ims_motor_tpl),
-	foreign key (fk_ims_motor_tpl) references ims_motor_tpl(pk_ims_motor_tpl)
+	primary key (id),
+	index (link)
 );
 
 create table ims_motor_name_map (
@@ -79,8 +80,8 @@ create table ims_motor_name_map (
 
 create table ims_motor (
 	-- boilerplate --
-	pk_ims_motor int auto_increment,
-	fk_ims_motor_tpl int,
+	id int auto_increment,
+	config int,
 	name varchar(15) not null,
 	rec_base varchar(30) not null,  -- pv/field base prefix --
 	dt_created datetime not null,
@@ -90,6 +91,40 @@ create table ims_motor (
 	FLD_PORT varchar(40),  -- digi port address --	
 	
 	-- constraints --
-	primary key (pk_ims_motor),
-	foreign key (fk_ims_motor_tpl) references ims_motor_tpl(pk_ims_motor_tpl)
+	primary key (id),
+	foreign key (config) references ims_motor_tpl(id)
 );
+
+load data local infile 'test.db' into table ims_motor_tpl;
+
+delimiter //
+
+create procedure init_pcds()
+begin
+    create temporary table _ancestors(aid int, level int auto_increment, primary key (level));
+end;
+//
+
+create procedure find_parents(tableName char(64), inputNo int)
+begin
+    truncate table _ancestors;
+    set @id = inputNo;
+    insert into _ancestors values(@id, 0);
+    repeat
+      set @sql = concat("select link, count(*) into @parent,@y from ", tableName, " where id=@id");
+      prepare stmt from @sql;
+      execute stmt;
+      if @y>0 then
+	insert into _ancestors values(@parent, 0);
+	set @id=@parent;
+      end if;
+    until @parent is NULL or @y=0 end repeat;
+    set @sql = concat("select * from _ancestors as a inner join ",
+                      tableName, " as t where a.aid = t.id order by level desc");
+    prepare stmt from @sql;
+    execute stmt;
+    truncate table _ancestors;
+end;
+//
+
+delimiter ;
