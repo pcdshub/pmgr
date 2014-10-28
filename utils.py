@@ -22,13 +22,6 @@ def getTables():
     n = cur.fetchall()
     return [nn.values()[0] for nn in n]
 
-def fixName(name):
-    name = re.sub("::", "_", re.sub("_", ":", name))
-    if name[:3] == "PV:":
-        return name[2:]
-    else:
-        c = name.rindex(':')
-        return name[3:c] + '.' + name[c+1:]
 
 def getConfiguration(name, table):
     global con

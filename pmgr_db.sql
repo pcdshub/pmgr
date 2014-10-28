@@ -74,15 +74,14 @@ create table ims_motor_tpl (
 create table ims_motor_name_map (
 	db_field_name	varchar(30) not null,
 	alias		varchar(16) not null,
-	displayorder 	int not null,
-	py_type 	varchar(16)  -- not sure if this is needed, depends on pyDb Intface --
+	displayorder 	int not null
 );
 
 create table ims_motor (
 	-- boilerplate --
 	id int auto_increment,
-	config int,
-	name varchar(15) not null,
+	config int not null,
+	name varchar(15) not null unique,
 	rec_base varchar(30) not null,  -- pv/field base prefix --
 	dt_created datetime not null,
 	dt_updated datetime not null,
@@ -96,6 +95,8 @@ create table ims_motor (
 );
 
 load data local infile 'test.db' into table ims_motor_tpl;
+/* Sigh. id = 0 in the file does an auto-increment, so we set it to -1 and fix it here. */
+update ims_motor_tpl set id = 0 where id = -1;
 
 delimiter //
 
@@ -118,7 +119,7 @@ begin
 	insert into _ancestors values(@parent, 0);
 	set @id=@parent;
       end if;
-    until @parent is NULL or @y=0 end repeat;
+    until @parent=null or @y=0 end repeat;
     set @sql = concat("select * from _ancestors as a inner join ",
                       tableName, " as t where a.aid = t.id order by level desc");
     prepare stmt from @sql;

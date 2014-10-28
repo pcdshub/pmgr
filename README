@@ -1,0 +1,51 @@
+We assume that there are a number of "classes" of things to be configured.
+If one such class is XXX, then we will have three mysql tables for it:
+    -- XXX_tpl is a table of configurations.
+    -- XXX_name_map is a table of field aliases.
+    -- XXX is a table of configured objects.
+
+The first set of fields in each of these tables is fixed, so we can operate
+generically on any configuration class.
+
+The configurations in XXX_tpl start with the following fields:
+	id int auto_increment,                   -- The primary key --
+	name varchar(15) not null unique,        -- The name of the configuration --
+	link int,                                -- The parent configuration --
+
+It is assumed that there will always be a "DEFAULT" configuration with id 0.  This will
+be the only configuration with a null link.  This should be a "no-op" configuration!
+
+After these, there will be many fields of various types all named "FLD_*" or
+"PV_*". The idea is that each configuration will be applied to a base PV name.
+ The "_*" is what should be appended to the base PV name.  Any "__" will be 
+changed to a single "_" in the actual name, and any single "_" will be changed
+to ":" with the exception of the last.  For "FLD", the last "_" will become "."
+while for "PV" it will become "_".
+
+For example if the base is IOC:TST:01:CTRL,
+	FLD_XY       -> IOC:TST:01:CTRL.XY
+	PV_XY        -> IOC:TST:01:CTRL:XY
+	FLD_XY_Z     -> IOC:TST:01:CTRL:XY.Z
+	PV_XY_Z      -> IOC:TST:01:CTRL:XY:Z
+	FLD_XY__Z    -> IOC:TST:01:CTRL.XY_Z
+	PV_XY__Z     -> IOC:TST:01:CTRL:XY_Z
+
+This is implemented by the function fixName.
+
+The XXX_name_map table has fields:
+	db_field_name	varchar(30) not null,    -- The FLD_* or PV_* field name.
+	alias		varchar(16) not null,    -- A human-readable alias for this field.
+	displayorder 	int not null,            -- Where this field should be displayed (< = more left).
+
+The XXX table has fields:
+	id int auto_increment,                   -- The identifier of this object.
+	config int not null,                     -- The configuration of this object.
+	name varchar(15) not null unique,        -- The name of this object.
+	rec_base varchar(30) not null,           -- pv/field base prefix --
+	dt_created datetime not null,            -- When the record was created.
+	dt_updated datetime not null,            -- When the record was modified.
+
+After these fields, the XXX table may also have "FLD_*" and "PV_*" fields
+as described above.  (These should be object specific things that are always
+unique to the object, such as descriptions and digi port addresses.)
+
