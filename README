@@ -11,6 +11,7 @@ The configurations in XXX_tpl start with the following fields:
 	id int auto_increment,                   -- The primary key --
 	name varchar(15) not null unique,        -- The name of the configuration --
 	link int,                                -- The parent configuration --
+	invariant tinyint,                       -- Can anyone modify this? 0 == OK --
 
 It is assumed that there will always be a "DEFAULT" configuration with id 0.  This will
 be the only configuration with a null link.  This should be a "no-op" configuration!
@@ -39,8 +40,9 @@ The XXX_name_map table has fields:
 
 The XXX table has fields:
 	id int auto_increment,                   -- The identifier of this object.
-	config int not null,                     -- The configuration of this object.
-	name varchar(15) not null unique,        -- The name of this object.
+	config int not null,                     -- The configuration id of this object.
+	hutch varchar(10),			 -- Which hutch owns this object.
+	name varchar(30) not null unique,        -- The name of this object.
 	rec_base varchar(30) not null,           -- pv/field base prefix --
 	dt_created datetime not null,            -- When the record was created.
 	dt_updated datetime not null,            -- When the record was modified.

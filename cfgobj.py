@@ -1,5 +1,9 @@
 import MySQLdb as mdb
 import re
+import pyca
+from psp.Pv import Pv
+import utils
+import time
 
 #
 # class cfgobj is an object that is to be configured (a motor, etc.)
@@ -19,7 +23,7 @@ class cfgobj(object):
     def m2pType(self, name):
         if name[:7] == 'varchar' or name[:8] == 'datetime':
             return str
-        if name[:3] == 'int':
+        if name[:3] == 'int' or name[:8] == 'smallint' or name[:7] == 'tinyint':
             return int
         if name[:6] == 'double':
             return float
@@ -34,9 +38,11 @@ class cfgobj(object):
             c = name.rindex(':')
             return name[3:c] + '.' + name[c+1:]
 
-    def __init__(self, name, table, *rec_base):
-        self.name = name
+    def __init__(self, hutch, table, name, *rec_base):
+        self.hutch = hutch
         self.table = table
+        self.name = name
+        
         if cfgobj.con == None:
             try:
                 cfgobj.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols');
@@ -44,27 +50,32 @@ class cfgobj(object):
                 cur.execute("call init_pcds()")
             except:
                 pass
+
         cur = cfgobj.con.cursor(mdb.cursors.DictCursor)
+
         cur.execute("describe %s" % self.table)
         self.locfld = [(d['Field'], self.m2pType(d['Type'])) for d in cur.fetchall()]
-        self.locfld = self.locfld[6:]   # Skip the standard locfld!
+        self.locfld = self.locfld[7:]   # Skip the standard fields!
+
+        cur.execute("describe %s_tpl" % self.table)
+        self.fld = [(d['Field'], self.m2pType(d['Type'])) for d in cur.fetchall()]
+        self.fld = self.fld[4:]         # Skip the standard fields!
+
         cur.execute("SELECT * from %s where name = %%s" % (table), (name))
         if cur.rowcount == 0:
             # No record for this, make one!
-            sql = "insert into %s values (0, 0, '%s', '%s', now(), now()" % (table, name, rec_base[0])
+            sql = "insert into %s values (0, 0, '%s', '%s', '%s', now(), now()" % (table, hutch, name, rec_base[0])
             for (f, t) in self.locfld:
-                print f
-                print t
                 if issubclass(t, basestring):
                     sql += ", ''"
                 else:
                     sql += ", 0"
             sql += ')'
-            print sql
             cur.execute(sql)
             cfgobj.con.commit()
             cur.execute("SELECT * from %s where name = %%s" % (table), (name))
         d = cur.fetchone()
+        self.id       = d['id']
         self.rec_base = d['rec_base']
         if self.rec_base != rec_base[0]:
             print ("Warning: %s in table %s already defined with base %s (not %s)" %
@@ -74,23 +85,58 @@ class cfgobj(object):
         for k in d.keys():
             if k[:3] == 'PV_' or k[:4] == 'FLD_':
                 self.curcfg[k] = d[k]
+        self.setConfigId(d['config'])
 
-        self.setConfig(d['config'])
-
-        self.fld2pv = {}
+        self.pv     = {}
+        self.curval = {}
         for k in self.curcfg.keys():
-            if k[:3] != "PV_" and k[:4] != "FLD_":
-                del self.curcfg[k]
-            else:
-                self.fld2pv[k] = self.fixName(k)
+            n = self.rec_base + self.fixName(k)
+            self.pv[k] = utils.monitorPv(n, self.pv_handler)
+            self.pv[k].fldname = k
 
-    def setConfig(self, cfg):
+    def pv_handler(self, pv, e):
+        if e is None:
+            self.curval[pv.fldname] = pv.value
+
+    def setConfigId(self, cfg):
         self.config = cfg
-        
+        cur = cfgobj.con.cursor(mdb.cursors.DictCursor)
         cur.callproc("find_parents", (self.table + "_tpl", self.config))
         for i in range(cur.rowcount):
             n = cur.fetchone()
             for k in n.keys():
-                if n[k] == None:
+                if (k[:3] != "PV_" and k[:4] != "FLD_") or n[k] == None:
                     del n[k]
             self.curcfg.update(n)
+
+    def setConfigName(self, cfg):
+        cur = cfgobj.con.cursor(mdb.cursors.DictCursor)
+        cur.execute("SELECT id from %s_tpl where name = %%s" % (self.table), (cfg))
+        if cur.rowcount == 0:
+            return False
+        d = cur.fetchone()
+        self.setConfigId(d['id'])
+        cur.execute("UPDATE %s set config = %%s, dt_updated = now() where id = %%s" % self.table,
+                    (str(self.config), str(self.id)))
+        cfgobj.con.commit()
+        return True
+
+    def saveAsNewConfig(self, cfg):
+        cur = cfgobj.con.cursor(mdb.cursors.DictCursor)
+        sql = "insert into %s_tpl values (0, '%s', null, 0" % (self.table, cfg)
+        for (f, t) in self.fld:
+            if issubclass(t, basestring):
+                sql += ", '%s'" % self.curval[f]
+            else:
+                sql += ", %s" % str(self.curval[f])
+        sql += ')'
+        print sql
+        cur.execute(sql)
+        cfgobj.con.commit()
+
+if __name__ == '__main__':
+    x = cfgobj("xcs", "ims_motor", "DG3:IPM2 diode X",  "XCS:DG3:MMS:15")
+    y = cfgobj("xcs", "ims_motor", "DG3:IPM2 diode Y",  "XCS:DG3:MMS:14")
+    z = cfgobj("xcs", "ims_motor", "DG3:IPM2 target Y", "XCS:DG3:MMS:16")
+    pyca.flush_io()
+    time.sleep(60)

@@ -10,11 +10,12 @@ create table ims_motor_tpl (
 	-- boilerplate --
 	id int auto_increment,
 	name varchar(15) not null unique, -- name or serial number --
-	link int,  -- recursive fk (parent) --
+	link int,                         -- recursive fk (parent) --
+        invariant tinyint,                -- can anyone modify this? 0 == OK --
 	-- pvs and fields --
 	FLD_ACCL  double,  -- Acceleration (seconds from SBAS to S) --
 	FLD_BACC  double,  -- Backlash Accel (seconds from SBAS to S) --
-	FLD_BDTS  double,  -- Backlash Distance (EGU) --
+	FLD_BDST  double,  -- Backlash Distance (EGU) --
 	FLD_BS    double,  -- Backlash Speed (EGU/s) --
 	FLD_DHLM  double,  -- Dial High Limit (EGU) --
 	FLD_DIR   varchar(16),  -- Direction [ENUM] --
@@ -81,7 +82,8 @@ create table ims_motor (
 	-- boilerplate --
 	id int auto_increment,
 	config int not null,
-	name varchar(15) not null unique,
+	hutch varchar(10),
+	name varchar(30) not null unique,
 	rec_base varchar(30) not null,  -- pv/field base prefix --
 	dt_created datetime not null,
 	dt_updated datetime not null,
