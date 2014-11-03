@@ -3,6 +3,7 @@ use pscontrols;
 drop table if exists ims_motor_name_map;
 drop table if exists ims_motor;
 drop table if exists ims_motor_tpl;
+drop table if exists ims_motor_update;
 drop procedure if exists init_pcds;
 drop procedure if exists find_parents;
 
@@ -72,12 +73,6 @@ create table ims_motor_tpl (
 	index (link)
 );
 
-create table ims_motor_name_map (
-	db_field_name	varchar(30) not null,
-	alias		varchar(16) not null,
-	displayorder 	int not null
-);
-
 create table ims_motor (
 	-- boilerplate --
 	id int auto_increment,
@@ -96,9 +91,24 @@ create table ims_motor (
 	foreign key (config) references ims_motor_tpl(id)
 );
 
+create table ims_motor_name_map (
+	db_field_name	varchar(30) not null,
+	alias		varchar(16) not null,
+	displayorder 	int not null
+);
+
+create table ims_motor_update (
+	tbl_name   varchar(16) unique not null,
+	dt_updated datetime not null,
+
+	primary key(tbl_name)
+);
+
 load data local infile 'test.db' into table ims_motor_tpl;
 /* Sigh. id = 0 in the file does an auto-increment, so we set it to -1 and fix it here. */
 update ims_motor_tpl set id = 0 where id = -1;
+
+insert ims_motor_update values ('config', now());
 
 delimiter //
 
