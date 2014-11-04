@@ -70,8 +70,8 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.db.start(self.initdone)
         
         settings = QtCore.QSettings("SLAC", "ParamMgr");
-        self.restoreGeometry(settings.value("%s/geometry" % self.table).toByteArray());
-        self.restoreState(settings.value("%s/windowState" % self.table).toByteArray());
+        self.restoreGeometry(settings.value("geometry/%s" % self.table).toByteArray());
+        self.restoreState(settings.value("windowState/%s" % self.table).toByteArray());
 
     def finishinit(self):
         self.ui.menuView.addAction(self.ui.objectWidget.toggleViewAction())
