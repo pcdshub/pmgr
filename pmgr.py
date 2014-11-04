@@ -70,8 +70,8 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.db.start(self.initdone)
         
         settings = QtCore.QSettings("SLAC", "ParamMgr");
-        self.restoreGeometry(settings.value("geometry").toByteArray());
-        self.restoreState(settings.value("windowState").toByteArray());
+        self.restoreGeometry(settings.value("%s/geometry" % self.table).toByteArray());
+        self.restoreState(settings.value("%s/windowState" % self.table).toByteArray());
 
     def finishinit(self):
         self.ui.menuView.addAction(self.ui.objectWidget.toggleViewAction())
@@ -94,8 +94,8 @@ class GraphicUserInterface(QtGui.QMainWindow):
 
     def closeEvent(self, event):
         settings = QtCore.QSettings("SLAC", "ParamMgr");
-        settings.setValue("geometry", self.saveGeometry())
-        settings.setValue("windowState", self.saveState())
+        settings.setValue("geometry/%s" % self.table, self.saveGeometry())
+        settings.setValue("windowState/%s" % self.table, self.saveState())
         QtGui.QMainWindow.closeEvent(self, event)
 
 if __name__ == '__main__':
