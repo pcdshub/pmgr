@@ -4,6 +4,7 @@ import threading
 import datetime
 import time
 import re
+import utils
 
 # Map MySQL types to python types in a quick and dirty manner.
 def m2pType(name):
@@ -76,9 +77,11 @@ class db(QtCore.QObject):
         super(db, self).__init__()
         self.hutch = hutch
         self.table = table
+        self.model = None
         self.cfgs = None
         self.objs = None
         self.initsig = None
+        self.pvdict = {}
         try:
             self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols');
             cur = self.con.cursor(mdb.cursors.DictCursor)
@@ -89,6 +92,7 @@ class db(QtCore.QObject):
         self.readcfg.connect(lambda : self.readTable(True))
         self.readobj.connect(lambda : self.readTable(False))
         self.poll = dbPoll(self.readcfg, self.readobj, 30, hutch)
+        self.con.commit()
 
     def start(self, initsig):
         self.initsig = initsig
@@ -150,6 +154,7 @@ class db(QtCore.QObject):
         self.cfgflds = [d for d in self.objflds if d['obj'] == False]
         for i in range(len(self.cfgflds)):
             self.cfgflds[i]['cfgidx'] = i
+        self.con.commit()
         
     def readDB(self, hutch):
         if hutch:
@@ -174,11 +179,70 @@ class db(QtCore.QObject):
         if cfg:
             self.cfgs = self.readDB(False)
             (self.id2cfg, self.cfg2id) = self.buildmaps(self.cfgs)
+            for d in self.cfgs:
+                r = d['link']
+                if r == None:
+                    d['linkname'] = ""
+                else:
+                    d['linkname'] = self.id2cfg[r]['name']
             self.cfgchange.emit()
         else:
             self.objs = self.readDB(True)
             (self.id2obj, self.obj2id) = self.buildmaps(self.objs)
+            if self.initsig == None:
+                self.connectAllPVs()
             self.objchange.emit()
         if self.initsig != None and self.cfgs != None and self.objs != None:
+            self.connectAllPVs()
             self.initsig.emit()
             self.initsig = None;
+        self.con.commit()
+
+    def getCfg(self, idx):
+        d = self.id2cfg[idx]
+        if not 'vfld' in d.keys():
+            vfld = []
+            if d['link'] != None:
+                vals = self.getCfg(d['link'])
+            for (k, v) in d.items():
+                if k[:3] != 'PV_' and k[:4] != 'FLD_':
+                    continue
+                if v == None:
+                    d[k] = vals[k]
+                else:
+                    vfld.append(k)
+            d['vfld'] = vfld
+        return d
+
+    def connectAllPVs(self):
+        newpvdict = {}
+        for d in self.objs:
+            d['linkname'] = self.id2cfg[d['config']]['name']
+            d['curval'] = {}
+            base = d['rec_base']
+            for ofld in self.objflds:
+                n = base + ofld['pv']
+                f = ofld['fld']
+                try:
+                    pv = self.pvdict[n]
+                    d['curval'][f] = pv.value
+                    del self.pvdict[n]
+                except:
+                    pv = utils.monitorPv(n, self.pv_handler)
+                    if ofld['type'] == str:
+                        pv.set_string_enum(True)
+                newpvdict[n] = pv
+                pv.obj = d
+                pv.fld = f
+        for pv in self.pvdict.values():
+            pv.disconnect()
+        self.pvdict = newpvdict
+        
+    def setModel(self, model):
+        self.model = model
+
+    def pv_handler(self, pv, e):
+        if e is None:
+            pv.obj['curval'][pv.fld] = pv.value
+            if self.model:
+                self.model.pvchange(pv.obj['id'], self.fldmap[pv.fld]['objidx'])

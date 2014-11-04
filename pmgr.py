@@ -58,21 +58,25 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.setWindowTitle("Parameter Manager for %s (%s)" % (self.hutch.upper(), table))
 
         self.ui.objectTable.verticalHeader().hide()
-        self.ui.objectTable.horizontalHeader().hide()
         self.ui.objectTable.setCornerButtonEnabled(False)
+        self.ui.objectTable.setSortingEnabled(True)
+        self.ui.objectTable.sortByColumn(0, QtCore.Qt.AscendingOrder)
 
         self.ui.configTable.verticalHeader().hide()
-        self.ui.configTable.horizontalHeader().hide()
         self.ui.configTable.setCornerButtonEnabled(False)
 
         self.db = db.db(self.hutch, self.table)
         self.initdone.connect(self.finishinit)
         self.db.start(self.initdone)
+        
+        settings = QtCore.QSettings("SLAC", "ParamMgr");
+        self.restoreGeometry(settings.value("geometry").toByteArray());
+        self.restoreState(settings.value("windowState").toByteArray());
 
     def finishinit(self):
         self.ui.menuView.addAction(self.ui.objectWidget.toggleViewAction())
         self.ui.objectWidget.setWindowTitle(self.table + " objects")
-        self.objectmodel = ObjModel(self.db)
+        self.objectmodel = ObjModel(self.db, self.ui)
         self.ui.objectTable.init(self.objectmodel, 1, 1)
         self.ui.objectTable.setShowGrid(True)
         self.ui.objectTable.resizeColumnsToContents()
@@ -87,6 +91,12 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.db.objchange.connect(self.objectmodel.objchange)
         self.db.cfgchange.connect(self.objectmodel.cfgchange)
         self.db.cfgchange.connect(self.configmodel.cfgchange)
+
+    def closeEvent(self, event):
+        settings = QtCore.QSettings("SLAC", "ParamMgr");
+        settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("windowState", self.saveState())
+        QtGui.QMainWindow.closeEvent(self, event)
 
 if __name__ == '__main__':
   QtGui.QApplication.setGraphicsSystem("raster")

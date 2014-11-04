@@ -2,34 +2,105 @@ from PyQt4 import QtGui, QtCore
 import param
 
 class ObjModel(QtGui.QStandardItemModel):
-    def __init__(self, db):
-        row = 1
-        col = 2
-        QtGui.QStandardItemModel.__init__(self, row, col)
+    cname = ["Name", "Config", "PV Base"]
+    cfld  = ["name", "linkname", "rec_base"]
+    coff  = len(cname)
+    
+    def __init__(self, db, ui):
+        QtGui.QStandardItemModel.__init__(self)
         self.db = db
+        self.ui = ui
+        self.id2idx = None
+        self.lastsort = (0, QtCore.Qt.DescendingOrder)
+        db.setModel(self)
         # Setup headers
-        self.setColumnCount(2 + self.db.objfldcnt)
-        self.setRowCount(1)
+        self.setColumnCount(self.db.objfldcnt + self.coff)
+        self.setRowCount(len(self.db.objs))
         font = QtGui.QFont()
         font.setBold(True)
-        for c in range(self.db.objfldcnt + 3):
-            if c == 0:
-                self.setData(self.index(0, 0), QtCore.QVariant("Name"), QtCore.Qt.DisplayRole)
-            elif c == 1:
-                self.setData(self.index(0, 1), QtCore.QVariant("Config"), QtCore.Qt.DisplayRole)
-            elif c == 2:
-                self.setData(self.index(0, 2), QtCore.QVariant("PV Base"), QtCore.Qt.DisplayRole)
+        for c in range(self.db.objfldcnt + self.coff):
+            if c < self.coff:
+                self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.cname[c]))
             else:
-                self.setData(self.index(0, c), QtCore.QVariant(self.db.objflds[c-3]['alias']),
-                             QtCore.Qt.DisplayRole)
-            self.setData(self.index(0, c), QtCore.QVariant(param.params.gray), QtCore.Qt.BackgroundRole)
-            self.setData(self.index(0, c), QtCore.QVariant(font), QtCore.Qt.FontRole)
+                self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.db.objflds[c-self.coff]['alias']))
+
+    def data(self, index, role = QtCore.Qt.DisplayRole):
+        if (role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and
+            role != QtCore.Qt.ForegroundRole):
+            return QtGui.QStandardItemModel.data(self, index, role)
+        if not index.isValid():
+            return QtCore.QVariant()
+        try:
+            r = index.row()
+            d = self.db.objs[r]
+            c = index.column()
+            if c < self.coff:
+                if role == QtCore.Qt.ForegroundRole:
+                    # MCB - Could be red if changed by user!
+                    return QtCore.QVariant(param.params.black)
+                else:
+                    return QtCore.QVariant(d[self.cfld[c]])
+            else:
+                f = self.db.objflds[c-self.coff]['fld']
+                v = d['curval'][f]
+                if role == QtCore.Qt.ForegroundRole:
+                    if self.db.objflds[c-self.coff]['obj']:
+                        v2 = d[f]
+                    else:
+                        v2 = self.db.id2cfg[d['config']][f]
+                    # MCB - Could be red if an object parameter changed by user!
+                    if v == v2:
+                        return QtCore.QVariant(param.params.black)
+                    else:
+                        return QtCore.QVariant(param.params.blue)
+                else:
+                    return QtCore.QVariant(v)
+        except:
+            return QtCore.QVariant()
+
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
+        if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
+            return QtGui.QStandardItemModel.setData(self, index, value, role)
+        return QtGui.QStandardItemModel.setData(self, index, value, role)
+        
+    def value(self, entry, c, display=True):
+        if c < self.coff:
+            return entry[self.cfld[c]]
+        else:
+            return entry[self.db.objflds[c-self.coff]['fld']]
+
+    def sort(self, Ncol, order):
+        self.lastsort = (Ncol, order)
+        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        self.db.objs = sorted(self.db.objs, key=lambda d: self.value(d, Ncol))
+        if order == QtCore.Qt.DescendingOrder:
+            self.db.objs.reverse()
+        self.makeidx()
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        self.ui.objectTable.resizeColumnsToContents()
+
+    def makeidx(self):
+        d = {}
+        for i in range(len(self.db.objs)):
+            d[self.db.objs[i]['id']] = i
+        self.id2idx = d
 
     def objchange(self):
         print "ObjModel has object change!"
+        self.sort(self.lastsort[0], self.lastsort[1])
 
     def cfgchange(self):
         print "ObjModel has config change!"
+        # This is really a sledgehammer.  Maybe we should check what really needs changing?
+        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        self.ui.objectTable.resizeColumnsToContents()
+
+    def pvchange(self, id, fldidx):
+        if self.id2idx == None:
+            self.makeidx()
+        idx = self.index(self.id2idx[id], fldidx + self.coff)
+        self.dataChanged.emit(idx, idx)
 
 """
     # Enabled:

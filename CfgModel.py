@@ -2,35 +2,46 @@ from PyQt4 import QtGui, QtCore
 import param
 
 class CfgModel(QtGui.QStandardItemModel):
+    cname = ["Name", "Parent"]
+    cfld  = ["name", "linkname"]
+    coff  = len(cname)
+    
     def __init__(self, db, ui):
         QtGui.QStandardItemModel.__init__(self)
         self.db = db
         self.ui = ui
         self.curidx = 0
+        self.path = []
+        self.children = []
         self.connect(ui.treeWidget, QtCore.SIGNAL("currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)"),
                      self.treeNavigation)
+        self.connect(ui.treeWidget, QtCore.SIGNAL("itemCollapsed(QTreeWidgetItem *)"),
+                     self.treeCollapse)
+        self.connect(ui.treeWidget, QtCore.SIGNAL("itemExpanded(QTreeWidgetItem *)"),
+                     self.treeExpand)
         # Setup headers
         self.setColumnCount(2 + self.db.cfgfldcnt)
-        self.setRowCount(1)
         font = QtGui.QFont()
         font.setBold(True)
         for c in range(self.db.cfgfldcnt + 2):
-            if c == 0:
-                self.setData(self.index(0, 0), QtCore.QVariant("Name"), QtCore.Qt.DisplayRole)
-            elif c == 1:
-                self.setData(self.index(0, 1), QtCore.QVariant("Parent"), QtCore.Qt.DisplayRole)
+            if c < self.coff:
+                self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.cname[c]))
             else:
-                self.setData(self.index(0, c), QtCore.QVariant(self.db.cfgflds[c-2]['alias']),
-                             QtCore.Qt.DisplayRole)
-            self.setData(self.index(0, c), QtCore.QVariant(param.params.gray), QtCore.Qt.BackgroundRole)
-            self.setData(self.index(0, c), QtCore.QVariant(font), QtCore.Qt.FontRole)
+                self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.db.cfgflds[c-self.coff]['alias']))
+        self.is_expanded = {}
         self.buildtree()
-        self.setCurIdx(0)
+        try:
+            self.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
+        except:
+            self.setCurIdx(0)
 
     def cfgchange(self):
         print "CfgModel has change!"
         self.buildtree()
-        self.setCurIdx(self.curidx)
+        try:
+            self.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
+        except:
+            self.setCurIdx(0)
 
     def buildtree(self):
         tree = self.ui.treeWidget
@@ -59,8 +70,47 @@ class CfgModel(QtGui.QStandardItemModel):
             parent = t[id]['link']
             if parent != None:
                 t[parent]['item'].addChild(item)
+            try:
+                # Everything defaults to collapsed!
+                if self.is_expanded[id]:
+                    tree.expandItem(item)
+            except:
+                self.is_expanded[id] = False
             r[len(r):] = t[id]['children']
         self.tree = t
+
+    def data(self, index, role = QtCore.Qt.DisplayRole):
+        if (role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and
+            role != QtCore.Qt.ForegroundRole):
+            return QtGui.QStandardItemModel.data(self, index, role)
+        if not index.isValid():
+            return QtCore.QVariant()
+        r = index.row()
+        c = index.column()
+        if r < len(self.path):
+            idx = self.path[r]
+        else:
+            idx = self.children[r - len(self.path)]
+        d = self.db.getCfg(idx)
+        if c < self.coff:
+            if role == QtCore.Qt.ForegroundRole:
+                # MCB - Could be red if changed by user!
+                return QtCore.QVariant(param.params.black)
+            else:
+                return QtCore.QVariant(d[self.cfld[c]])
+        else:
+            f = self.db.cfgflds[c-self.coff]['fld'] 
+            if role == QtCore.Qt.ForegroundRole:
+                # MCB - Could be red if changed by user!
+                color = param.params.black if f in d['vfld'] else param.params.blue
+                return QtCore.QVariant(color)
+            else:
+                return QtCore.QVariant(d[f])
+            
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
+        if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
+            return QtGui.QStandardItemModel.setData(self, index, value, role)
+        return QtGui.QStandardItemModel.setData(self, index, value, role)
 
     def setCurIdx(self, idx):
         self.curidx = idx
@@ -70,70 +120,9 @@ class CfgModel(QtGui.QStandardItemModel):
         while self.tree[idx]['link'] != None:
             idx = self.tree[idx]['link']
             path[:0] = [idx]
-        self.setRowCount(1 + len(path) + len(children))
-        vals = {}
-        for i in range(len(path)):
-            idx = path[i]
-            d = self.db.id2cfg[idx]
-            if not 'vfld' in d.keys():
-                vfld = []
-                for (k, v) in d.items():
-                    if k[:3] != 'PV_' and k[:4] != 'FLD_':
-                        continue
-                    if v == None:
-                        d[k] = vals[k]
-                    else:
-                        vfld.append(k)
-                d['vfld'] = vfld
-            else:
-                vfld = d['vfld']
-            for c in range(self.db.cfgfldcnt + 2):
-                didx = self.index(i+1, c)
-                if c == 0:
-                    self.setData(didx, QtCore.QVariant(d['name']), QtCore.Qt.DisplayRole)
-                elif c == 1:
-                    link = d['link']
-                    if link == None:
-                        link = ""
-                    else:
-                        link = self.db.id2cfg[link]['name']
-                    self.setData(didx, QtCore.QVariant(link), QtCore.Qt.DisplayRole)
-                else:
-                    f = self.db.cfgflds[c-2]['fld'] 
-                    color = param.params.black if f in vfld else param.params.blue
-                    self.setData(didx, QtCore.QVariant(d[f]), QtCore.Qt.DisplayRole)
-                    self.setData(didx, QtCore.QVariant(color), QtCore.Qt.ForegroundRole)
-            vals = d
-        off = len(path) + 1
-        for i in range(len(children)):
-            idx = children[i]
-            d = self.db.id2cfg[idx]
-            if not 'vfld' in d.keys():
-                vfld = []
-                for (k, v) in d.items():
-                    if v == None:
-                        d[k] = vals[k]
-                    else:
-                        vfld.append(k)
-                d['vfld'] = vfld
-            else:
-                vfld = d['vfld']
-            for c in range(self.db.cfgfldcnt + 2):
-                didx = self.index(i+off, c)
-                if c == 0:
-                    self.setData(didx, QtCore.QVariant(d['name']), QtCore.Qt.DisplayRole)
-                elif c == 1:
-                    link = d['link']
-                    if link == None:
-                        link = ""
-                    else:
-                        link = self.db.id2cfg[link]['name']
-                    self.setData(didx, QtCore.QVariant(link), QtCore.Qt.DisplayRole)
-                else:
-                    f = self.db.cfgflds[c-2]['fld'] 
-                    color = param.params.black if f in vfld else param.params.blue
-                    self.setData(didx, QtCore.QVariant(d[f]), QtCore.Qt.DisplayRole)
-                    self.setData(didx, QtCore.QVariant(color), QtCore.Qt.ForegroundRole)
+        self.setRowCount(len(path) + len(children))
+        self.path = path
+        self.children = children
         self.emit(QtCore.SIGNAL("layoutChanged()"))
         self.ui.configTable.resizeColumnsToContents()
         
@@ -141,6 +130,14 @@ class CfgModel(QtGui.QStandardItemModel):
         if cur != None:
             print "Current is %s (%d)" % (cur.text(0), cur.id)
             self.setCurIdx(cur.id)
+
+    def treeCollapse(self, item):
+        if item != None:
+            self.is_expanded[item.id] = False
+
+    def treeExpand(self, item):
+        if item != None:
+            self.is_expanded[item.id] = True
 
 """
     # Enabled:
