@@ -28,7 +28,7 @@ def fixName(name):
 
 
 class dbPoll(threading.Thread):
-    def __init__(self, cfgsig, objsig, interval, hutch):
+    def __init__(self, sig, interval, hutch):
         super(dbPoll, self).__init__()
         try:
             self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols');
@@ -36,8 +36,7 @@ class dbPoll(threading.Thread):
             cur.execute("call init_pcds()")
         except:
             pass
-        self.cfgsig = cfgsig
-        self.objsig = objsig
+        self.sig = sig
         self.interval = interval
         self.hutch = hutch
         self.daemon = True
@@ -56,22 +55,24 @@ class dbPoll(threading.Thread):
                 last = now
             cur = self.con.cursor(mdb.cursors.DictCursor)
             cur.execute("select * from ims_motor_update where tbl_name = 'config' or tbl_name = %s", self.hutch)
+            v = 0
             for d in cur.fetchall():
                 if d['tbl_name'] == 'config':
                     if d['dt_updated'] != lastcfg:
                         lastcfg = d['dt_updated']
-                        self.cfgsig.emit()
+                        v = v | 1
                 else:
                     if d['dt_updated'] != lastobj:
                         lastobj = d['dt_updated']
-                        self.objsig.emit()
+                        v = v | 2
+            if v != 0:
+                self.sig.emit(v)
             self.con.commit()
 
 class db(QtCore.QObject):
     cfgchange   = QtCore.pyqtSignal()
     objchange   = QtCore.pyqtSignal()
-    readcfg     = QtCore.pyqtSignal()
-    readobj     = QtCore.pyqtSignal()
+    readsig     = QtCore.pyqtSignal(int)
 
     def __init__(self, hutch, table):
         super(db, self).__init__()
@@ -89,9 +90,8 @@ class db(QtCore.QObject):
         except:
             pass
         self.readFormat()
-        self.readcfg.connect(lambda : self.readTable(True))
-        self.readobj.connect(lambda : self.readTable(False))
-        self.poll = dbPoll(self.readcfg, self.readobj, 30, hutch)
+        self.readsig.connect(self.readTable)
+        self.poll = dbPoll(self.readsig, 30, hutch)
         self.con.commit()
 
     def start(self, initsig):
@@ -156,14 +156,13 @@ class db(QtCore.QObject):
             self.cfgflds[i]['cfgidx'] = i
         self.con.commit()
         
-    def readDB(self, hutch):
+    def readDB(self, hutch, cur):
         if hutch:
             name = self.hutch
             ext = " where hutch = '%s'" % self.hutch
         else:
             name = "config"
             ext = "_tpl"
-        cur = self.con.cursor(mdb.cursors.DictCursor)
         cur.execute("select * from %s%s" % (self.table, ext))
         return list(cur.fetchall())
 
@@ -175,9 +174,10 @@ class db(QtCore.QObject):
             d_name[d['name']] = d
         return (d_id, d_name)
 
-    def readTable(self, cfg):
-        if cfg:
-            self.cfgs = self.readDB(False)
+    def readTable(self, mask):
+        cur = self.con.cursor(mdb.cursors.DictCursor)
+        if (mask & 1) != 0:
+            self.cfgs = self.readDB(False, cur)
             (self.id2cfg, self.cfg2id) = self.buildmaps(self.cfgs)
             for d in self.cfgs:
                 r = d['link']
@@ -185,18 +185,20 @@ class db(QtCore.QObject):
                     d['linkname'] = ""
                 else:
                     d['linkname'] = self.id2cfg[r]['name']
-            self.cfgchange.emit()
-        else:
-            self.objs = self.readDB(True)
+        if (mask & 2) != 0:
+            self.objs = self.readDB(True, cur)
             (self.id2obj, self.obj2id) = self.buildmaps(self.objs)
             if self.initsig == None:
                 self.connectAllPVs()
+        self.con.commit()
+        if (mask & 1) != 0:
+            self.cfgchange.emit()
+        if (mask & 2) != 0:
             self.objchange.emit()
         if self.initsig != None and self.cfgs != None and self.objs != None:
             self.connectAllPVs()
             self.initsig.emit()
             self.initsig = None;
-        self.con.commit()
 
     def getCfg(self, idx):
         d = self.id2cfg[idx]
