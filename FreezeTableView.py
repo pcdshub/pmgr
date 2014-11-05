@@ -8,11 +8,15 @@ class FreezeHeaderView(QtGui.QHeaderView):
         self.__hdr = None
         self.__parent = parent
         self.__orientation = orientation
+        self.sortindicator = (None, None)
         self.connect(self, QtCore.SIGNAL("sectionResized(int,int,int)"),
                      self.updateSectionWidth)
+        self.connect(self, QtCore.SIGNAL("sortIndicatorChanged(int,Qt::SortOrder)"), self.selfSortChanged)
+        self.setClickable(True)  # Sigh.  Why isn't this done when we ask it to be sortable?!?
 
     def setShadowHeader(self, hdr):
         self.__hdr = hdr
+        self.connect(self.__hdr, QtCore.SIGNAL("sortIndicatorChanged(int,Qt::SortOrder)"), self.parentSortChanged)
 
     def sectionSizeFromContents(self, logidx):
         if self.__hdr == None:
@@ -25,6 +29,16 @@ class FreezeHeaderView(QtGui.QHeaderView):
     def updateSectionWidth(self, logidx, oldsize, newsize):
         if self.__hdr.sectionSize(logidx) == oldsize and newsize != 0:
             self.__hdr.resizeSection(logidx, newsize)
+
+    def selfSortChanged(self, logidx, order):
+        if (logidx, order) != self.sortindicator:
+            self.sortindicator = (logidx, order)
+            self.__hdr.setSortIndicator(logidx, order)
+
+    def parentSortChanged(self, logidx, order):
+        if (logidx, order) != self.sortindicator:
+            self.sortindicator = (logidx, order)
+            self.setSortIndicator(logidx, order)
 
 ######################################################################
 
@@ -40,6 +54,10 @@ class DropTableView(QtGui.QTableView):
         self.setDropIndicatorShown(True)
         self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        # MCB - This doesn't work.  Probably because we aren't actually
+        # tracking the selection, just clearing it when it isn't visible.
+        # So just turn it off.
+        self.horizontalHeader().setHighlightSections(False)
         
         self.connect(self, QtCore.SIGNAL("customContextMenuRequested(const QPoint&)"),
                      self.showContextMenu)
@@ -139,6 +157,8 @@ class FreezeTableView(DropTableView):
         fTV.setVerticalHeader(FreezeHeaderView(QtCore.Qt.Vertical, self))
         fTV.verticalHeader().setShadowHeader(self.verticalHeader())
         fTV.setStyleSheet("QTableView { border: none; }")
+        #fTV.setStyleSheet("QTableView { border: none; background-color: #FF0000  }")
+        #fTV.horizontalHeader().setStyleSheet("QHeaderView { background-color: #FF0000  }")
 
         for col in range(self.model().columnCount()):
             if col >= self.fcols:
@@ -237,12 +257,15 @@ class FreezeTableView(DropTableView):
         self.connect(rTV.selectionModel(),
                      QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
                      self.rowSelectionChanged)
+        self.connect(fTV.selectionModel(),
+                     QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
+                     self.frozenSelectionChanged)
         self.didinit = True
 
     #
     # OK, too clever by half.  We had a problem, when sharing a selection model,
     # if the selected column was hidden in the child, all of the columns would
-    # suddenly become visible.  So now we're just using two separate models, and
+    # suddenly become visible.  So now we're just using separate models, and
     # trying to keep them in sync.  Easier than one would think, as the first column
     # can only be selected in the child, and the detectors (the first row after the
     # parameter headers) can only be selected in the parent.  So when we get a selection,
@@ -252,22 +275,38 @@ class FreezeTableView(DropTableView):
         if not selected.isEmpty():
             self.cTV.selectionModel().clear()
             self.rTV.selectionModel().clear()
+            self.fTV.selectionModel().clear()
 
     def colSelectionChanged(self, selected, deselected):
         if not selected.isEmpty():
             self.selectionModel().clear()
             self.rTV.selectionModel().clear()
+            self.fTV.selectionModel().clear()
 
     def rowSelectionChanged(self, selected, deselected):
         if not selected.isEmpty():
             self.selectionModel().clear()
             self.cTV.selectionModel().clear()
+            self.fTV.selectionModel().clear()
+
+    def frozenSelectionChanged(self, selected, deselected):
+        if not selected.isEmpty():
+            self.selectionModel().clear()
+            self.cTV.selectionModel().clear()
+            self.rTV.selectionModel().clear()
 
     def clearSelection(self):
         self.selectionModel().clear()
         self.cTV.selectionModel().clear()
         self.rTV.selectionModel().clear()
+        self.fTV.selectionModel().clear()
 
+    def setSortingEnabled(self, value):
+        DropTableView.setSortingEnabled(self, value)
+        self.cTV.setSortingEnabled(value)
+        self.rTV.setSortingEnabled(value)
+        self.fTV.setSortingEnabled(value)
+        
     def addHorizontalSectionWidget(self, logidx, w):
         self.itemDelegate().addSectionWidget(logidx, w, self)
 

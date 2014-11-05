@@ -42,7 +42,7 @@ class ObjModel(QtGui.QStandardItemModel):
                     return QtCore.QVariant(d[self.cfld[c]])
             else:
                 f = self.db.objflds[c-self.coff]['fld']
-                v = d['curval'][f]
+                v = d[f]
                 if role == QtCore.Qt.ForegroundRole:
                     if self.db.objflds[c-self.coff]['obj']:
                         v2 = d[f]
@@ -70,14 +70,15 @@ class ObjModel(QtGui.QStandardItemModel):
             return entry[self.db.objflds[c-self.coff]['fld']]
 
     def sort(self, Ncol, order):
-        self.lastsort = (Ncol, order)
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
-        self.db.objs = sorted(self.db.objs, key=lambda d: self.value(d, Ncol))
-        if order == QtCore.Qt.DescendingOrder:
-            self.db.objs.reverse()
-        self.makeidx()
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
-        self.ui.objectTable.resizeColumnsToContents()
+        if (Ncol, order) != self.lastsort:
+            self.lastsort = (Ncol, order)
+            self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+            self.db.objs = sorted(self.db.objs, key=lambda d: self.value(d, Ncol))
+            if order == QtCore.Qt.DescendingOrder:
+                self.db.objs.reverse()
+            self.makeidx()
+            self.emit(QtCore.SIGNAL("layoutChanged()"))
+            self.ui.objectTable.resizeColumnsToContents()
 
     def makeidx(self):
         d = {}
@@ -112,7 +113,7 @@ class ObjModel(QtGui.QStandardItemModel):
     #     QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
     #
     def flags(self, index):
-        flags = QtCore.Qt.ItemIsEnabled
+        flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         if index.isValid():
             row = index.row()
             col = index.column()

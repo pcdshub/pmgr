@@ -220,14 +220,13 @@ class db(QtCore.QObject):
         newpvdict = {}
         for d in self.objs:
             d['linkname'] = self.id2cfg[d['config']]['name']
-            d['curval'] = {}
             base = d['rec_base']
             for ofld in self.objflds:
                 n = base + ofld['pv']
                 f = ofld['fld']
                 try:
                     pv = self.pvdict[n]
-                    d['curval'][f] = pv.value
+                    d[f] = pv.value
                     del self.pvdict[n]
                 except:
                     pv = utils.monitorPv(n, self.pv_handler)
@@ -245,6 +244,6 @@ class db(QtCore.QObject):
 
     def pv_handler(self, pv, e):
         if e is None:
-            pv.obj['curval'][pv.fld] = pv.value
+            pv.obj[pv.fld] = pv.value
             if self.model:
                 self.model.pvchange(pv.obj['id'], self.fldmap[pv.fld]['objidx'])

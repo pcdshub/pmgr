@@ -59,8 +59,6 @@ class GraphicUserInterface(QtGui.QMainWindow):
 
         self.ui.objectTable.verticalHeader().hide()
         self.ui.objectTable.setCornerButtonEnabled(False)
-        self.ui.objectTable.setSortingEnabled(True)
-        self.ui.objectTable.sortByColumn(0, QtCore.Qt.AscendingOrder)
 
         self.ui.configTable.verticalHeader().hide()
         self.ui.configTable.setCornerButtonEnabled(False)
@@ -80,6 +78,8 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.ui.objectTable.init(self.objectmodel, 1, 1)
         self.ui.objectTable.setShowGrid(True)
         self.ui.objectTable.resizeColumnsToContents()
+        self.ui.objectTable.setSortingEnabled(True)
+        self.ui.objectTable.sortByColumn(0, QtCore.Qt.AscendingOrder)
 
         self.ui.menuView.addAction(self.ui.configWidget.toggleViewAction())
         self.ui.configWidget.setWindowTitle(self.table + " configurations")
