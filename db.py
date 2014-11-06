@@ -26,6 +26,14 @@ def fixName(name):
         c = name.rindex(':')
         return name[3:c] + '.' + name[c+1:]
 
+def createAlias(name):
+    name = re.sub("__", "_", name)
+    if name[:3] == "PV_":
+        return name[3:]
+    if name[:4] == "FLD_":
+        return name[4:]
+    else:
+        return name
 
 class dbPoll(threading.Thread):
     def __init__(self, sig, interval, hutch):
@@ -45,6 +53,7 @@ class dbPoll(threading.Thread):
         last = 0
         lastcfg = datetime.datetime(1900,1,1,0,0,1)
         lastobj = datetime.datetime(1900,1,1,0,0,1)
+        first = True
         while True:
             now = time.time()
             looptime = now - last
@@ -65,6 +74,9 @@ class dbPoll(threading.Thread):
                     if d['dt_updated'] != lastobj:
                         lastobj = d['dt_updated']
                         v = v | 2
+            if first:
+                first = False
+                v = 3
             if v != 0:
                 self.sig.emit(v)
             self.con.commit()
@@ -105,25 +117,18 @@ class db(QtCore.QObject):
         locfld = [(d['Field'], m2pType(d['Type'])) for d in cur.fetchall()]
         locfld = locfld[7:]   # Skip the standard fields!
 
-        cur.execute("describe %s_tpl" % self.table)
+        cur.execute("describe %s_cfg" % self.table)
         fld = [(d['Field'], m2pType(d['Type'])) for d in cur.fetchall()]
-        fld = fld[4:]         # Skip the standard fields!
+        fld = fld[6:]         # Skip the standard fields!
         self.cfgfldcnt = len(fld)
         self.objfldcnt = len(locfld) + self.cfgfldcnt
 
         cur.execute("select * from %s_name_map" % self.table)
         result = cur.fetchall()
         alias = {}
-        dorder = {}
         for d in result:
             f = d['db_field_name']
             alias[f] = d['alias']
-            dorder[f] = d['displayorder']
-
-        if len(dorder.values()) > 0:
-            deforder = max(dorder.values()) + 1
-        else:
-            deforder = 1
 
         self.objflds = []
         self.fld2pv = {}
@@ -134,18 +139,18 @@ class db(QtCore.QObject):
             self.fld2pv[f] = n
             self.pv2fld[n] = f
             if f in alias.keys():
-                self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'dorder': dorder[f], 'type': t, 'obj': True})
+                self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'obj': True})
             else:
-                self.objflds.append({'fld': f, 'pv': n, 'alias' : f, 'dorder': deforder, 'type': t, 'obj': True})
+                self.objflds.append({'fld': f, 'pv': n, 'alias' : createAlias(f), 'type': t, 'obj': True})
         for (f, t) in fld:
             n = fixName(f)
             self.fld2pv[f] = n
             self.pv2fld[n] = f
             if f in alias.keys():
-                self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'dorder': dorder[f], 'type': t, 'obj': False})
+                self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'obj': False})
             else:
-                self.objflds.append({'fld': f, 'pv': n, 'alias' : f, 'dorder': deforder, 'type': t, 'obj': False})
-        self.objflds.sort(key=lambda d: (d['dorder'], d['alias']))
+                self.objflds.append({'fld': f, 'pv': n, 'alias' : createAlias(f), 'type': t, 'obj': False})
+        self.objflds.sort(key=lambda d: (not d['obj'], d['alias']))
         self.fldmap = {}
         for i in range(len(self.objflds)):
             d = self.objflds[i]
@@ -159,10 +164,10 @@ class db(QtCore.QObject):
     def readDB(self, hutch, cur):
         if hutch:
             name = self.hutch
-            ext = " where hutch = '%s'" % self.hutch
+            ext = " where owner = '%s'" % self.hutch
         else:
             name = "config"
-            ext = "_tpl"
+            ext = "_cfg"
         cur.execute("select * from %s%s" % (self.table, ext))
         return list(cur.fetchall())
 
@@ -180,6 +185,7 @@ class db(QtCore.QObject):
             self.cfgs = self.readDB(False, cur)
             (self.id2cfg, self.cfg2id) = self.buildmaps(self.cfgs)
             for d in self.cfgs:
+                d['status'] = ""
                 r = d['link']
                 if r == None:
                     d['linkname'] = ""
@@ -188,6 +194,13 @@ class db(QtCore.QObject):
         if (mask & 2) != 0:
             self.objs = self.readDB(True, cur)
             (self.id2obj, self.obj2id) = self.buildmaps(self.objs)
+            for o in self.objs:
+                o['status'] = ""
+                d = {}
+                for f in self.objflds:
+                    if f['obj']:
+                        d[f['fld']] = o[f['fld']]
+                o['origcfg'] = d
             if self.initsig == None:
                 self.connectAllPVs()
         self.con.commit()
@@ -211,7 +224,6 @@ class db(QtCore.QObject):
                     continue
                 if v == None:
                     d[k] = vals[k]
-                else:
                     vfld.append(k)
             d['vfld'] = vfld
         return d
@@ -221,12 +233,15 @@ class db(QtCore.QObject):
         for d in self.objs:
             d['linkname'] = self.id2cfg[d['config']]['name']
             base = d['rec_base']
+            d['connstat'] = self.objfldcnt*[False]
             for ofld in self.objflds:
                 n = base + ofld['pv']
                 f = ofld['fld']
                 try:
                     pv = self.pvdict[n]
                     d[f] = pv.value
+                    d['connstat'][ofld['objidx']] = True
+                    print d['connstat']
                     del self.pvdict[n]
                 except:
                     pv = utils.monitorPv(n, self.pv_handler)
@@ -235,6 +250,9 @@ class db(QtCore.QObject):
                 newpvdict[n] = pv
                 pv.obj = d
                 pv.fld = f
+            if reduce(lambda a,b: a and b, d['connstat']):
+                del d['connstat']
+                d['status'] = "".join(sorted("C" + d['status']))
         for pv in self.pvdict.values():
             pv.disconnect()
         self.pvdict = newpvdict
@@ -245,5 +263,14 @@ class db(QtCore.QObject):
     def pv_handler(self, pv, e):
         if e is None:
             pv.obj[pv.fld] = pv.value
+            idx = self.fldmap[pv.fld]['objidx']
+            try:
+                pv.obj['connstat'][idx] = True
+                if reduce(lambda a,b: a and b, pv.obj['connstat']):
+                    del pv.obj['connstat']
+                    pv.obj['status'] = "".join(sorted("C" + pv.obj['status']))
+                    self.model.statchange(pv.obj['id'])
+            except:
+                pass
             if self.model:
-                self.model.pvchange(pv.obj['id'], self.fldmap[pv.fld]['objidx'])
+                self.model.pvchange(pv.obj['id'], idx)

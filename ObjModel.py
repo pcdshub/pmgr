@@ -2,15 +2,19 @@ from PyQt4 import QtGui, QtCore
 import param
 
 class ObjModel(QtGui.QStandardItemModel):
-    cname = ["Name", "Config", "PV Base"]
-    cfld  = ["name", "linkname", "rec_base"]
-    coff  = len(cname)
+    cname   = ["Status", "Name", "Config", "PV Base"]
+    cfld    = ["status", "name", "linkname", "rec_base"]
+    coff    = len(cname)
+    statcol = 0
+    namecol = 1
+    cfgcol  = 2
     
     def __init__(self, db, ui):
         QtGui.QStandardItemModel.__init__(self)
         self.db = db
         self.ui = ui
         self.id2idx = None
+        self.edits = {}
         self.lastsort = (0, QtCore.Qt.DescendingOrder)
         db.setModel(self)
         # Setup headers
@@ -24,6 +28,13 @@ class ObjModel(QtGui.QStandardItemModel):
             else:
                 self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.db.objflds[c-self.coff]['alias']))
 
+    def index2db(self, index):
+        c = index.column()
+        if c < self.coff:
+            return (self.db.objs[index.row()]['id'], self.cfld[c])
+        else:
+            return (self.db.objs[index.row()]['id'], self.db.objflds[c-self.coff]['fld'])
+        
     def data(self, index, role = QtCore.Qt.DisplayRole):
         if (role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and
             role != QtCore.Qt.ForegroundRole):
@@ -31,37 +42,68 @@ class ObjModel(QtGui.QStandardItemModel):
         if not index.isValid():
             return QtCore.QVariant()
         try:
-            r = index.row()
-            d = self.db.objs[r]
-            c = index.column()
-            if c < self.coff:
+            d = self.db.objs[index.row()]
+            (idx, f) = self.index2db(index)
+            try:
+                v = self.edits[idx][f]
                 if role == QtCore.Qt.ForegroundRole:
-                    # MCB - Could be red if changed by user!
-                    return QtCore.QVariant(param.params.black)
-                else:
-                    return QtCore.QVariant(d[self.cfld[c]])
-            else:
-                f = self.db.objflds[c-self.coff]['fld']
-                v = d[f]
-                if role == QtCore.Qt.ForegroundRole:
-                    if self.db.objflds[c-self.coff]['obj']:
-                        v2 = d[f]
-                    else:
-                        v2 = self.db.id2cfg[d['config']][f]
-                    # MCB - Could be red if an object parameter changed by user!
-                    if v == v2:
-                        return QtCore.QVariant(param.params.black)
-                    else:
-                        return QtCore.QVariant(param.params.blue)
+                    return QtCore.QVariant(param.params.red)
                 else:
                     return QtCore.QVariant(v)
+            except:
+                v = d[f]             # Actual value
+                if role != QtCore.Qt.ForegroundRole:
+                    return QtCore.QVariant(v)
+                v2 = d['origcfg'][f] # Configured value
+                if param.equal(v, v2):
+                    return QtCore.QVariant(param.params.black)
+                else:
+                    return QtCore.QVariant(param.params.blue)
         except:
             return QtCore.QVariant()
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
             return QtGui.QStandardItemModel.setData(self, index, value, role)
-        return QtGui.QStandardItemModel.setData(self, index, value, role)
+        t = value.type()
+        if t == QtCore.QMetaType.QString:
+            v = str(value.toString())
+        elif t == QtCore.QMetaType.Int:
+            (v, ok) = value.toInt()
+        elif t == QtCore.QMetaType.Double:
+            (v, ok) = value.toDouble()
+        else:
+            print "Unexpected QVariant type %d" % value.type()
+            return False
+        (idx, f) = self.index2db(index)
+        try:
+            d = self.edits[idx]
+        except:
+            d = {}
+        hadedit = (d != {})
+        try:
+            del d[f]
+        except:
+            pass
+        r = self.db.objs[index.row()]
+        if index.column() < self.coff:
+            dd = r
+        else:
+            dd = r['origcfg']
+        if not param.equal(v, dd[f]):
+            d[f] = v
+            if not hadedit:
+                r['status'] = "".join(sorted("M" + r['status']))
+                statidx = self.index(index.row(), self.statcol)
+                self.dataChanged.emit(index, index)
+        else:
+            if hadedit and d == {}:
+                r['status'] = r['status'].replace("M", "")
+                statidx = self.index(index.row(), self.statcol)
+                self.dataChanged.emit(index, index)
+        self.edits[idx] = d
+        self.dataChanged.emit(index, index)
+        return True
         
     def value(self, entry, c, display=True):
         if c < self.coff:
@@ -103,6 +145,12 @@ class ObjModel(QtGui.QStandardItemModel):
         idx = self.index(self.id2idx[id], fldidx + self.coff)
         self.dataChanged.emit(idx, idx)
 
+    def statchange(self, id):
+        if self.id2idx == None:
+            self.makeidx()
+        idx = self.index(self.id2idx[id], self.statcol)
+        self.dataChanged.emit(idx, idx)
+
     # Enabled:
     #     Everything.
     # Selectable:
@@ -117,6 +165,12 @@ class ObjModel(QtGui.QStandardItemModel):
         if index.isValid():
             row = index.row()
             col = index.column()
+            if col < self.coff:
+                if col != self.cfgcol and col != self.statcol:
+                    flags = flags | QtCore.Qt.ItemIsEditable
+            else:
+                if self.db.objflds[col-self.coff]['obj']:
+                    flags = flags | QtCore.Qt.ItemIsEditable
         return flags
         
     #

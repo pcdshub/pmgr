@@ -2,17 +2,19 @@ use pscontrols;
 
 drop table if exists ims_motor_name_map;
 drop table if exists ims_motor;
-drop table if exists ims_motor_tpl;
+drop table if exists ims_motor_cfg;
 drop table if exists ims_motor_update;
 drop procedure if exists init_pcds;
 drop procedure if exists find_parents;
 
-create table ims_motor_tpl (
+create table ims_motor_cfg (
 	-- boilerplate --
 	id int auto_increment,
 	name varchar(15) not null unique, -- name or serial number --
 	link int,                         -- recursive fk (parent) --
-        invariant tinyint,                -- can anyone modify this? 0 == OK --
+        security varchar(30),             -- is this modifyable? --
+	owner varchar(10),
+	dt_updated datetime not null,
 	-- pvs and fields --
 	FLD_ACCL  double,  -- Acceleration (seconds from SBAS to S) --
 	FLD_BACC  double,  -- Backlash Accel (seconds from SBAS to S) --
@@ -77,7 +79,7 @@ create table ims_motor (
 	-- boilerplate --
 	id int auto_increment,
 	config int not null,
-	hutch varchar(10),
+	owner varchar(10),
 	name varchar(30) not null unique,
 	rec_base varchar(30) not null,  -- pv/field base prefix --
 	dt_created datetime not null,
@@ -88,13 +90,12 @@ create table ims_motor (
 	
 	-- constraints --
 	primary key (id),
-	foreign key (config) references ims_motor_tpl(id)
+	foreign key (config) references ims_motor_cfg(id)
 );
 
 create table ims_motor_name_map (
 	db_field_name	varchar(30) not null,
-	alias		varchar(16) not null,
-	displayorder 	int not null
+	alias		varchar(16) not null
 );
 
 create table ims_motor_update (
@@ -104,9 +105,9 @@ create table ims_motor_update (
 	primary key(tbl_name)
 );
 
-load data local infile 'test.db' into table ims_motor_tpl;
+load data local infile 'test.db' into table ims_motor_cfg;
 /* Sigh. id = 0 in the file does an auto-increment, so we set it to -1 and fix it here. */
-update ims_motor_tpl set id = 0 where id = -1;
+update ims_motor_cfg set id = 0 where id = -1;
 
 insert ims_motor_update values ('config', now());
 
