@@ -1,1 +1,2 @@
 pyuic4 -o pmgr_ui.py pmgr.ui
+pyuic4 -o cfgdialog_ui.py cfgdialog.ui

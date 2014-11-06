@@ -1,5 +1,6 @@
 from PyQt4 import QtGui, QtCore
 import param
+import utils
 
 class CfgModel(QtGui.QStandardItemModel):
     cname   = ["Status", "Name", "Parent"]
@@ -37,6 +38,9 @@ class CfgModel(QtGui.QStandardItemModel):
             self.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
         except:
             self.setCurIdx(0)
+        self.setHeaderData(self.statcol, QtCore.Qt.Horizontal,
+                           QtCore.QVariant("M = Modified"),
+                           QtCore.Qt.ToolTipRole)
 
     def cfgchange(self):
         print "CfgModel has change!"
@@ -47,7 +51,6 @@ class CfgModel(QtGui.QStandardItemModel):
             self.setCurIdx(0)
 
     def buildtree(self):
-        tree = self.ui.treeWidget
         t = {}
         for d in self.db.cfgs:
             t[d['id']] = {'name': d['name'], 'link': d['link'], 'children' : []}
@@ -61,7 +64,14 @@ class CfgModel(QtGui.QStandardItemModel):
         r.sort(key=lambda v: t[v]['name'])
         for d in t.values():
             d['children'].sort(key=lambda v: t[v]['name'])
+        self.root = r
+        self.tree = t
+        self.setupTree(self.ui.treeWidget, 'item')
+
+    def setupTree(self, tree, fld):
         tree.clear()
+        r = list(self.root)  # Make a copy!
+        t = self.tree
         for id in r:
             if t[id]['link'] == None:
                 item = QtGui.QTreeWidgetItem(tree)
@@ -69,10 +79,10 @@ class CfgModel(QtGui.QStandardItemModel):
                 item = QtGui.QTreeWidgetItem()
             item.id = id
             item.setText(0, t[id]['name'])
-            t[id]['item'] = item
+            t[id][fld] = item
             parent = t[id]['link']
             if parent != None:
-                t[parent]['item'].addChild(item)
+                t[parent][fld].addChild(item)
             try:
                 # Everything defaults to collapsed!
                 if self.is_expanded[id]:
@@ -80,7 +90,7 @@ class CfgModel(QtGui.QStandardItemModel):
             except:
                 self.is_expanded[id] = False
             r[len(r):] = t[id]['children']
-        self.tree = t
+        return t
 
     def index2db(self, index):
         r = index.row()
@@ -136,13 +146,23 @@ class CfgModel(QtGui.QStandardItemModel):
         except:
             d = {}
         hadedit = (d != {})
+        # OK, the link/linkname thing is slightly weird.  The field name for our index is
+        # 'linkname', but we are passing an int that should go to 'link'.  So we need to
+        # change *both*!
+        if f == 'linkname':
+            vlink = v
+            v = self.db.id2cfg[vlink]['name']
         try:
             del d[f]
+            if f == 'linkname':
+                del d['link']
         except:
             pass
         dd = self.db.getCfg(idx)
         if not param.equal(v, dd[f]):
             d[f] = v
+            if f == 'linkname':
+                d['link'] = vlink
             if not hadedit:
                 dd['status'] = "".join(sorted("M" + dd['status']))
                 statidx = self.index(index.row(), self.statcol)
@@ -152,7 +172,13 @@ class CfgModel(QtGui.QStandardItemModel):
                 dd['status'] = dd['status'].replace("M", "")
                 statidx = self.index(index.row(), self.statcol)
                 self.dataChanged.emit(index, index)
-        self.edits[idx] = d
+        if d != {}:
+            self.edits[idx] = d
+        else:
+            try:
+                del self.edits[idx]
+            except:
+                pass
         self.dataChanged.emit(index, index)
         return True
 
@@ -182,6 +208,50 @@ class CfgModel(QtGui.QStandardItemModel):
     def treeExpand(self, item):
         if item != None:
             self.is_expanded[item.id] = True
+
+    def rowIsChanged(self, table, index):
+        (idx, f) = self.index2db(index)
+        try:
+            e = self.edits[idx]
+            return True
+        except:
+            return False
+
+    def setupContextMenus(self, table):
+        menu = utils.MyContextMenu()
+        menu.addAction("Create new", self.create)
+        menu.addAction("Clone existing", self.clone)
+        menu.addAction("Clone values", self.clonevals)
+        menu.addAction("Delete", self.delete)
+        menu.addAction("Commit this config", self.commitone, self.rowIsChanged)
+        menu.addAction("Commit all", self.commitall, lambda table, index: self.edits != {})
+        menu.addAction("Change parent", self.chparent, lambda table, index: index.column() == self.cfgcol)
+        table.addContextMenu(menu)
+
+    def create(self, table, index):
+        pass
+
+    def delete(self, table, index):
+        pass
+
+    def clone(self, table, index):
+        pass
+
+    def clonevals(self, table, index):
+        pass
+
+    def commitone(self, table, index):
+        pass
+
+    def commitall(self, table, index):
+        pass
+
+    def chparent(self, table, index):
+        (idx, f) = self.index2db(index)
+        d = self.db.getCfg(idx)
+        if (param.params.cfgdialog.exec_("Select new parent for %s" % d['name'], d['link']) ==
+            QtGui.QDialog.Accepted):
+            self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
 
     # Enabled:
     #     Everything.

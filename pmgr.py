@@ -5,42 +5,10 @@ from psp.options import Options
 from pmgr_ui import Ui_MainWindow
 from ObjModel import ObjModel
 from CfgModel import CfgModel
+from cfgdialog import cfgdialog
 import param
 import db
 import threading
-
-######################################################################
-       
-#
-# Class to support for context menus in DropTableView.  The API is:
-#     isActive(table, index)
-#         - Return True is this menu should be displayed at this index
-#           in the table.
-#     doMenu(table, pos, index)
-#         - Show/execute the menu at location pos/index in the table.
-#     addAction(name, action)
-#         - Create a menu item named "name" that, when selected, calls
-#           action(table, index) to perform the action.
-#
-class MyContextMenu(QtGui.QMenu):
-    def __init__(self, isActive=None):
-        QtGui.QMenu.__init__(self)
-        self.isActive = isActive
-        self.actions = []
-
-    def addAction(self, name, action):
-        QtGui.QMenu.addAction(self, name)
-        self.actions.append((name, action))
-
-    def doMenu(self, table, pos, index):
-        gpos = table.viewport().mapToGlobal(pos)
-        selectedItem = self.exec_(gpos)
-        if selectedItem != None:
-            txt = selectedItem.text()
-            for name, action in self.actions:
-                if txt == name:
-                    action(table, index)
-                    return
 
 ######################################################################
                 
@@ -68,8 +36,8 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.db.start(self.initdone)
         
         settings = QtCore.QSettings("SLAC", "ParamMgr");
-        self.restoreGeometry(settings.value("geometry/%s" % self.table).toByteArray());
-        self.restoreState(settings.value("windowState/%s" % self.table).toByteArray());
+        self.restoreGeometry(settings.value("%s/geometry" % self.table).toByteArray());
+        self.restoreState(settings.value("%s/windowState" % self.table).toByteArray());
 
     def finishinit(self):
         self.ui.menuView.addAction(self.ui.objectWidget.toggleViewAction())
@@ -88,14 +56,19 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.ui.configTable.setShowGrid(True)
         self.ui.configTable.resizeColumnsToContents()
 
+        self.objectmodel.setupContextMenus(self.ui.objectTable)
+        self.configmodel.setupContextMenus(self.ui.configTable)
+
+        param.params.cfgdialog = cfgdialog(self.configmodel, self)
+
         self.db.objchange.connect(self.objectmodel.objchange)
         self.db.cfgchange.connect(self.objectmodel.cfgchange)
         self.db.cfgchange.connect(self.configmodel.cfgchange)
 
     def closeEvent(self, event):
         settings = QtCore.QSettings("SLAC", "ParamMgr");
-        settings.setValue("geometry/%s" % self.table, self.saveGeometry())
-        settings.setValue("windowState/%s" % self.table, self.saveState())
+        settings.setValue("%s/geometry" % self.table, self.saveGeometry())
+        settings.setValue("%s/windowState" % self.table, self.saveState())
         QtGui.QMainWindow.closeEvent(self, event)
 
 if __name__ == '__main__':

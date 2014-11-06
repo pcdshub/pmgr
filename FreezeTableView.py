@@ -130,7 +130,7 @@ class DropTableView(QtGui.QTableView):
     def showContextMenu(self, pos):
         index = self.indexAt(pos)
         for m in self.menus:
-            if m.isActive != None and m.isActive(self, index):
+            if m.isActive(self, index):
                 m.doMenu(self, pos, index)
                 return
 

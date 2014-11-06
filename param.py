@@ -4,8 +4,9 @@ params = None
 
 def equal(v1, v2):
     if type(v1) == float:
-        # I hate floating point.
-        return abs(v1 - v2) < (abs(v1) + abs(v2)) * 1e-12
+        # I hate floating point.  OK, we need to be "close", but if we are *at* zero
+        # the "close" test fails!
+        return v1 == v2 or abs(v1 - v2) < (abs(v1) + abs(v2)) * 1e-12
     else:
         return v1 == v2
 
@@ -16,3 +17,4 @@ class param_structure(object):
         self.blue   = QtGui.QColor(QtCore.Qt.blue)
         self.red    = QtGui.QColor(QtCore.Qt.red)
         self.black  = QtGui.QColor(QtCore.Qt.black)
+        self.cfgdialog = None

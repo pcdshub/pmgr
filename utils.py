@@ -1,6 +1,55 @@
+from PyQt4 import QtCore, QtGui
 from psp.Pv import Pv
 import pyca
 import threading
+
+######################################################################
+       
+#
+# Class to support for context menus in DropTableView.  The API is:
+#     isActive(table, index)
+#         - Return True is this menu should be displayed at this index
+#           in the table.
+#     doMenu(table, pos, index)
+#         - Show/execute the menu at location pos/index in the table.
+#     addAction(name, action)
+#         - Create a menu item named "name" that, when selected, calls
+#           action(table, index) to perform the action.
+#
+class MyContextMenu(QtGui.QMenu):
+    def __init__(self, isAct=None):
+        QtGui.QMenu.__init__(self)
+        self.isAct = isAct
+        self.actions = []
+        self.havecond = False
+
+    def isActive(self, table, index):
+        if self.isAct == None or self.isAct(table, index):
+            if self.havecond:
+                self.clear()
+                for name, action, cond in self.actions:
+                    if cond == None or cond(table, index):
+                        QtGui.QMenu.addAction(self, name)
+            return True
+        else:
+            return False
+
+    def addAction(self, name, action, cond=None):
+        if cond != None:
+            self.havecond = True
+        self.actions.append((name, action, cond))
+
+    def doMenu(self, table, pos, index):
+        gpos = table.viewport().mapToGlobal(pos)
+        selectedItem = self.exec_(gpos)
+        if selectedItem != None:
+            txt = selectedItem.text()
+            for name, action, cond in self.actions:
+                if txt == name:
+                    action(table, index)
+                    return
+
+######################################################################
 
 #
 # Utility functions to deal with PVs.

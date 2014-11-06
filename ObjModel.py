@@ -1,5 +1,6 @@
 from PyQt4 import QtGui, QtCore
 import param
+import utils
 
 class ObjModel(QtGui.QStandardItemModel):
     cname   = ["Status", "Name", "Config", "PV Base"]
@@ -27,6 +28,9 @@ class ObjModel(QtGui.QStandardItemModel):
                 self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.cname[c]))
             else:
                 self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.db.objflds[c-self.coff]['alias']))
+        self.setHeaderData(self.statcol, QtCore.Qt.Horizontal,
+                           QtCore.QVariant("C = All PVs Connected\nM = Modified"),
+                           QtCore.Qt.ToolTipRole)
 
     def index2db(self, index):
         c = index.column()
@@ -81,8 +85,16 @@ class ObjModel(QtGui.QStandardItemModel):
         except:
             d = {}
         hadedit = (d != {})
+        # OK, the config/linkname thing is slightly weird.  The field name for our index is
+        # 'linkname', but we are passing an int that should go to 'link'.  So we need to
+        # change *both*!
+        if f == 'linkname':
+            vlink = v
+            v = self.db.id2cfg[vlink]['name']
         try:
             del d[f]
+            if f == 'linkname':
+                del d['config']
         except:
             pass
         r = self.db.objs[index.row()]
@@ -92,6 +104,8 @@ class ObjModel(QtGui.QStandardItemModel):
             dd = r['origcfg']
         if not param.equal(v, dd[f]):
             d[f] = v
+            if f == 'linkname':
+                d['config'] = vlink
             if not hadedit:
                 r['status'] = "".join(sorted("M" + r['status']))
                 statidx = self.index(index.row(), self.statcol)
@@ -101,7 +115,13 @@ class ObjModel(QtGui.QStandardItemModel):
                 r['status'] = r['status'].replace("M", "")
                 statidx = self.index(index.row(), self.statcol)
                 self.dataChanged.emit(index, index)
-        self.edits[idx] = d
+        if d != {}:
+            self.edits[idx] = d
+        else:
+            try:
+                del self.edits[idx]
+            except:
+                pass
         self.dataChanged.emit(index, index)
         return True
         
@@ -151,6 +171,42 @@ class ObjModel(QtGui.QStandardItemModel):
         idx = self.index(self.id2idx[id], self.statcol)
         self.dataChanged.emit(idx, idx)
 
+    def rowIsChanged(self, table, index):
+        (idx, f) = self.index2db(index)
+        try:
+            e = self.edits[idx]
+            return True
+        except:
+            return False
+
+    def setupContextMenus(self, table):
+        menu = utils.MyContextMenu()
+        menu.addAction("Create new object", self.create)
+        menu.addAction("Delete", self.delete)
+        menu.addAction("Commit this object", self.commitone, self.rowIsChanged)
+        menu.addAction("Commit all", self.commitall, lambda table, index: self.edits != {})
+        menu.addAction("Change configuration", self.chparent, lambda table, index: index.column() == self.cfgcol)
+        table.addContextMenu(menu)
+
+    def create(self, table, index):
+        pass
+
+    def delete(self, table, index):
+        pass
+
+    def commitone(self, table, index):
+        pass
+
+    def commitall(self, table, index):
+        pass
+
+    def chparent(self, table, index):
+        (idx, f) = self.index2db(index)
+        d = self.db.objs[index.row()]
+        if (param.params.cfgdialog.exec_("Select new configuration for %s" % d['name'], d['config']) ==
+            QtGui.QDialog.Accepted):
+            self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
+
     # Enabled:
     #     Everything.
     # Selectable:
@@ -172,7 +228,7 @@ class ObjModel(QtGui.QStandardItemModel):
                 if self.db.objflds[col-self.coff]['obj']:
                     flags = flags | QtCore.Qt.ItemIsEditable
         return flags
-        
+
     #
     # Drag/Drop stuff.
     #
