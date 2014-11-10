@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'cfgdialog.ui'
+# Form implementation generated from reading ui file 'colsave.ui'
 #
 # Created: Fri Nov  7 10:56:36 2014
 #      by: PyQt4 UI code generator 4.9.1
@@ -17,22 +17,20 @@ except AttributeError:
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName(_fromUtf8("Dialog"))
-        Dialog.resize(338, 437)
-        self.verticalLayout = QtGui.QVBoxLayout(Dialog)
-        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+        Dialog.resize(359, 81)
+        self.gridLayout = QtGui.QGridLayout(Dialog)
+        self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
         self.label = QtGui.QLabel(Dialog)
         self.label.setObjectName(_fromUtf8("label"))
-        self.verticalLayout.addWidget(self.label)
-        self.treeWidget = QtGui.QTreeWidget(Dialog)
-        self.treeWidget.setObjectName(_fromUtf8("treeWidget"))
-        self.treeWidget.headerItem().setText(0, _fromUtf8("1"))
-        self.treeWidget.header().setVisible(False)
-        self.verticalLayout.addWidget(self.treeWidget)
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        self.lineEdit = QtGui.QLineEdit(Dialog)
+        self.lineEdit.setObjectName(_fromUtf8("lineEdit"))
+        self.gridLayout.addWidget(self.lineEdit, 0, 1, 1, 1)
         self.buttonBox = QtGui.QDialogButtonBox(Dialog)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
-        self.verticalLayout.addWidget(self.buttonBox)
+        self.gridLayout.addWidget(self.buttonBox, 1, 0, 1, 2)
 
         self.retranslateUi(Dialog)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), Dialog.accept)
@@ -40,6 +38,6 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
-        self.label.setText(QtGui.QApplication.translate("Dialog", "Select configuration for XXXXX", None, QtGui.QApplication.UnicodeUTF8))
+        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Use Saved Column Configuration", None, QtGui.QApplication.UnicodeUTF8))
+        self.label.setText(QtGui.QApplication.translate("Dialog", "New Column Configuration Name:", None, QtGui.QApplication.UnicodeUTF8))
 

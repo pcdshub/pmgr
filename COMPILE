@@ -1,2 +1,5 @@
 pyuic4 -o pmgr_ui.py pmgr.ui
 pyuic4 -o cfgdialog_ui.py cfgdialog.ui
+pyuic4 -o coluse_ui.py coluse.ui
+pyuic4 -o colsave_ui.py colsave.ui
+pyuic4 -o colchoose_ui.py colchoose.ui

@@ -38,9 +38,13 @@ class MyContextMenu(QtGui.QMenu):
         if cond != None:
             self.havecond = True
         self.actions.append((name, action, cond))
+        QtGui.QMenu.addAction(self, name)
 
     def doMenu(self, table, pos, index):
-        gpos = table.viewport().mapToGlobal(pos)
+        if type(index) == int:
+            gpos = table.horizontalHeader().viewport().mapToGlobal(pos)
+        else:
+            gpos = table.viewport().mapToGlobal(pos)
         selectedItem = self.exec_(gpos)
         if selectedItem != None:
             txt = selectedItem.text()

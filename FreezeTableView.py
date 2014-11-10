@@ -49,11 +49,13 @@ class DropTableView(QtGui.QTableView):
         self.hidecols = cols
         self.debugname = name
         self.menus = []
+        self.hmenus = []
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
         self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.horizontalHeader().setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         # MCB - This doesn't work.  Probably because we aren't actually
         # tracking the selection, just clearing it when it isn't visible.
         # So just turn it off.
@@ -61,6 +63,9 @@ class DropTableView(QtGui.QTableView):
         
         self.connect(self, QtCore.SIGNAL("customContextMenuRequested(const QPoint&)"),
                      self.showContextMenu)
+        self.connect(self.horizontalHeader(),
+                     QtCore.SIGNAL("customContextMenuRequested(const QPoint&)"),
+                     self.showHeaderContextMenu)
 
     #
     # We're cheating here.  We are making a distinction between a drag (which
@@ -123,6 +128,9 @@ class DropTableView(QtGui.QTableView):
     def addContextMenu(self, menu):
         self.menus.append(menu)
 
+    def addHeaderContextMenu(self, menu):
+        self.hmenus.append(menu)
+
     #
     # Look through the list of context menus to find one that applies
     # at the current location.
@@ -130,6 +138,13 @@ class DropTableView(QtGui.QTableView):
     def showContextMenu(self, pos):
         index = self.indexAt(pos)
         for m in self.menus:
+            if m.isActive(self, index):
+                m.doMenu(self, pos, index)
+                return
+
+    def showHeaderContextMenu(self, pos):
+        index = self.horizontalHeader().logicalIndexAt(pos)
+        for m in self.hmenus:
             if m.isActive(self, index):
                 m.doMenu(self, pos, index)
                 return
@@ -260,6 +275,8 @@ class FreezeTableView(DropTableView):
         self.connect(fTV.selectionModel(),
                      QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
                      self.frozenSelectionChanged)
+
+        self.connect(self.horizontalHeader(), QtCore.SIGNAL("sectionMoved(int,int,int)"), self.fixColumnMove)
         self.didinit = True
 
     #
@@ -448,3 +465,22 @@ class FreezeTableView(DropTableView):
         self.cTV.addContextMenu(menu)
         self.rTV.addContextMenu(menu)
         self.fTV.addContextMenu(menu)
+
+    def fixColumnMove(self, logidx, oldvis, newvis):
+        self.rTV.horizontalHeader().moveSection(oldvis, newvis)
+        # If a frozen column tries to move, move it right back!
+        if newvis < self.fcols:
+            self.horizontalHeader().moveSection(newvis, oldvis)
+
+    def restoreHeaderState(self, data):
+        self.horizontalHeader().restoreState(data)
+        self.rTV.horizontalHeader().restoreState(data)
+        for col in range(self.fcols):
+            self.rTV.setColumnHidden(col, True)
+
+    def saveHeaderState(self):
+        return self.horizontalHeader().saveState()
+
+    def showColumn(self, c):
+        self.rTV.horizontalHeader().showSection(c)
+        DropTableView.showColumn(self, c)

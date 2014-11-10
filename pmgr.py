@@ -5,7 +5,7 @@ from psp.options import Options
 from pmgr_ui import Ui_MainWindow
 from ObjModel import ObjModel
 from CfgModel import CfgModel
-from cfgdialog import cfgdialog
+import dialogs
 import param
 import db
 import threading
@@ -27,23 +27,21 @@ class GraphicUserInterface(QtGui.QMainWindow):
 
         self.ui.objectTable.verticalHeader().hide()
         self.ui.objectTable.setCornerButtonEnabled(False)
+        self.ui.objectTable.horizontalHeader().setMovable(True)
 
         self.ui.configTable.verticalHeader().hide()
         self.ui.configTable.setCornerButtonEnabled(False)
+        self.ui.configTable.horizontalHeader().setMovable(True)
 
         self.db = db.db(self.hutch, self.table)
         self.initdone.connect(self.finishinit)
         self.db.start(self.initdone)
-        
-        settings = QtCore.QSettings("SLAC", "ParamMgr");
-        self.restoreGeometry(settings.value("%s/geometry" % self.table).toByteArray());
-        self.restoreState(settings.value("%s/windowState" % self.table).toByteArray());
 
     def finishinit(self):
         self.ui.menuView.addAction(self.ui.objectWidget.toggleViewAction())
         self.ui.objectWidget.setWindowTitle(self.table + " objects")
         self.objectmodel = ObjModel(self.db, self.ui)
-        self.ui.objectTable.init(self.objectmodel, 1, 2)
+        self.ui.objectTable.init(self.objectmodel, 0, 2)
         self.ui.objectTable.setShowGrid(True)
         self.ui.objectTable.resizeColumnsToContents()
         self.ui.objectTable.setSortingEnabled(True)
@@ -52,23 +50,45 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.ui.menuView.addAction(self.ui.configWidget.toggleViewAction())
         self.ui.configWidget.setWindowTitle(self.table + " configurations")
         self.configmodel = CfgModel(self.db, self.ui)
-        self.ui.configTable.init(self.configmodel, 1, 2)
+        self.ui.configTable.init(self.configmodel, 0, 2)
         self.ui.configTable.setShowGrid(True)
         self.ui.configTable.resizeColumnsToContents()
 
         self.objectmodel.setupContextMenus(self.ui.objectTable)
         self.configmodel.setupContextMenus(self.ui.configTable)
 
-        param.params.cfgdialog = cfgdialog(self.configmodel, self)
+        param.params.cfgdialog       = dialogs.cfgdialog(self.configmodel, self)
+        param.params.colsavedialog   = dialogs.colsavedialog(self)
+        param.params.colusedialog    = dialogs.colusedialog(self)
 
         self.db.objchange.connect(self.objectmodel.objchange)
         self.db.cfgchange.connect(self.objectmodel.cfgchange)
         self.db.cfgchange.connect(self.configmodel.cfgchange)
 
+        settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
+        settings.beginGroup(self.table)
+        self.restoreGeometry(settings.value("geometry").toByteArray())
+        self.restoreState(settings.value("windowState").toByteArray())
+        self.ui.configTable.restoreHeaderState(settings.value("cfgcol/default").toByteArray())
+        self.ui.objectTable.restoreHeaderState(settings.value("objcol/default").toByteArray())
+
+        self.ui.configTable.colmgr = "%s/cfgcol" % self.table
+        self.ui.objectTable.colmgr = "%s/objcol" % self.table
+
+        settings.beginGroup("cfgcol")
+        self.ui.configTable.savedcols = [str(x) for x in list(settings.childKeys())]
+        settings.endGroup()
+        settings.beginGroup("objcol")
+        self.ui.objectTable.savedcols = [str(x) for x in list(settings.childKeys())]
+        settings.endGroup()
+
     def closeEvent(self, event):
-        settings = QtCore.QSettings("SLAC", "ParamMgr");
-        settings.setValue("%s/geometry" % self.table, self.saveGeometry())
-        settings.setValue("%s/windowState" % self.table, self.saveState())
+        settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
+        settings.beginGroup(self.table)
+        settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("windowState", self.saveState())
+        settings.setValue("cfgcol/default", self.ui.configTable.saveHeaderState())
+        settings.setValue("objcol/default", self.ui.objectTable.saveHeaderState())
         QtGui.QMainWindow.closeEvent(self, event)
 
 if __name__ == '__main__':

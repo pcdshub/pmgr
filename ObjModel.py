@@ -1,6 +1,7 @@
 from PyQt4 import QtGui, QtCore
 import param
 import utils
+import colmgr
 
 class ObjModel(QtGui.QStandardItemModel):
     cname   = ["Status", "Name", "Config", "PV Base"]
@@ -9,6 +10,7 @@ class ObjModel(QtGui.QStandardItemModel):
     statcol = 0
     namecol = 1
     cfgcol  = 2
+    mutable = 2
     
     def __init__(self, db, ui):
         QtGui.QStandardItemModel.__init__(self)
@@ -187,6 +189,8 @@ class ObjModel(QtGui.QStandardItemModel):
         menu.addAction("Commit all", self.commitall, lambda table, index: self.edits != {})
         menu.addAction("Change configuration", self.chparent, lambda table, index: index.column() == self.cfgcol)
         table.addContextMenu(menu)
+
+        colmgr.addColumnManagerMenu(table)
 
     def create(self, table, index):
         pass
