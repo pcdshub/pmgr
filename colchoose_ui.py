@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'colchoose.ui'
 #
-# Created: Mon Nov 10 11:34:54 2014
+# Created: Mon Nov 10 16:37:08 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!

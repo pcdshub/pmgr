@@ -95,6 +95,7 @@ class db(QtCore.QObject):
         self.objs = None
         self.initsig = None
         self.pvdict = {}
+        self.nameedits = {}
         try:
             self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols');
             cur = self.con.cursor(mdb.cursors.DictCursor)
@@ -131,21 +132,15 @@ class db(QtCore.QObject):
             alias[f] = d['alias']
 
         self.objflds = []
-        self.fld2pv = {}
-        self.pv2fld = {}
         
         for (f, t) in locfld:
             n = fixName(f)
-            self.fld2pv[f] = n
-            self.pv2fld[n] = f
             if f in alias.keys():
                 self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'obj': True})
             else:
                 self.objflds.append({'fld': f, 'pv': n, 'alias' : createAlias(f), 'type': t, 'obj': True})
         for (f, t) in fld:
             n = fixName(f)
-            self.fld2pv[f] = n
-            self.pv2fld[n] = f
             if f in alias.keys():
                 self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'obj': False})
             else:
@@ -171,29 +166,27 @@ class db(QtCore.QObject):
         cur.execute("select * from %s%s" % (self.table, ext))
         return list(cur.fetchall())
 
-    def buildmaps(self, dlist):
-        d_id = {}
-        d_name = {}
-        for d in dlist:
-            d_id[d['id']] = d
-            d_name[d['name']] = d
-        return (d_id, d_name)
-
     def readTable(self, mask):
         cur = self.con.cursor(mdb.cursors.DictCursor)
         if (mask & 1) != 0:
             self.cfgs = self.readDB(False, cur)
-            (self.id2cfg, self.cfg2id) = self.buildmaps(self.cfgs)
+            d_name = {}
+            d_cfg = {}
+            for d in self.cfgs:
+                d_name[d['id']] = d['name']
+                d_cfg[d['id']] = d
+            d_name.update(self.nameedits)
+            self.id2name = d_name
+            self.id2cfg  = d_cfg
             for d in self.cfgs:
                 d['status'] = ""
                 r = d['link']
                 if r == None:
                     d['linkname'] = ""
                 else:
-                    d['linkname'] = self.id2cfg[r]['name']
+                    d['linkname'] = self.id2name[r]
         if (mask & 2) != 0:
             self.objs = self.readDB(True, cur)
-            (self.id2obj, self.obj2id) = self.buildmaps(self.objs)
             for o in self.objs:
                 o['status'] = ""
                 d = {}
@@ -213,25 +206,10 @@ class db(QtCore.QObject):
             self.initsig.emit()
             self.initsig = None;
 
-    def getCfg(self, idx):
-        d = self.id2cfg[idx]
-        if not 'vfld' in d.keys():
-            vfld = []
-            if d['link'] != None:
-                vals = self.getCfg(d['link'])
-            for (k, v) in d.items():
-                if k[:3] != 'PV_' and k[:4] != 'FLD_':
-                    continue
-                if v == None:
-                    d[k] = vals[k]
-                    vfld.append(k)
-            d['vfld'] = vfld
-        return d
-
     def connectAllPVs(self):
         newpvdict = {}
         for d in self.objs:
-            d['linkname'] = self.id2cfg[d['config']]['name']
+            d['linkname'] = self.id2name[d['config']]
             base = d['rec_base']
             d['connstat'] = self.objfldcnt*[False]
             for ofld in self.objflds:

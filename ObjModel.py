@@ -92,7 +92,7 @@ class ObjModel(QtGui.QStandardItemModel):
         # change *both*!
         if f == 'linkname':
             vlink = v
-            v = self.db.id2cfg[vlink]['name']
+            v = self.db.id2name[vlink]
         try:
             del d[f]
             if f == 'linkname':
@@ -142,7 +142,6 @@ class ObjModel(QtGui.QStandardItemModel):
                 self.db.objs.reverse()
             self.makeidx()
             self.emit(QtCore.SIGNAL("layoutChanged()"))
-            self.ui.objectTable.resizeColumnsToContents()
 
     def makeidx(self):
         d = {}
@@ -159,7 +158,6 @@ class ObjModel(QtGui.QStandardItemModel):
         # This is really a sledgehammer.  Maybe we should check what really needs changing?
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
         self.emit(QtCore.SIGNAL("layoutChanged()"))
-        self.ui.objectTable.resizeColumnsToContents()
 
     def pvchange(self, id, fldidx):
         if self.id2idx == None:
@@ -172,6 +170,19 @@ class ObjModel(QtGui.QStandardItemModel):
             self.makeidx()
         idx = self.index(self.id2idx[id], self.statcol)
         self.dataChanged.emit(idx, idx)
+
+    def haveNewName(self, idx, name):
+        for i in range(len(self.db.objs)):
+            try:
+                if self.edits[i]['config'] == idx:
+                    self.edits[i]['linkname'] = str(name)
+                    index = self.index(i, self.cfgcol)
+                    self.dataChanged.emit(index, index)
+            except:
+                if self.db.objs[i]['config'] == idx:
+                    self.db.objs[i]['linkname'] = str(name)
+                    index = self.index(i, self.cfgcol)
+                    self.dataChanged.emit(index, index)
 
     def rowIsChanged(self, table, index):
         (idx, f) = self.index2db(index)

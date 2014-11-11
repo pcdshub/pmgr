@@ -474,9 +474,15 @@ class FreezeTableView(DropTableView):
 
     def restoreHeaderState(self, data):
         self.horizontalHeader().restoreState(data)
+        self.fTV.horizontalHeader().restoreState(data)
         self.rTV.horizontalHeader().restoreState(data)
-        for col in range(self.fcols):
-            self.rTV.setColumnHidden(col, True)
+        self.cTV.horizontalHeader().restoreState(data)
+        for col in range(self.model().columnCount()):
+            if col >= self.fcols:
+                self.fTV.setColumnHidden(col, True)
+                self.cTV.setColumnHidden(col, True)
+            else:
+                self.rTV.setColumnHidden(col, True)
 
     def saveHeaderState(self):
         return self.horizontalHeader().saveState()
@@ -484,3 +490,7 @@ class FreezeTableView(DropTableView):
     def showColumn(self, c):
         self.rTV.horizontalHeader().showSection(c)
         DropTableView.showColumn(self, c)
+
+    def resizeColumnsToContents(self):
+        DropTableView.resizeColumnsToContents(self)
+        self.restoreHeaderState(self.saveHeaderState())

@@ -15,6 +15,7 @@ class cfgdialog(QtGui.QDialog):
         t = self.model.setupTree(self.ui.treeWidget, "ditem")
         if idx != None:
             self.ui.treeWidget.setCurrentItem(t[idx]['ditem'])
+            self.ui.treeWidget.expandItem(t[idx]['ditem'])
         code = QtGui.QDialog.exec_(self)
         if code == QtGui.QDialog.Accepted:
             try:

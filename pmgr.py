@@ -65,6 +65,9 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.db.cfgchange.connect(self.objectmodel.cfgchange)
         self.db.cfgchange.connect(self.configmodel.cfgchange)
 
+        self.configmodel.newname.connect(self.configmodel.haveNewName)
+        self.configmodel.newname.connect(self.objectmodel.haveNewName)
+
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
         settings.beginGroup(self.table)
         self.restoreGeometry(settings.value("geometry").toByteArray())

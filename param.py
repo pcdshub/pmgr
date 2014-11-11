@@ -17,6 +17,7 @@ class param_structure(object):
         self.blue   = QtGui.QColor(QtCore.Qt.blue)
         self.red    = QtGui.QColor(QtCore.Qt.red)
         self.black  = QtGui.QColor(QtCore.Qt.black)
+        self.purple = QtGui.QColor(204, 0, 102)
         self.cfgdialog       = None
         self.colusedialog    = None
         self.colsavedialog   = None

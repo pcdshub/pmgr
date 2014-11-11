@@ -18,6 +18,7 @@ def addColumnManagerMenu(table):
     menu = utils.MyContextMenu()
     menu.addAction("Hide column",        hidecol)
     menu.addAction("Reset columns",      resetcol)
+    menu.addAction("Autosize columns",   sizecol)
     menu.addAction("Run column chooser", choosecol)
     menu.addAction("Save column config", savecol)
     menu.addAction("Use column config",  restorecol)
@@ -34,6 +35,9 @@ def resetcol(table, index):
     for i in range(table.model().columnCount()):
         if h.visualIndex(i) != i:
             h.moveSection(h.visualIndex(i), i)
+
+def sizecol(table, index):
+    table.resizeColumnsToContents()
 
 def choosecol(table, index):
     m = table.model()
