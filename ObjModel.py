@@ -214,7 +214,8 @@ class ObjModel(QtGui.QStandardItemModel):
         menu.addAction("Delete this object", self.delete)
         menu.addAction("Commit this object", self.commitone, self.rowIsChanged)
         menu.addAction("Commit all", self.commitall, lambda table, index: self.edits != {})
-        menu.addAction("Commit this object", self.commitone, self.rowIsChanged)
+        menu.addAction("Apply and Commit this object", self.applyone, self.rowIsChanged)
+        menu.addAction("Apply and Commit all", self.commitone, lambda table, index: self.edits != {})
         menu.addAction("Change configuration", self.chparent, lambda table, index: index.column() == self.cfgcol)
         table.addContextMenu(menu)
 
@@ -230,6 +231,12 @@ class ObjModel(QtGui.QStandardItemModel):
         pass
 
     def commitall(self, table, index):
+        pass
+
+    def applyone(self, table, index):
+        pass
+
+    def applyall(self, table, index):
         pass
 
     def chparent(self, table, index):

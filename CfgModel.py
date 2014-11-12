@@ -215,7 +215,7 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def seteditval(self, idx, f, v):
         if idx < 0:
-            self.id2cfg[idx]['_val'][f] = v
+            self.id2cfg[idx][f] = v
             return
         else:
             if v == None:
@@ -425,16 +425,33 @@ class CfgModel(QtGui.QStandardItemModel):
         now = datetime.datetime.now()
         d = {'status': "N", 'name': "NewConfig%d" % id, 'link': parent, 'linkname': self.db.id2name[parent],
              'id': id, 'owner': None, 'security': None, 'dt_created': now, 'dt_updated': now}
-        if sibling != None:
+        if sibling == None:
+            vals = self.getCfg(parent)
+        else:
             vals = self.getCfg(sibling)
+        color = {}
+        haveval = {}
         for f in self.db.cfgflds:
             fld = f['fld']
+            d[fld] = vals[fld]
             if sibling == None:
-                d[fld] = None
-            elif useval or vals['_val'][fld]:
-                d[fld] = vals[fld]
+                color[fld] = param.params.blue
+                haveval[fld] = False
+            elif useval:
+                color[fld] = param.params.black
+                haveval[fld] = True
             else:
-                d[fld] = None
+                v = vals['_val'][fld]
+                haveval[fld] = v
+                if v:
+                    color[fld] = param.params.black
+                else:
+                    color[fld] = vals['_color'][fld]
+        for fld in self.cfld:
+            color[fld] = param.params.black
+        d['_color'] = color
+        d['_val'] = haveval
+        self.editval[id] = {}
         self.db.id2name[id] = d['name']
         self.id2cfg[id] = d
         self.buildtree()
