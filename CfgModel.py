@@ -3,16 +3,19 @@ import param
 import utils
 import colmgr
 import sys
+import datetime
 
 class CfgModel(QtGui.QStandardItemModel):
     newname = QtCore.pyqtSignal(int, QtCore.QString)
+    cfgChanged = QtCore.pyqtSignal(int, QtCore.QString)
+    
     cname   = ["Status", "Name", "Parent"]
     cfld    = ["status", "name", "linkname"]
     coff    = len(cname)
     statcol = 0
     namecol = 1
     cfgcol  = 2
-    mutable = 2
+    mutable = 2   # The first non-frozen column
     
     def __init__(self, db, ui):
         QtGui.QStandardItemModel.__init__(self)
@@ -22,6 +25,7 @@ class CfgModel(QtGui.QStandardItemModel):
         self.path = []
         self.children = []
         self.edits = {}
+        self.editval = {}
         self.id2cfg = {}
         self.nextid = -1
         self.connect(ui.treeWidget, QtCore.SIGNAL("currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)"),
@@ -31,10 +35,11 @@ class CfgModel(QtGui.QStandardItemModel):
         self.connect(ui.treeWidget, QtCore.SIGNAL("itemExpanded(QTreeWidgetItem *)"),
                      self.treeExpand)
         # Setup headers
-        self.setColumnCount(2 + self.db.cfgfldcnt)
+        self.colcnt = self.db.cfgfldcnt + self.coff
+        self.setColumnCount(self.colcnt)
         font = QtGui.QFont()
         font.setBold(True)
-        for c in range(self.db.cfgfldcnt + 2):
+        for c in range(self.colcnt):
             if c < self.coff:
                 self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.cname[c]))
             else:
@@ -51,13 +56,35 @@ class CfgModel(QtGui.QStandardItemModel):
                            QtCore.Qt.ToolTipRole)
 
     def cfgchange(self):
-        print "CfgModel has change!"
+        print "CfgModel has changed!"
         self.buildtree()
         try:
             self.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
         except:
             self.setCurIdx(0)
 
+    def setModifiedStatus(self, index, idx, d):
+        try:
+            v = d['status'].index("M")
+            wasmod = True
+        except:
+            wasmod = False
+        mod = False
+        if self.editval[idx] != {}:
+            mod = True
+        try:
+            if self.edits[idx] != {}:
+                mod = True
+        except:
+            pass
+        if mod != wasmod:
+            if mod:
+                d['status'] = "".join(sorted("M" + d['status']))
+            else:
+                d['status'] = d['status'].replace("M", "")
+            statidx = self.index(index.row(), self.statcol)
+            self.dataChanged.emit(statidx, statidx)
+    
     def haveNewName(self, idx, name):
         for r in range(len(self.path) + len(self.children)):
             if r < len(self.path):
@@ -82,9 +109,15 @@ class CfgModel(QtGui.QStandardItemModel):
     def buildtree(self):
         t = {}
         for d in self.db.cfgs:
-            t[d['id']] = {'name': d['name'], 'link': d['link'], 'children' : []}
+            idx = d['id']
+            t[idx] = {'name': d['name'], 'link': d['link'], 'children' : []}
+            try:
+                t[idx]['link'] = self.edits[idx]['link']
+            except:
+                pass
         for d in self.id2cfg.values():
-            t[d['id']] = {'name': d['name'], 'link': d['link'], 'children' : []}
+            idx = d['id']
+            t[idx] = {'name': d['name'], 'link': d['link'], 'children' : []}
         r = []
         for (k, v) in t.items():
             l = v['link']
@@ -151,14 +184,12 @@ class CfgModel(QtGui.QStandardItemModel):
         if not '_color' in d.keys():
             color = {}
             haveval = {}
-            editval = {}
             if d['link'] != None:
                 vals = self.getCfg(d['link'])
                 pcolor = vals['_color']
             for (k, v) in d.items():
                 if k[:3] != 'PV_' and k[:4] != 'FLD_' and not k in self.cfld:
                     continue
-                editval[k] = None
                 if v == None:
                     haveval[k] = False
                     d[k] = vals[k]
@@ -173,8 +204,30 @@ class CfgModel(QtGui.QStandardItemModel):
                     color[k] = param.params.red
             d['_color'] = color
             d['_val'] = haveval
-            d['_editval'] = editval
+            self.editval[idx] = {}
         return d
+
+    def geteditval(self, idx, f):
+        try:
+            return self.editval[idx][f]
+        except:
+            return None
+
+    def seteditval(self, idx, f, v):
+        if idx < 0:
+            self.id2cfg[idx]['_val'][f] = v
+            return
+        else:
+            if v == None:
+                try:
+                    del self.editval[idx][f]
+                except:
+                    pass
+            else:
+                try:
+                    self.editval[idx][f] = v
+                except:
+                    self.editval[idx] = {f: v}
 
     def data(self, index, role = QtCore.Qt.DisplayRole):
         if (role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and
@@ -212,7 +265,6 @@ class CfgModel(QtGui.QStandardItemModel):
             e = self.edits[idx]
         except:
             e = {}
-        hadedit = (e != {})
         # OK, the link/linkname thing is slightly weird.  The field name for our index is
         # 'linkname', but we are passing an int that should go to 'link'.  So we need to
         # change *both*!
@@ -234,36 +286,31 @@ class CfgModel(QtGui.QStandardItemModel):
             e[f] = v
             if f == 'linkname':
                 e['link'] = vlink
-            if not hadedit:
-                # If we didn't have any changes before, we do now!
-                d['status'] = "".join(sorted("M" + d['status']))
-                statidx = self.index(index.row(), self.statcol)
-                self.dataChanged.emit(statidx, statidx)
         else:
             chg = False
             # No change?
-            if hadedit and e == {}:
-                # If we deleted our last change, we're not modified any more!
-                d['status'] = d['status'].replace("M", "")
-                statidx = self.index(index.row(), self.statcol)
-                self.dataChanged.emit(statidx, statidx)
         # Save the edits for this id!
         if e != {}:
-            self.edits[idx] = e
+            if idx < 0:
+                self.id2cfg[idx].update(e)
+            else:
+                self.edits[idx] = e
         else:
             try:
                 del self.edits[idx]
             except:
                 pass
+        self.setModifiedStatus(index, idx, d)
         # Set our color.
-        if chg:
+        if chg and idx >= 0:
+            # Only mark changes to *existing* configurations in red!
+            d['_color'][f] = param.params.red
+            chcolor = param.params.purple
+        elif self.geteditval(idx, f) != None:
             d['_color'][f] = param.params.red
             chcolor = param.params.purple
         else:
-            haveval = d['_editval'][f]
-            if haveval == None:
-                haveval = d['_val'][f]
-            if haveval:
+            if d['_val'][f]:
                 d['_color'][f] = param.params.black
                 chcolor = param.params.blue
             else:
@@ -276,11 +323,12 @@ class CfgModel(QtGui.QStandardItemModel):
                     d['_color'][f] = param.params.purple
                     chcolor = param.params.purple
         self.dataChanged.emit(index, index)
-        # If we changed the name, let everyone know!
         if index.column() == self.namecol:
             self.db.nameedits[idx] = v
             self.db.id2name[idx] = v
             self.newname.emit(idx, v)
+        else:
+            self.cfgChanged.emit(idx, f)
         # Now, fix up the children that inherit from us!
         self.fixChildren(idx, f, index.column(), v, chcolor)
         return True
@@ -288,14 +336,22 @@ class CfgModel(QtGui.QStandardItemModel):
     def fixChildren(self, idx, f, column, v, chcolor):
         for c in self.tree[idx]['children']:
             cd = self.getCfg(c)
-            haveval = cd['_editval'][f]
+            haveval = self.geteditval(c, f)
             if haveval == None:
                 haveval = cd['_val'][f]
             if haveval:
                 continue                  # This child has a value, so he's OK!
             if not param.equal(v, cd[f]):
                 cd[f] = v
-                cd['_color'][f] = chcolor
+                if idx < 0 and c >= 0:
+                    # If we inherit from a *new* config, we are purple!
+                    cd['_color'][f] = param.params.purple
+                elif idx < 0 and chcolor == param.params.purple:
+                    # On the other hand, if we *are* a new config, we can't be purple!
+                    cd['_color'][f] = param.params.blue
+                else:
+                    cd['_color'][f] = chcolor
+                self.cfgChanged.emit(c, f)
                 if c in self.path:
                     r = self.path.index(c)
                     index = self.index(r, column)
@@ -304,7 +360,7 @@ class CfgModel(QtGui.QStandardItemModel):
                     r = self.children.index(c) + len(self.path)
                     index = self.index(r, column)
                     self.dataChanged.emit(index, index)
-                self.fixChildren(c, f, column, v, chcolor)
+                self.fixChildren(c, f, column, v, cd['_color'][f])
         
     def setCurIdx(self, idx):
         self.curidx = idx
@@ -340,17 +396,21 @@ class CfgModel(QtGui.QStandardItemModel):
         except:
             return False
 
-    def hasValue(self, table, index):
+    def hasValue(self, v, table, index):
         (idx, f) = self.index2db(index)
-        return self.getCfg(idx)['_val'][f]
+        d = self.getCfg(idx)
+        ev = self.geteditval(idx, f)
+        if ev != None:
+            return ev == v
+        return d['_val'][f] == v
 
     def setupContextMenus(self, table):
         menu = utils.MyContextMenu()
-        menu.addAction("Create new child", self.create)
+        menu.addAction("Create new child", self.createnew)
         menu.addAction("Clone existing", self.clone)
         menu.addAction("Clone values", self.clonevals)
-        menu.addAction("Delete value", self.deleteval, self.hasValue)
-        menu.addAction("Create value", self.createval, lambda t, i: not self.hasValue(t, i))
+        menu.addAction("Delete value", self.deleteval, lambda t, i: self.hasValue(True, t, i))
+        menu.addAction("Create value", self.createval, lambda t, i: self.hasValue(False, t, i))
         menu.addAction("Delete config", self.deletecfg)
         menu.addAction("Commit this config", self.commitone, self.rowIsChanged)
         menu.addAction("Commit all", self.commitall, lambda table, index: self.edits != {})
@@ -359,28 +419,89 @@ class CfgModel(QtGui.QStandardItemModel):
 
         colmgr.addColumnManagerMenu(table)
 
-    def create(self, table, index):
+    def create_child(self, parent, sibling=None, useval=False):
+        id = self.nextid;
+        self.nextid -= 1
+        now = datetime.datetime.now()
+        d = {'status': "N", 'name': "NewConfig%d" % id, 'link': parent, 'linkname': self.db.id2name[parent],
+             'id': id, 'owner': None, 'security': None, 'dt_created': now, 'dt_updated': now}
+        if sibling != None:
+            vals = self.getCfg(sibling)
+        for f in self.db.cfgflds:
+            fld = f['fld']
+            if sibling == None:
+                d[fld] = None
+            elif useval or vals['_val'][fld]:
+                d[fld] = vals[fld]
+            else:
+                d[fld] = None
+        self.db.id2name[id] = d['name']
+        self.id2cfg[id] = d
+        self.buildtree()
+        self.setCurIdx(id)
+        return id
+
+    def createnew(self, table, index):
         (idx, f) = self.index2db(index)
-        print "Create child of %s (%d)" % (self.db.id2name[idx], idx)
-        pass
-
-    def deletecfg(self, table, index):
-        pass
-
-    def deleteval(self, table, index):
-        pass
-
-    def createval(self, table, index):
-        pass
+        id = self.create_child(idx)
 
     def clone(self, table, index):
         (idx, f) = self.index2db(index)
-        print "Create sibling of %s (%d)" % (self.db.id2name[idx], idx)
-        l = self.getCfg(idx)['link']
-        print "New parent is %s (%d)" % (self.db.id2name[l], l)
+        parent = self.getCfg(idx)['link']
+        id = self.create_child(parent, idx)
 
     def clonevals(self, table, index):
-        pass
+        (idx, f) = self.index2db(index)
+        parent = self.getCfg(idx)['link']
+        id = self.create_child(parent, idx, True)
+
+    def deleteval(self, table, index):
+        (idx, f) = self.index2db(index)
+        d = self.getCfg(idx)
+        pidx = d['link']
+        if pidx != None:                     # Can't delete a value from a root class!
+            p = self.getCfg(pidx)
+            if self.geteditval(idx, f) == None:
+                self.seteditval(idx, f, False)
+            else:
+                self.seteditval(idx, f, None)
+            self.setModifiedStatus(index, idx, d)
+            if idx < 0:
+                d['_color'][f] = param.params.blue
+            elif self.geteditval(idx, f) != None:
+                d['_color'][f] = param.params.red
+            else:
+                try:
+                    v = self.edits[idx][f]
+                    d['_color'][f] = param.params.red
+                except:
+                    pcolor = p['_color'][f]
+                    if pcolor == param.params.red or pcolor == param.params.purple:
+                        d['_color'][f] = param.params.purple
+                    else:
+                        d['_color'][f] = param.params.blue
+            d[f] = p[f]
+        self.dataChanged.emit(index, index)
+
+    def createval(self, table, index):
+        (idx, f) = self.index2db(index)
+        d = self.getCfg(idx)
+        if self.geteditval(idx, f) == None:
+            self.seteditval(idx, f, True)
+        else:
+            self.seteditval(idx, f, None)
+        self.setModifiedStatus(index, idx, d)
+        if idx < 0:
+            d['_color'][f] = param.params.black
+        elif self.geteditval(idx, f) != None:
+            d['_color'][f] = param.params.red
+        else:
+            try:
+                v = self.edits[idx][f]
+                d['_color'][f] = param.params.red
+            except:
+                d['_color'][f] = param.params.black
+        self.dataChanged.emit(index, index)
 
     def commitone(self, table, index):
         pass
@@ -388,12 +509,47 @@ class CfgModel(QtGui.QStandardItemModel):
     def commitall(self, table, index):
         pass
 
+    def deletecfg(self, table, index):
+        pass
+
     def chparent(self, table, index):
         (idx, f) = self.index2db(index)
         d = self.getCfg(idx)
+        if d['link'] == None:
+            QtGui.QMessageBox.critical(None,
+                                 "Error", "Cannot change parent of root class!",
+                                 QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            return
         if (param.params.cfgdialog.exec_("Select new parent for %s" % d['name'], d['link']) ==
             QtGui.QDialog.Accepted):
+            (idx, f) = self.index2db(index)
+            p = param.params.cfgdialog.result
+            while p != None:
+                p = self.getCfg(p)['link']
+                if p == idx:
+                    QtGui.QMessageBox.critical(None,
+                                               "Error", "Configuration change is circular!",
+                                               QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                    return
             self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
+            p = self.getCfg(param.params.cfgdialog.result)
+            pcolor = p['_color']
+            d = self.getCfg(idx)
+            color = d['_color']
+            for (k, v) in d['_val'].items():
+                if v == False:
+                    d[k] = p[k]
+                    try:
+                        vv = self.edits[idx][k]
+                        color[k] = param.params.red
+                    except:
+                        if pcolor[k] == param.params.red or pcolor[k] == param.params.purple:
+                            color[k] = param.params.purple
+                        else:
+                            color[k] = param.params.blue
+            self.buildtree()
+            self.setCurIdx(idx)
+
 
     # Enabled:
     #     Everything.

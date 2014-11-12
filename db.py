@@ -189,11 +189,6 @@ class db(QtCore.QObject):
             self.objs = self.readDB(True, cur)
             for o in self.objs:
                 o['status'] = ""
-                d = {}
-                for f in self.objflds:
-                    if f['obj']:
-                        d[f['fld']] = o[f['fld']]
-                o['origcfg'] = d
             if self.initsig == None:
                 self.connectAllPVs()
         self.con.commit()

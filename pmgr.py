@@ -38,21 +38,21 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.db.start(self.initdone)
 
     def finishinit(self):
-        self.ui.menuView.addAction(self.ui.objectWidget.toggleViewAction())
-        self.ui.objectWidget.setWindowTitle(self.table + " objects")
-        self.objectmodel = ObjModel(self.db, self.ui)
-        self.ui.objectTable.init(self.objectmodel, 0, 2)
-        self.ui.objectTable.setShowGrid(True)
-        self.ui.objectTable.resizeColumnsToContents()
-        self.ui.objectTable.setSortingEnabled(True)
-        self.ui.objectTable.sortByColumn(self.objectmodel.namecol, QtCore.Qt.AscendingOrder)
-
         self.ui.menuView.addAction(self.ui.configWidget.toggleViewAction())
         self.ui.configWidget.setWindowTitle(self.table + " configurations")
         self.configmodel = CfgModel(self.db, self.ui)
         self.ui.configTable.init(self.configmodel, 0, 2)
         self.ui.configTable.setShowGrid(True)
         self.ui.configTable.resizeColumnsToContents()
+
+        self.ui.menuView.addAction(self.ui.objectWidget.toggleViewAction())
+        self.ui.objectWidget.setWindowTitle(self.table + " objects")
+        self.objectmodel = ObjModel(self.db, self.ui, self.configmodel)
+        self.ui.objectTable.init(self.objectmodel, 0, 2)
+        self.ui.objectTable.setShowGrid(True)
+        self.ui.objectTable.resizeColumnsToContents()
+        self.ui.objectTable.setSortingEnabled(True)
+        self.ui.objectTable.sortByColumn(self.objectmodel.namecol, QtCore.Qt.AscendingOrder)
 
         self.objectmodel.setupContextMenus(self.ui.objectTable)
         self.configmodel.setupContextMenus(self.ui.configTable)
@@ -67,6 +67,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
 
         self.configmodel.newname.connect(self.configmodel.haveNewName)
         self.configmodel.newname.connect(self.objectmodel.haveNewName)
+        self.configmodel.cfgChanged.connect(self.objectmodel.cfgEdit)
 
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
         settings.beginGroup(self.table)

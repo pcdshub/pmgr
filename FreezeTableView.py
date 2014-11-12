@@ -494,3 +494,13 @@ class FreezeTableView(DropTableView):
     def resizeColumnsToContents(self):
         DropTableView.resizeColumnsToContents(self)
         self.restoreHeaderState(self.saveHeaderState())
+        #
+        # Sigh.  This is a hack to avoid a problem I don't understand.
+        #
+        # Initially, when you click one of the frozen columns, they resize for some reason,
+        # but the underlying table does not.  However, once you resize them at all, they
+        # track just fine.
+        #
+        # So the hack is we force a resize, which lets the sizes start to track each other.
+        #
+        self.horizontalHeader().resizeSection(0, self.horizontalHeader().sectionSize(0) + 1)
