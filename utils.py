@@ -152,3 +152,8 @@ def monitorPv(name,handler):
         return pv
     except:
         return None
+
+def fixName(l, idx, name):
+    for d in l:
+        if d['config'] == idx:
+            d['cfgname'] = name

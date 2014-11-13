@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pmgr.ui'
 #
-# Created: Mon Nov 10 16:37:22 2014
+# Created: Thu Nov 13 13:08:26 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -22,6 +22,12 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
+        self.saveButton = QtGui.QPushButton(self.centralwidget)
+        self.saveButton.setObjectName(_fromUtf8("saveButton"))
+        self.gridLayout.addWidget(self.saveButton, 0, 0, 1, 1)
+        self.applyButton = QtGui.QPushButton(self.centralwidget)
+        self.applyButton.setObjectName(_fromUtf8("applyButton"))
+        self.gridLayout.addWidget(self.applyButton, 0, 1, 1, 1)
         self.treeWidget = QtGui.QTreeWidget(self.centralwidget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -33,10 +39,10 @@ class Ui_MainWindow(object):
         self.treeWidget.headerItem().setText(0, _fromUtf8("1"))
         self.treeWidget.header().setVisible(False)
         self.treeWidget.header().setStretchLastSection(True)
-        self.gridLayout.addWidget(self.treeWidget, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.treeWidget, 1, 0, 1, 2)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 880, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 880, 22))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -84,6 +90,8 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtGui.QApplication.translate("MainWindow", "MainWindow", None, QtGui.QApplication.UnicodeUTF8))
+        self.saveButton.setText(QtGui.QApplication.translate("MainWindow", "Save All", None, QtGui.QApplication.UnicodeUTF8))
+        self.applyButton.setText(QtGui.QApplication.translate("MainWindow", "Apply All", None, QtGui.QApplication.UnicodeUTF8))
         self.treeWidget.setToolTip(QtGui.QApplication.translate("MainWindow", "Click to select a configuration to display in the Configurations window. \n"
 "All ancestors and all children of the selected configuration will be displayed.", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("MainWindow", "File", None, QtGui.QApplication.UnicodeUTF8))

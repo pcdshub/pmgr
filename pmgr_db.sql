@@ -11,7 +11,7 @@ create table ims_motor_cfg (
 	-- boilerplate --
 	id int auto_increment,
 	name varchar(15) not null unique, -- name or serial number --
-	link int,                         -- recursive fk (parent) --
+	config int,                       -- recursive fk (parent) --
         security varchar(30),             -- is this modifyable? --
 	owner varchar(10),
 	dt_updated datetime not null,
@@ -72,7 +72,7 @@ create table ims_motor_cfg (
 
 	-- constraints --
 	primary key (id),
-	index (link)
+	index (config)
 );
 
 create table ims_motor (
@@ -125,7 +125,7 @@ begin
     set @id = inputNo;
     insert into _ancestors values(@id, 0);
     repeat
-      set @sql = concat("select link, count(*) into @parent,@y from ", tableName, " where id=@id");
+      set @sql = concat("select config, count(*) into @parent,@y from ", tableName, " where id=@id");
       prepare stmt from @sql;
       execute stmt;
       if @y>0 then

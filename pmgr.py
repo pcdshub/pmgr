@@ -76,15 +76,17 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.ui.configTable.restoreHeaderState(settings.value("cfgcol/default").toByteArray())
         self.ui.objectTable.restoreHeaderState(settings.value("objcol/default").toByteArray())
 
+        # MCB - Sigh.  I don't know why this is needed, but it is.
+        h = self.ui.configTable.horizontalHeader()
+        h.resizeSection(1, h.sectionSize(1) + 1)
+        h = self.ui.objectTable.horizontalHeader()
+        h.resizeSection(1, h.sectionSize(1) + 1)
+
         self.ui.configTable.colmgr = "%s/cfgcol" % self.table
         self.ui.objectTable.colmgr = "%s/objcol" % self.table
 
-        settings.beginGroup("cfgcol")
-        self.ui.configTable.savedcols = [str(x) for x in list(settings.childKeys())]
-        settings.endGroup()
-        settings.beginGroup("objcol")
-        self.ui.objectTable.savedcols = [str(x) for x in list(settings.childKeys())]
-        settings.endGroup()
+        self.connect(self.ui.saveButton, QtCore.SIGNAL("clicked()"), self.objectmodel.commitall)
+        self.connect(self.ui.applyButton, QtCore.SIGNAL("clicked()"), self.objectmodel.applyall)
 
     def closeEvent(self, event):
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])

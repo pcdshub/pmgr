@@ -6,6 +6,21 @@ import time
 import re
 import utils
 
+#
+# db is our main db class.  It uses a dbPoll to check for updates, and will
+# read and notify the model classes when they are received.
+#
+# The Exported fields/methods are:
+#     cfgfldcnt, cfgflds   - The count and a dictionary of configuration field information.
+#     objfldcnt, objflds   - The count and a dictionary of object field information (a superset of
+#                            configuration field information).
+#     fldmap               - A field name to information dictionary mapping.
+#     cfgs                 - The configurations, indexed by ID.
+#     objs                 - The objects, indexed by ID.
+#     getCfgName(id)       - Fetch the (possibly edited) configuration name.
+#     setCfgName(id, name) - Set the configuration name, but do not commit it.
+#
+
 # Map MySQL types to python types in a quick and dirty manner.
 def m2pType(name):
     if name[:7] == 'varchar' or name[:8] == 'datetime':
@@ -36,6 +51,9 @@ def createAlias(name):
         return name
 
 class dbPoll(threading.Thread):
+    CONFIG = 1
+    OBJECT = 2
+    
     def __init__(self, sig, interval, hutch):
         super(dbPoll, self).__init__()
         try:
@@ -69,11 +87,11 @@ class dbPoll(threading.Thread):
                 if d['tbl_name'] == 'config':
                     if d['dt_updated'] != lastcfg:
                         lastcfg = d['dt_updated']
-                        v = v | 1
+                        v = v | self.CONFIG
                 else:
                     if d['dt_updated'] != lastobj:
                         lastobj = d['dt_updated']
-                        v = v | 2
+                        v = v | self.OBJECT
             if first:
                 first = False
                 v = 3
@@ -94,7 +112,6 @@ class db(QtCore.QObject):
         self.cfgs = None
         self.objs = None
         self.initsig = None
-        self.pvdict = {}
         self.nameedits = {}
         try:
             self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols');
@@ -166,84 +183,52 @@ class db(QtCore.QObject):
         cur.execute("select * from %s%s" % (self.table, ext))
         return list(cur.fetchall())
 
+    def getCfgName(self, id):
+        try:
+            return self.nameedits[id]
+        except:
+            return self.cfgs[id]['name']
+
+    def setCfgName(self, id, name):
+        if self.cfgs[id]['name'] == name:
+            del self.cfgs[id]['name']
+        else:
+            self.nameedits[id] = name
+
+    def setObjNames(self):
+        for o in self.objs.values():
+            o['cfgname'] = self.getCfgName(o['config'])
+
     def readTable(self, mask):
         cur = self.con.cursor(mdb.cursors.DictCursor)
-        if (mask & 1) != 0:
-            self.cfgs = self.readDB(False, cur)
-            d_name = {}
-            d_cfg = {}
-            for d in self.cfgs:
-                d_name[d['id']] = d['name']
-                d_cfg[d['id']] = d
-            d_name.update(self.nameedits)
-            self.id2name = d_name
-            self.id2cfg  = d_cfg
-            for d in self.cfgs:
+        if (mask & dbPoll.CONFIG) != 0:
+            cfgs = self.readDB(False, cur)
+            cfgmap = {}
+            for d in cfgs:
+                cfgmap[d['id']] = d
                 d['status'] = ""
-                r = d['link']
+            self.cfgs = cfgmap
+            for d in cfgs:
+                r = d['config']
                 if r == None:
-                    d['linkname'] = ""
+                    d['cfgname'] = ""
                 else:
-                    d['linkname'] = self.id2name[r]
-        if (mask & 2) != 0:
-            self.objs = self.readDB(True, cur)
-            for o in self.objs:
+                    d['cfgname'] = self.getCfgName(r)
+        if (mask & dbPoll.OBJECT) != 0:
+            objs = self.readDB(True, cur)
+            objmap = {}
+            for o in objs:
                 o['status'] = ""
+                objmap[o['id']] = o
+            self.objs = objmap
             if self.initsig == None:
-                self.connectAllPVs()
+                self.setObjNames()
         self.con.commit()
-        if (mask & 1) != 0:
+        if (mask & dbPoll.CONFIG) != 0:
             self.cfgchange.emit()
-        if (mask & 2) != 0:
+        if (mask & dbPoll.OBJECT) != 0:
             self.objchange.emit()
         if self.initsig != None and self.cfgs != None and self.objs != None:
-            self.connectAllPVs()
+            self.setObjNames()
             self.initsig.emit()
             self.initsig = None;
-
-    def connectAllPVs(self):
-        newpvdict = {}
-        for d in self.objs:
-            d['linkname'] = self.id2name[d['config']]
-            base = d['rec_base']
-            d['connstat'] = self.objfldcnt*[False]
-            for ofld in self.objflds:
-                n = base + ofld['pv']
-                f = ofld['fld']
-                try:
-                    pv = self.pvdict[n]
-                    d[f] = pv.value
-                    d['connstat'][ofld['objidx']] = True
-                    print d['connstat']
-                    del self.pvdict[n]
-                except:
-                    pv = utils.monitorPv(n, self.pv_handler)
-                    if ofld['type'] == str:
-                        pv.set_string_enum(True)
-                newpvdict[n] = pv
-                pv.obj = d
-                pv.fld = f
-            if reduce(lambda a,b: a and b, d['connstat']):
-                del d['connstat']
-                d['status'] = "".join(sorted("C" + d['status']))
-        for pv in self.pvdict.values():
-            pv.disconnect()
-        self.pvdict = newpvdict
-        
-    def setModel(self, model):
-        self.model = model
-
-    def pv_handler(self, pv, e):
-        if e is None:
-            pv.obj[pv.fld] = pv.value
-            idx = self.fldmap[pv.fld]['objidx']
-            try:
-                pv.obj['connstat'][idx] = True
-                if reduce(lambda a,b: a and b, pv.obj['connstat']):
-                    del pv.obj['connstat']
-                    pv.obj['status'] = "".join(sorted("C" + pv.obj['status']))
-                    self.model.statchange(pv.obj['id'])
-            except:
-                pass
-            if self.model:
-                self.model.pvchange(pv.obj['id'], idx)
