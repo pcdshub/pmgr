@@ -153,7 +153,18 @@ def monitorPv(name,handler):
     except:
         return None
 
+#
+# Go through a list of dictionaries and create a 'cfgname' name for the
+# specified 'config' idx.
+#
 def fixName(l, idx, name):
     for d in l:
         if d['config'] == idx:
             d['cfgname'] = name
+
+#
+# Determine if the current user has the authority to modify a record
+# with the given owner (hutch) and security string.
+#
+def permissions(owner, security):
+    return True

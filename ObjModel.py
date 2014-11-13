@@ -2,7 +2,9 @@ from PyQt4 import QtGui, QtCore
 import param
 import utils
 import colmgr
+import datetime
 import utils
+import pyca
 
 class ObjModel(QtGui.QStandardItemModel):
     cname   = ["Status", "Name", "Config", "PV Base"]
@@ -22,6 +24,7 @@ class ObjModel(QtGui.QStandardItemModel):
         self.pvdict = {}
         self.edits = {}
         self.objs = {}
+        self.nextid = -1
         self.lastsort = (0, QtCore.Qt.DescendingOrder)
         # Setup headers
         self.colcnt = self.db.objfldcnt + self.coff
@@ -47,18 +50,24 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             return (self.rowmap[index.row()], self.db.objflds[c-self.coff]['fld'])
 
+    def getObj(self, idx):
+        if idx >= 0:
+            return self.db.objs[idx]
+        else:
+            return self.objs[idx]
+
     def getCfg(self, idx, f):
         try:
             return self.edits[idx][f]
         except:
             pass
         if f in self.cfld or self.db.fldmap[f]['obj']:
-            return self.db.objs[idx][f]
+            return self.getObj(idx)[f]
         else:
             try:
                 cfg = self.edits[idx]['config']
             except:
-                cfg = self.db.objs[idx]['config']
+                cfg = self.getObj(idx)['config']
             try:
                 return self.model.edits[cfg][f]
             except:
@@ -72,7 +81,7 @@ class ObjModel(QtGui.QStandardItemModel):
             return QtCore.QVariant()
         try:
             (idx, f) = self.index2db(index)
-            d = self.db.objs[idx]
+            d = self.getObj(idx)
             if role == QtCore.Qt.BackgroundRole:
                 if d[f] == None:
                     return QtCore.QVariant(param.params.gray)
@@ -132,17 +141,20 @@ class ObjModel(QtGui.QStandardItemModel):
             d[f] = v
             if f == 'cfgname':
                 d['config'] = vlink
-            if not hadedit:
-                r = self.db.objs[idx]
+            if not hadedit and idx >= 0:
+                r = self.getObj(idx)
                 r['status'] = "".join(sorted("M" + r['status']))
                 self.statchange(idx)
         else:
-            if hadedit and d == {}:
-                r = self.db.objs[idx]
+            if hadedit and d == {} and idx >= 0:
+                r = self.getObj(idx)
                 r['status'] = r['status'].replace("M", "")
                 self.statchange(idx)
         if d != {}:
-            self.edits[idx] = d
+            if idx < 0:
+                self.objs[idx].update(d)
+            else:
+                self.edits[idx] = d
         else:
             try:
                 del self.edits[idx]
@@ -164,10 +176,7 @@ class ObjModel(QtGui.QStandardItemModel):
         try:
             return self.edits[idx][f]
         except:
-            if idx >= 0:
-                return self.db.objs[idx][f]
-            else:
-                return self.objs[idx][f]
+            return self.getObj(idx)[f]
 
     def sort(self, Ncol, order):
         if (Ncol, order) != self.lastsort:
@@ -189,13 +198,6 @@ class ObjModel(QtGui.QStandardItemModel):
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
         self.emit(QtCore.SIGNAL("layoutChanged()"))
 
-    def pvchange(self, id, fldidx):
-        try:
-            idx = self.index(self.rowmap.index(id), fldidx + self.coff)
-            self.dataChanged.emit(idx, idx)
-        except:
-            pass
-
     def statchange(self, id):
         try:
             idx = self.index(self.rowmap.index(id), self.statcol)
@@ -204,14 +206,12 @@ class ObjModel(QtGui.QStandardItemModel):
             pass
 
     def connectPVs(self, idx):
+        pyca.attach_context()
         try:
             oldpvdict = self.pvdict[idx]
         except:
             oldpvdict = {}
-        if idx >= 0:
-            d = self.db.objs[idx]
-        else:
-            d = self.objs[idx]
+        d = self.getObj(idx)
         try:
             base = self.edits[idx]['rec_base']
         except:
@@ -219,22 +219,23 @@ class ObjModel(QtGui.QStandardItemModel):
         newpvdict = {}
         d['connstat'] = self.db.objfldcnt*[False]
         d['status'] = d['status'].replace("C", "")
-        for ofld in self.db.objflds:
-            n = base + ofld['pv']
-            f = ofld['fld']
-            try:
-                pv = oldpvdict[n]
-                d[f] = pv.value
-                d['connstat'][ofld['objidx']] = True
-                del oldpvdict[n]
-            except:
-                d[f] = None
-                pv = utils.monitorPv(n, self.pv_handler)
-                if ofld['type'] == str:
-                    pv.set_string_enum(True)
-            newpvdict[n] = pv
-            pv.obj = d
-            pv.fld = f
+        if base != "":
+            for ofld in self.db.objflds:
+                n = base + ofld['pv']
+                f = ofld['fld']
+                try:
+                    pv = oldpvdict[n]
+                    d[f] = pv.value
+                    d['connstat'][ofld['objidx']] = True
+                    del oldpvdict[n]
+                except:
+                    d[f] = None
+                    pv = utils.monitorPv(n, self.pv_handler)
+                    if ofld['type'] == str:
+                        pv.set_string_enum(True)
+                newpvdict[n] = pv
+                pv.obj = d
+                pv.fld = f
         if reduce(lambda a,b: a and b, d['connstat']):
             del d['connstat']
             d['status'] = "".join(sorted("C" + d['status']))
@@ -259,8 +260,11 @@ class ObjModel(QtGui.QStandardItemModel):
                     self.statchange(pv.obj['id'])
             except:
                 pass
-            if self.model:
-                self.pvchange(pv.obj['id'], idx)
+            try:
+                index = self.index(self.rowmap.index(pv.obj['id']), idx + self.coff)
+                self.dataChanged.emit(index, index)
+            except:
+                pass
 
     def haveNewName(self, idx, name):
         name = str(name)
@@ -275,10 +279,7 @@ class ObjModel(QtGui.QStandardItemModel):
                     index = self.index(i, self.cfgcol)
                     self.dataChanged.emit(index, index)
             except:
-                if idx >= 0:
-                    d = self.db.objs[idx]
-                else:
-                    d = self.objs[idx]
+                d = self.getObj(idx)
                 if d['config'] == idx:
                     d['cfgname'] = str(name)
                     index = self.index(i, self.cfgcol)
@@ -286,7 +287,7 @@ class ObjModel(QtGui.QStandardItemModel):
 
     def checkStatus(self, index, vals):
         (idx, f) = self.index2db(index)
-        s = self.db.objs[idx]['status']
+        s = self.getObj(idx)['status']
         for v in vals:
             if v in s:
                 return True
@@ -305,17 +306,40 @@ class ObjModel(QtGui.QStandardItemModel):
         colmgr.addColumnManagerMenu(table)
 
     def create(self, table, index):
-        pass
+        idx = self.nextid;
+        self.nextid -= 1
+        now = datetime.datetime.now()
+        d = {'id': idx, 'config': 0, 'owner': self.db.hutch, 'name': "NewObject%d" % idx,
+             'rec_base': "", 'dt_created': now, 'dt_updated': now, 'status': "N",
+             'cfgname': self.db.getCfgName(0) }
+        for o in self.db.objflds:
+            if o['obj']:
+                t = o['type']
+                if t == str:
+                    v = ""
+                elif t == int:
+                    v = 0
+                else:
+                    v = 0.0   # Must be float, since this is returned from db.m2pType.
+                d[o['fld']] = v
+            else:
+                d[o['fld']] = None
+        self.objs[idx] = d
+        self.rowmap.append(idx)
+        self.setRowCount(len(self.rowmap))
+        lastsort = self.lastsort
+        self.lastsort = (None, None)
+        self.sort(lastsort[0], lastsort[1])
 
     def delete(self, table, index):
         (idx, f) = self.index2db(index)
-        r = self.db.objs[idx]
+        r = self.getObj(idx)
         r['status'] = "".join(sorted("D" + r['status']))
         self.statchange(idx)
 
     def undelete(self, table, index):
         (idx, f) = self.index2db(index)
-        r = self.db.objs[idx]
+        r = self.getObj(idx)
         r['status'] = r['status'].replace("D", "")
         self.statchange(idx)
 
@@ -339,7 +363,7 @@ class ObjModel(QtGui.QStandardItemModel):
 
     def chparent(self, table, index):
         (idx, f) = self.index2db(index)
-        d = self.db.objs[idx]
+        d = self.getObj(idx)
         if (param.params.cfgdialog.exec_("Select new configuration for %s" % d['name'], d['config']) ==
             QtGui.QDialog.Accepted):
             self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
@@ -363,10 +387,7 @@ class ObjModel(QtGui.QStandardItemModel):
             try:
                 cfg = self.edits[id]['config']
             except:
-                if idx >= 0:
-                    cfg = self.db.objs[id]['config']
-                else:
-                    cfg = self.objs[id]['config']
+                cfg = self.getObj(id)['config']
             if cfg == idx:
                 self.dataChanged.emit(self.index(i, c1), self.index(i, c2))
 
