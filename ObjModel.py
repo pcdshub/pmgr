@@ -299,6 +299,7 @@ class ObjModel(QtGui.QStandardItemModel):
         menu.addAction("Delete this object", self.delete,     lambda table, index: not self.checkStatus(index, 'D'))
         menu.addAction("Undelete this object", self.undelete, lambda table, index: self.checkStatus(index, 'D'))
         menu.addAction("Change configuration", self.chparent, lambda table, index: index.column() == self.cfgcol)
+        menu.addAction("Create configuration from object", self.createcfg)
         menu.addAction("Commit this object", self.commitone,  lambda table, index: self.checkStatus(index, 'DMN'))
         menu.addAction("Apply to this object", self.applyone, lambda table, index: self.checkStatus(index, 'DMN'))
         table.addContextMenu(menu)
@@ -326,16 +327,27 @@ class ObjModel(QtGui.QStandardItemModel):
                 d[o['fld']] = None
         self.objs[idx] = d
         self.rowmap.append(idx)
+        self.adjustSize()
+
+    def adjustSize(self):
         self.setRowCount(len(self.rowmap))
         lastsort = self.lastsort
         self.lastsort = (None, None)
         self.sort(lastsort[0], lastsort[1])
 
+    def createcfg(self, table, index):
+        (idx, f) = self.index2db(index)
+        self.model.create_child(0, self.getObj(idx), True)
+
     def delete(self, table, index):
         (idx, f) = self.index2db(index)
-        r = self.getObj(idx)
-        r['status'] = "".join(sorted("D" + r['status']))
-        self.statchange(idx)
+        if idx >= 0:
+            r = self.getObj(idx)
+            r['status'] = "".join(sorted("D" + r['status']))
+            self.statchange(idx)
+        else:
+            self.rowmap.remove(idx)
+            self.adjustSize()
 
     def undelete(self, table, index):
         (idx, f) = self.index2db(index)

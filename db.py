@@ -190,9 +190,12 @@ class db(QtCore.QObject):
             return self.cfgs[id]['name']
 
     def setCfgName(self, id, name):
-        if self.cfgs[id]['name'] == name:
-            del self.cfgs[id]['name']
-        else:
+        try:
+            if self.cfgs[id]['name'] == name:
+                del self.cfgs[id]['name']
+            else:
+                self.nameedits[id] = name
+        except:
             self.nameedits[id] = name
 
     def setObjNames(self):

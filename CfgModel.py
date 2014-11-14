@@ -422,10 +422,11 @@ class CfgModel(QtGui.QStandardItemModel):
         d = {'status': "N", 'name': "NewConfig%d" % id, 'config': parent,
              'cfgname': self.db.getCfgName(parent), 'id': id, 'owner': None,
              'security': None, 'dt_created': now, 'dt_updated': now}
+        self.db.setCfgName(id, d['name'])
         if sibling == None:
             vals = self.getCfg(parent)
         else:
-            vals = self.getCfg(sibling)
+            vals = sibling
         color = {}
         haveval = {}
         for f in self.db.cfgflds:
@@ -461,12 +462,12 @@ class CfgModel(QtGui.QStandardItemModel):
     def clone(self, table, index):
         (idx, f) = self.index2db(index)
         parent = self.getCfg(idx)['config']
-        id = self.create_child(parent, idx)
+        id = self.create_child(parent, self.getCfg(idx))
 
     def clonevals(self, table, index):
         (idx, f) = self.index2db(index)
         parent = self.getCfg(idx)['config']
-        id = self.create_child(parent, idx, True)
+        id = self.create_child(parent, self.getCfg(idx), True)
 
     def deleteval(self, table, index):
         (idx, f) = self.index2db(index)
