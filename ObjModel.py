@@ -4,7 +4,6 @@ import utils
 import colmgr
 import datetime
 import utils
-import pyca
 
 class ObjModel(QtGui.QStandardItemModel):
     cname   = ["Status", "Name", "Config", "PV Base"]
@@ -206,7 +205,6 @@ class ObjModel(QtGui.QStandardItemModel):
             pass
 
     def connectPVs(self, idx):
-        pyca.attach_context()
         try:
             oldpvdict = self.pvdict[idx]
         except:
