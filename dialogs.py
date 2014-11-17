@@ -2,6 +2,7 @@ from PyQt4 import QtCore, QtGui
 import cfgdialog_ui
 import coluse_ui
 import colsave_ui
+import errordialog_ui
 
 class cfgdialog(QtGui.QDialog):
     def __init__(self, model, parent=None):
@@ -34,4 +35,10 @@ class colsavedialog(QtGui.QDialog):
     def __init__(self, parent=None):
         QtGui.QDialog.__init__(self, parent)
         self.ui = colsave_ui.Ui_Dialog()
+        self.ui.setupUi(self)
+
+class errordialog(QtGui.QDialog):
+    def __init__(self, parent=None):
+        QtGui.QDialog.__init__(self, parent)
+        self.ui = errordialog_ui.Ui_Dialog()
         self.ui.setupUi(self)

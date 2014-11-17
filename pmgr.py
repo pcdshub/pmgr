@@ -7,7 +7,7 @@ from ObjModel import ObjModel
 from CfgModel import CfgModel
 import dialogs
 import param
-import db
+from db import db
 import threading
 
 ######################################################################
@@ -16,106 +16,103 @@ import threading
 class GraphicUserInterface(QtGui.QMainWindow):
     initdone = QtCore.pyqtSignal()
 
-    def __init__(self, app, hutch, table):
+    def __init__(self):
         QtGui.QMainWindow.__init__(self)
-        self.app = app
-        self.hutch = hutch.lower()
-        self.table = table
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
-        self.setWindowTitle("Parameter Manager for %s (%s)" % (self.hutch.upper(), table))
+        param.params.ui = Ui_MainWindow()
+        param.params.ui.setupUi(self)
+        self.setWindowTitle("Parameter Manager for %s (%s)" % (param.params.hutch.upper(), param.params.table))
 
-        self.ui.objectTable.verticalHeader().hide()
-        self.ui.objectTable.setCornerButtonEnabled(False)
-        self.ui.objectTable.horizontalHeader().setMovable(True)
+        param.params.ui.objectTable.verticalHeader().hide()
+        param.params.ui.objectTable.setCornerButtonEnabled(False)
+        param.params.ui.objectTable.horizontalHeader().setMovable(True)
 
-        self.ui.configTable.verticalHeader().hide()
-        self.ui.configTable.setCornerButtonEnabled(False)
-        self.ui.configTable.horizontalHeader().setMovable(True)
+        param.params.ui.configTable.verticalHeader().hide()
+        param.params.ui.configTable.setCornerButtonEnabled(False)
+        param.params.ui.configTable.horizontalHeader().setMovable(True)
 
-        self.db = db.db(self.hutch, self.table)
+        param.params.db = db()
         self.initdone.connect(self.finishinit)
-        self.db.start(self.initdone)
+        param.params.db.start(self.initdone)
 
     def finishinit(self):
-        self.ui.menuView.addAction(self.ui.configWidget.toggleViewAction())
-        self.ui.configWidget.setWindowTitle(self.table + " configurations")
-        self.configmodel = CfgModel(self.db, self.ui)
-        self.ui.configTable.init(self.configmodel, 0, 2)
-        self.ui.configTable.setShowGrid(True)
-        self.ui.configTable.resizeColumnsToContents()
+        param.params.ui.menuView.addAction(param.params.ui.configWidget.toggleViewAction())
+        param.params.ui.configWidget.setWindowTitle(param.params.table + " configurations")
+        param.params.cfgmodel = CfgModel()
+        param.params.ui.configTable.init(param.params.cfgmodel, 0, 2)
+        param.params.ui.configTable.setShowGrid(True)
+        param.params.ui.configTable.resizeColumnsToContents()
 
-        self.ui.menuView.addAction(self.ui.objectWidget.toggleViewAction())
-        self.ui.objectWidget.setWindowTitle(self.table + " objects")
-        self.objectmodel = ObjModel(self.db, self.ui, self.configmodel)
-        self.ui.objectTable.init(self.objectmodel, 0, 2)
-        self.ui.objectTable.setShowGrid(True)
-        self.ui.objectTable.resizeColumnsToContents()
-        self.ui.objectTable.setSortingEnabled(True)
-        self.ui.objectTable.sortByColumn(self.objectmodel.namecol, QtCore.Qt.AscendingOrder)
+        param.params.ui.menuView.addAction(param.params.ui.objectWidget.toggleViewAction())
+        param.params.ui.objectWidget.setWindowTitle(param.params.table + " objects")
+        param.params.objmodel = ObjModel()
+        param.params.ui.objectTable.init(param.params.objmodel, 0, 2)
+        param.params.ui.objectTable.setShowGrid(True)
+        param.params.ui.objectTable.resizeColumnsToContents()
+        param.params.ui.objectTable.setSortingEnabled(True)
+        param.params.ui.objectTable.sortByColumn(param.params.objmodel.namecol, QtCore.Qt.AscendingOrder)
 
-        self.objectmodel.setupContextMenus(self.ui.objectTable)
-        self.configmodel.setupContextMenus(self.ui.configTable)
+        param.params.objmodel.setupContextMenus(param.params.ui.objectTable)
+        param.params.cfgmodel.setupContextMenus(param.params.ui.configTable)
 
-        param.params.cfgdialog       = dialogs.cfgdialog(self.configmodel, self)
+        param.params.cfgdialog       = dialogs.cfgdialog(param.params.cfgmodel, self)
         param.params.colsavedialog   = dialogs.colsavedialog(self)
         param.params.colusedialog    = dialogs.colusedialog(self)
 
-        self.db.objchange.connect(self.objectmodel.objchange)
-        self.db.cfgchange.connect(self.objectmodel.cfgchange)
-        self.db.cfgchange.connect(self.configmodel.cfgchange)
+        param.params.db.objchange.connect(param.params.objmodel.objchange)
+        param.params.db.cfgchange.connect(param.params.objmodel.cfgchange)
+        param.params.db.cfgchange.connect(param.params.cfgmodel.cfgchange)
 
-        self.configmodel.newname.connect(self.configmodel.haveNewName)
-        self.configmodel.newname.connect(self.objectmodel.haveNewName)
-        self.configmodel.cfgChanged.connect(self.objectmodel.cfgEdit)
+        param.params.cfgmodel.newname.connect(param.params.cfgmodel.haveNewName)
+        param.params.cfgmodel.newname.connect(param.params.objmodel.haveNewName)
+        param.params.cfgmodel.cfgChanged.connect(param.params.objmodel.cfgEdit)
 
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
-        settings.beginGroup(self.table)
+        settings.beginGroup(param.params.table)
         self.restoreGeometry(settings.value("geometry").toByteArray())
         self.restoreState(settings.value("windowState").toByteArray())
-        self.ui.configTable.restoreHeaderState(settings.value("cfgcol/default").toByteArray())
-        self.ui.objectTable.restoreHeaderState(settings.value("objcol/default").toByteArray())
+        param.params.ui.configTable.restoreHeaderState(settings.value("cfgcol/default").toByteArray())
+        param.params.ui.objectTable.restoreHeaderState(settings.value("objcol/default").toByteArray())
 
         # MCB - Sigh.  I don't know why this is needed, but it is.
-        h = self.ui.configTable.horizontalHeader()
+        h = param.params.ui.configTable.horizontalHeader()
         h.resizeSection(1, h.sectionSize(1) + 1)
-        h = self.ui.objectTable.horizontalHeader()
+        h = param.params.ui.objectTable.horizontalHeader()
         h.resizeSection(1, h.sectionSize(1) + 1)
 
-        self.ui.configTable.colmgr = "%s/cfgcol" % self.table
-        self.ui.objectTable.colmgr = "%s/objcol" % self.table
+        param.params.ui.configTable.colmgr = "%s/cfgcol" % param.params.table
+        param.params.ui.objectTable.colmgr = "%s/objcol" % param.params.table
 
-        self.connect(self.ui.saveButton, QtCore.SIGNAL("clicked()"), self.objectmodel.commitall)
-        self.connect(self.ui.applyButton, QtCore.SIGNAL("clicked()"), self.objectmodel.applyall)
+        self.connect(param.params.ui.saveButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
+        self.connect(param.params.ui.applyButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)
 
     def closeEvent(self, event):
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
-        settings.beginGroup(self.table)
+        settings.beginGroup(param.params.table)
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
-        settings.setValue("cfgcol/default", self.ui.configTable.saveHeaderState())
-        settings.setValue("objcol/default", self.ui.objectTable.saveHeaderState())
+        settings.setValue("cfgcol/default", param.params.ui.configTable.saveHeaderState())
+        settings.setValue("objcol/default", param.params.ui.objectTable.saveHeaderState())
         QtGui.QMainWindow.closeEvent(self, event)
 
 if __name__ == '__main__':
-  QtGui.QApplication.setGraphicsSystem("raster")
-  param.params = param.param_structure()
-  app = QtGui.QApplication([''])
+    QtGui.QApplication.setGraphicsSystem("raster")
+    param.params = param.param_structure()
+    app = QtGui.QApplication([''])
   
-  # Options( [mandatory list, optional list, switches list] )
-  options = Options(['hutch', 'type'],
-                    [],
-                    [])
-  try:
-    options.parse()
-  except Exception, msg:
-    options.usage(str(msg))
-    sys.exit()
+    # Options( [mandatory list, optional list, switches list] )
+    options = Options(['hutch', 'type'], [], [])
+    try:
+        options.parse()
+    except Exception, msg:
+        options.usage(str(msg))
+        sys.exit()
 
-  gui = GraphicUserInterface(app, options.hutch, options.type)
-  try:
-      gui.show()
-      retval = app.exec_()
-  except KeyboardInterrupt:
-      app.exit(1)
-  sys.exit(retval)
+    param.params.hutch = options.hutch.lower()
+    param.params.table = options.type
+    gui = GraphicUserInterface()
+    try:
+        gui.show()
+        retval = app.exec_()
+    except KeyboardInterrupt:
+        app.exit(1)
+    sys.exit(retval)

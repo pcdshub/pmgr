@@ -1,10 +1,13 @@
 import MySQLdb as mdb
+import _mysql_exceptions
 from PyQt4 import QtCore, QtGui
 import threading
 import datetime
 import time
 import re
 import utils
+import dialogs
+import param
 
 #
 # db is our main db class.  It uses a dbPoll to check for updates, and will
@@ -54,7 +57,7 @@ class dbPoll(threading.Thread):
     CONFIG = 1
     OBJECT = 2
     
-    def __init__(self, sig, interval, hutch):
+    def __init__(self, sig, interval):
         super(dbPoll, self).__init__()
         try:
             self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols');
@@ -64,14 +67,15 @@ class dbPoll(threading.Thread):
             pass
         self.sig = sig
         self.interval = interval
-        self.hutch = hutch
         self.daemon = True
+        self.do_db = True
 
     def run(self):
         last = 0
         lastcfg = datetime.datetime(1900,1,1,0,0,1)
         lastobj = datetime.datetime(1900,1,1,0,0,1)
         first = True
+        cur = self.con.cursor(mdb.cursors.DictCursor)
         while True:
             now = time.time()
             looptime = now - last
@@ -80,8 +84,10 @@ class dbPoll(threading.Thread):
                 last = time.time()
             else:
                 last = now
-            cur = self.con.cursor(mdb.cursors.DictCursor)
-            cur.execute("select * from ims_motor_update where tbl_name = 'config' or tbl_name = %s", self.hutch)
+            if not self.do_db:
+                continue
+            cur.execute("select * from ims_motor_update where tbl_name = 'config' or tbl_name = %s",
+                        (param.params.hutch,))
             v = 0
             for d in cur.fetchall():
                 if d['tbl_name'] == 'config':
@@ -99,29 +105,37 @@ class dbPoll(threading.Thread):
                 self.sig.emit(v)
             self.con.commit()
 
-class db(QtCore.QObject):
-    cfgchange   = QtCore.pyqtSignal()
-    objchange   = QtCore.pyqtSignal()
-    readsig     = QtCore.pyqtSignal(int)
+    def start_transaction(self):
+        self.do_db = False
 
-    def __init__(self, hutch, table):
+    def end_transaction(self):
+        self.do_db = True
+
+class db(QtCore.QObject):
+    cfgchange     = QtCore.pyqtSignal()
+    objchange     = QtCore.pyqtSignal()
+    readsig       = QtCore.pyqtSignal(int)
+
+    def __init__(self):
         super(db, self).__init__()
-        self.hutch = hutch
-        self.table = table
-        self.model = None
         self.cfgs = None
         self.objs = None
         self.initsig = None
+        self.errorlist = []
+        self.cfgmap = {}
+        self.in_trans = False
         self.nameedits = {}
+        self.cur = None
+        self.errordialog = dialogs.errordialog()
         try:
             self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols');
-            cur = self.con.cursor(mdb.cursors.DictCursor)
-            cur.execute("call init_pcds()")
+            self.cur = self.con.cursor(mdb.cursors.DictCursor)
+            self.cur.execute("call init_pcds()")
         except:
             pass
         self.readFormat()
-        self.readsig.connect(self.readTable)
-        self.poll = dbPoll(self.readsig, 30, hutch)
+        self.readsig.connect(self.readTables)
+        self.poll = dbPoll(self.readsig, 30)
         self.con.commit()
 
     def start(self, initsig):
@@ -129,20 +143,18 @@ class db(QtCore.QObject):
         self.poll.start()
 
     def readFormat(self):
-        cur = self.con.cursor(mdb.cursors.DictCursor)
-
-        cur.execute("describe %s" % self.table)
-        locfld = [(d['Field'], m2pType(d['Type'])) for d in cur.fetchall()]
+        self.cur.execute("describe %s" % param.params.table)
+        locfld = [(d['Field'], m2pType(d['Type'])) for d in self.cur.fetchall()]
         locfld = locfld[7:]   # Skip the standard fields!
 
-        cur.execute("describe %s_cfg" % self.table)
-        fld = [(d['Field'], m2pType(d['Type'])) for d in cur.fetchall()]
+        self.cur.execute("describe %s_cfg" % param.params.table)
+        fld = [(d['Field'], m2pType(d['Type'])) for d in self.cur.fetchall()]
         fld = fld[6:]         # Skip the standard fields!
         self.cfgfldcnt = len(fld)
         self.objfldcnt = len(locfld) + self.cfgfldcnt
 
-        cur.execute("select * from %s_name_map" % self.table)
-        result = cur.fetchall()
+        self.cur.execute("select * from %s_name_map" % param.params.table)
+        result = self.cur.fetchall()
         alias = {}
         for d in result:
             f = d['db_field_name']
@@ -173,15 +185,51 @@ class db(QtCore.QObject):
             self.cfgflds[i]['cfgidx'] = i
         self.con.commit()
         
-    def readDB(self, hutch, cur):
-        if hutch:
-            name = self.hutch
-            ext = " where owner = '%s'" % self.hutch
+    def readDB(self, is_hutch):
+        if is_hutch:
+            ext = " where owner = '%s'" % param.params.hutch
         else:
-            name = "config"
             ext = "_cfg"
-        cur.execute("select * from %s%s" % (self.table, ext))
-        return list(cur.fetchall())
+        self.cur.execute("select * from %s%s" % (param.params.table, ext))
+        return list(self.cur.fetchall())
+
+    def setObjNames(self):
+        for o in self.objs.values():
+            o['cfgname'] = self.getCfgName(o['config'])
+
+    def readTables(self, mask=dbPoll.CONFIG|dbPoll.OBJECT, nosig=False):
+        if self.in_trans:                       # This shouldn't happen.  But let's be paranoid.
+            return
+        if (mask & dbPoll.CONFIG) != 0:
+            cfgs = self.readDB(False)
+            map = {}
+            for d in cfgs:
+                map[d['id']] = d
+            self.cfgs = map
+            for d in cfgs:
+                r = d['config']
+                if r == None:
+                    d['cfgname'] = ""
+                else:
+                    d['cfgname'] = self.getCfgName(r)
+        if (mask & dbPoll.OBJECT) != 0:
+            objs = self.readDB(True)
+            objmap = {}
+            for o in objs:
+                objmap[o['id']] = o
+            self.objs = objmap
+            if self.initsig == None:
+                self.setObjNames()
+        if not nosig:
+            self.con.commit()
+            if (mask & dbPoll.CONFIG) != 0:
+                self.cfgchange.emit()
+            if (mask & dbPoll.OBJECT) != 0:
+                self.objchange.emit()
+        if self.initsig != None and self.cfgs != None and self.objs != None:
+            self.setObjNames()
+            self.initsig.emit()
+            self.initsig = None;
 
     def getCfgName(self, id):
         try:
@@ -198,40 +246,214 @@ class db(QtCore.QObject):
         except:
             self.nameedits[id] = name
 
-    def setObjNames(self):
-        for o in self.objs.values():
-            o['cfgname'] = self.getCfgName(o['config'])
+    def start_transaction(self):
+        self.in_trans = True
+        self.poll.start_transaction()
+        self.errorlist = []
+        self.cfgmap = {}
+        try:
+            self.cur.execute("lock tables %s write, %s_cfg write" % (param.params.table, param.params.table))
+            self.readTables(dbPoll.CONFIG|dbPoll.OBJECT, True)
+            return True
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+            self.end_transaction()
+            return False
 
-    def readTable(self, mask):
-        cur = self.con.cursor(mdb.cursors.DictCursor)
-        if (mask & dbPoll.CONFIG) != 0:
-            cfgs = self.readDB(False, cur)
-            cfgmap = {}
-            for d in cfgs:
-                cfgmap[d['id']] = d
-                d['status'] = ""
-            self.cfgs = cfgmap
-            for d in cfgs:
-                r = d['config']
-                if r == None:
-                    d['cfgname'] = ""
+    def transaction_error(self, msg):
+        self.errorlist.append(_mysql_exceptions.Error(0, msg))
+
+    def end_transaction(self):
+        if self.errorlist != []:
+            self.con.rollback()
+        else:
+            self.con.commit()
+        try:
+            self.cur.execute("unlock tables")
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+        self.in_trans = False
+        self.poll.end_transaction()
+        self.readTables()
+        if self.errorlist:
+            w = self.errordialog.ui.errorText
+            w.setPlainText("")
+            for e in self.errorlist:
+                (n, m) = e.args
+                if n != 0:
+                    w.appendPlainText("Error %d: %s\n" % (n, m))
                 else:
-                    d['cfgname'] = self.getCfgName(r)
-        if (mask & dbPoll.OBJECT) != 0:
-            objs = self.readDB(True, cur)
-            objmap = {}
-            for o in objs:
-                o['status'] = ""
-                objmap[o['id']] = o
-            self.objs = objmap
-            if self.initsig == None:
-                self.setObjNames()
-        self.con.commit()
-        if (mask & dbPoll.CONFIG) != 0:
-            self.cfgchange.emit()
-        if (mask & dbPoll.OBJECT) != 0:
-            self.objchange.emit()
-        if self.initsig != None and self.cfgs != None and self.objs != None:
-            self.setObjNames()
-            self.initsig.emit()
-            self.initsig = None;
+                    w.appendPlainText("Error: %s\n" % (m))
+            self.errordialog.exec_()
+            return False
+        else:
+            return True
+
+    def configDelete(self, idx):
+        try:
+            if self.cur.execute("select id from %s where config = %%s" % param.params.table, (idx,)) != 0:
+                self.errorlist.append(
+                    _mysql_exceptions.Error(0,
+                                            "Can't delete configuration %s, still in use." % self.getCfgName(idx)))
+                                                              
+                return
+            self.cur.execute("delete from %s_cfg where id = %%s" % param.params.table, (idx,))
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+ 
+    #
+    # Security?
+    #
+    def configInsert(self, d):
+        cmd = "insert %s_cfg (name, config, owner, dt_updated" % param.params.table
+        vals = d['_val']
+        for f in self.cfgflds:
+            fld = f['fld']
+            if vals[fld]:
+                cmd += ", " + fld
+        cmd += ") values (%s, %s, %s, now()"
+        vlist = [d['name']]
+        try:
+            vlist.append(self.cfgmap[d['config']])
+        except:
+            vlist.append(d['config'])
+        vlist.append(param.params.hutch)
+        for f in self.cfgflds:
+            fld = f['fld']
+            if vals[fld]:
+                cmd += ", %s"
+                vlist.append(d[fld])
+        cmd += ')'
+        print cmd
+        try:
+            self.cur.execute(cmd, tuple(vlist))
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+            return
+        try:
+            self.cur.execute("select id from %s_cfg where name = %%s" % param.params.table, (d['name'],))
+            result = self.cur.fetchone()
+            self.cfgmap[d['id']] = result['id']
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+            self.cfgmap[d['id']] = d['id']   # This is still mapping to a negative,
+                                             # just so we can go a little further.
+            
+    def configChange(self, d, e, ev):
+        idx = d['id']
+        cmd = "update %s_cfg set dt_updated = now()" % param.params.table
+        vlist = []
+        try:
+            v = e['name']
+            cmd += ", name = %s"
+            vlist.append(v)
+        except:
+            pass
+        try:
+            v = e['config']
+            cmd += ", config = %s"
+            try:
+                vlist.append(self.cfgmap[v])
+            except:
+                vlist.append(v)
+        except:
+            pass
+        for f in self.cfgflds:
+            fld = f['fld']
+            try:
+                v = e[fld]           # We have a new value!
+            except:
+                try:
+                    if not ev[fld]:  # We want to inherit now!
+                        v = None
+                    else:          # We want to set the value to what we are inheriting!
+                        v = d[fld]
+                except:
+                    continue       # No change to this field!
+            cmd += ", %s = %%s" % fld
+            vlist.append(v)
+        cmd += ' where id = %s'
+        vlist.append(idx)
+        print cmd % tuple(vlist)
+        try:
+            self.cur.execute(cmd, tuple(vlist))
+        except _mysql_exceptions.Error as err:
+            self.errorlist.append(err)
+
+    def objectDelete(self, idx):
+        try:
+            self.cur.execute("delete from %s where id = %%s" % param.params.table, (idx,))
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+        pass
+
+    def objectInsert(self, d):
+        cmd = "insert %s (name, config, owner, rec_base, dt_created, dt_updated" % param.params.table
+        for f in self.objflds:
+            if f['obj'] == False:
+                continue
+            fld = f['fld']
+            cmd += ", " + fld
+        cmd += ") values (%s, %s, %s, %s, now(), now()"
+        vlist = [d['name']]
+        try:
+            vlist.append(self.cfgmap[d['config']])
+        except:
+            vlist.append(d['config'])
+        vlist.append(param.params.hutch)
+        vlist.append(d['rec_base'])
+        for f in self.objflds:
+            if f['obj'] == False:
+                continue
+            fld = f['fld']
+            cmd += ", %s"
+            vlist.append(d[fld])
+        cmd += ')'
+        print cmd
+        try:
+            self.cur.execute(cmd, tuple(vlist))
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+
+    def objectChange(self, d, e):
+        idx = d['id']
+        cmd = "update %s set dt_updated = now()" % param.params.table
+        vlist = []
+        try:
+            v = e['name']
+            cmd += ", name = %s"
+            vlist.append(v)
+        except:
+            pass
+        try:
+            v = e['config']
+            cmd += ", config = %s"
+            try:
+                vlist.append(self.cfgmap[v])
+            except:
+                vlist.append(v)
+        except:
+            pass
+        try:
+            v = e['rec_base']
+            cmd += ", rec_base = %s"
+            vlist.append(v)
+        except:
+            pass
+        for f in self.objflds:
+            if f['obj'] == False:
+                continue
+            fld = f['fld']
+            try:
+                v = e[fld]           # We have a new value!
+            except:
+                continue
+            cmd += "%s = %%s" % fld
+            vlist.append(v)
+        cmd += ' where id = %s'
+        vlist.append(idx)
+        print cmd % tuple(vlist)
+        try:
+            self.cur.execute(cmd, tuple(vlist))
+        except _mysql_exceptions.Error as err:
+            self.errorlist.append(err)

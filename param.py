@@ -23,3 +23,11 @@ class param_structure(object):
         self.colusedialog    = None
         self.colsavedialog   = None
         self.settings = ("SLAC", "ParamMgr")
+
+        self.ui = None
+        self.objmodel = None
+        self.cfgmodel = None
+        self.db = None
+
+        self.hutch = None
+        self.table = None

@@ -159,12 +159,15 @@ def monitorPv(name,handler):
 #
 def fixName(l, idx, name):
     for d in l:
-        if d['config'] == idx:
-            d['cfgname'] = name
+        try:
+            if d['config'] == idx:
+                d['cfgname'] = name
+        except:
+            pass
 
 #
 # Determine if the current user has the authority to modify a record
 # with the given owner (hutch) and security string.
 #
-def permissions(owner, security):
+def permission(owner, security):
     return True

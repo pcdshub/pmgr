@@ -17,24 +17,24 @@ class CfgModel(QtGui.QStandardItemModel):
     cfgcol  = 2
     mutable = 2   # The first non-frozen column
     
-    def __init__(self, db, ui):
+    def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
-        self.db = db
-        self.ui = ui
         self.curidx = 0
         self.path = []
         self.edits = {}
         self.editval = {}
         self.cfgs = {}
+        self.status = {}
         self.nextid = -1
-        self.connect(ui.treeWidget, QtCore.SIGNAL("currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)"),
+        self.connect(param.params.ui.treeWidget,
+                     QtCore.SIGNAL("currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)"),
                      self.treeNavigation)
-        self.connect(ui.treeWidget, QtCore.SIGNAL("itemCollapsed(QTreeWidgetItem *)"),
+        self.connect(param.params.ui.treeWidget, QtCore.SIGNAL("itemCollapsed(QTreeWidgetItem *)"),
                      self.treeCollapse)
-        self.connect(ui.treeWidget, QtCore.SIGNAL("itemExpanded(QTreeWidgetItem *)"),
+        self.connect(param.params.ui.treeWidget, QtCore.SIGNAL("itemExpanded(QTreeWidgetItem *)"),
                      self.treeExpand)
         # Setup headers
-        self.colcnt = self.db.cfgfldcnt + self.coff
+        self.colcnt = param.params.db.cfgfldcnt + self.coff
         self.setColumnCount(self.colcnt)
         font = QtGui.QFont()
         font.setBold(True)
@@ -42,29 +42,38 @@ class CfgModel(QtGui.QStandardItemModel):
             if c < self.coff:
                 self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.cname[c]))
             else:
-                self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.db.cfgflds[c-self.coff]['alias']))
+                self.setHorizontalHeaderItem(c, QtGui.QStandardItem(param.params.db.cfgflds[c-self.coff]['alias']))
         self.is_expanded = {}
+        self.createStatus()
         self.buildtree()
         try:
-            self.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
+            param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
         except:
             self.setCurIdx(0)
-        self.ui.treeWidget.expandItem(self.tree[self.curidx]['item'])
+        param.params.ui.treeWidget.expandItem(self.tree[self.curidx]['item'])
         self.setHeaderData(self.statcol, QtCore.Qt.Horizontal,
                            QtCore.QVariant("D = Deleted\nM = Modified\nN = New"),
                            QtCore.Qt.ToolTipRole)
 
+    def createStatus(self):
+        for d in param.params.db.cfgs.values():
+            try:
+                v = self.status[d['id']]
+            except:
+                self.status[d['id']] = ""
+
     def cfgchange(self):
         print "CfgModel has changed!"
+        self.createStatus()
         self.buildtree()
         try:
-            self.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
+            param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
         except:
             self.setCurIdx(0)
 
     def setModifiedStatus(self, index, idx, d):
         try:
-            v = d['status'].index("M")
+            v = self.status[idx].index("M")
             wasmod = True
         except:
             wasmod = False
@@ -78,15 +87,15 @@ class CfgModel(QtGui.QStandardItemModel):
             pass
         if mod != wasmod:
             if mod:
-                d['status'] = "".join(sorted("M" + d['status']))
+                self.status[idx] = "".join(sorted("M" + self.status[idx]))
             else:
-                d['status'] = d['status'].replace("M", "")
+                self.status[idx] = self.status[idx].replace("M", "")
             statidx = self.index(index.row(), self.statcol)
             self.dataChanged.emit(statidx, statidx)
     
     def haveNewName(self, idx, name):
         name = str(name)
-        utils.fixName(self.db.cfgs.values(), idx, name)
+        utils.fixName(param.params.db.cfgs.values(), idx, name)
         utils.fixName(self.cfgs.values(), idx, name)
         utils.fixName(self.edits.values(), idx, name)
         for r in range(len(self.path)):
@@ -97,7 +106,7 @@ class CfgModel(QtGui.QStandardItemModel):
                     self.dataChanged.emit(index, index)
             except:
                 if i >= 0:
-                    d = self.db.cfgs[i]
+                    d = param.params.db.cfgs[i]
                 else:
                     d = self.cfgs[i]
                 if d['config'] == idx:
@@ -110,7 +119,7 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def buildtree(self):
         t = {}
-        for d in self.db.cfgs.values():
+        for d in param.params.db.cfgs.values():
             idx = d['id']
             t[idx] = {'name': d['name'], 'link': d['config'], 'children' : []}
             try:
@@ -132,7 +141,7 @@ class CfgModel(QtGui.QStandardItemModel):
             d['children'].sort(key=lambda v: t[v]['name'])
         self.root = r
         self.tree = t
-        self.setupTree(self.ui.treeWidget, 'item')
+        self.setupTree(param.params.ui.treeWidget, 'item')
 
     def setupTree(self, tree, fld):
         tree.clear()
@@ -165,14 +174,14 @@ class CfgModel(QtGui.QStandardItemModel):
         if c < self.coff:
             f = self.cfld[c]
         else:
-            f = self.db.cfgflds[c-self.coff]['fld']
+            f = param.params.db.cfgflds[c-self.coff]['fld']
         return (idx, f)
 
     def getCfg(self, idx):
         if idx == None:
             return {}
         if idx >= 0:
-            d = self.db.cfgs[idx]
+            d = param.params.db.cfgs[idx]
         else:
             d = self.cfgs[idx]
         try:
@@ -235,6 +244,11 @@ class CfgModel(QtGui.QStandardItemModel):
         if not index.isValid():
             return QtCore.QVariant()
         (idx, f) = self.index2db(index)
+        if f == "status":
+            if role == QtCore.Qt.ForegroundRole:
+                return QtCore.QVariant(param.params.black)
+            else:
+                return QtCore.QVariant(self.status[idx])
         d = self.getCfg(idx)
         if role == QtCore.Qt.ForegroundRole:
             color = d['_color'][f]
@@ -269,7 +283,7 @@ class CfgModel(QtGui.QStandardItemModel):
         # change *both*!
         if f == 'cfgname':
             vlink = v
-            v = self.db.getCfgName(vlink)
+            v = param.params.db.getCfgName(vlink)
         # Remove the old edit of this field, if any.
         try:
             del e[f]
@@ -309,6 +323,12 @@ class CfgModel(QtGui.QStandardItemModel):
             d['_color'][f] = param.params.red
             chcolor = param.params.purple
         else:
+            try:
+                vv = d['_val'][f]
+            except:
+                print d
+                print f
+                print d['name']
             if d['_val'][f]:
                 d['_color'][f] = param.params.black
                 chcolor = param.params.blue
@@ -323,7 +343,7 @@ class CfgModel(QtGui.QStandardItemModel):
                     chcolor = param.params.purple
         self.dataChanged.emit(index, index)
         if index.column() == self.namecol:
-            self.db.setCfgName(idx, v)
+            param.params.db.setCfgName(idx, v)
             self.newname.emit(idx, v)
         else:
             self.cfgChanged.emit(idx, f)
@@ -394,7 +414,7 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def checkStatus(self, index, vals):
         (idx, f) = self.index2db(index)
-        s = self.getCfg(idx)['status']
+        s = self.status[idx]
         for v in vals:
             if v in s:
                 return True
@@ -419,17 +439,18 @@ class CfgModel(QtGui.QStandardItemModel):
         id = self.nextid;
         self.nextid -= 1
         now = datetime.datetime.now()
-        d = {'status': "N", 'name': "NewConfig%d" % id, 'config': parent,
-             'cfgname': self.db.getCfgName(parent), 'id': id, 'owner': None,
+        d = {'name': "NewConfig%d" % id, 'config': parent,
+             'cfgname': param.params.db.getCfgName(parent), 'id': id, 'owner': None,
              'security': None, 'dt_created': now, 'dt_updated': now}
-        self.db.setCfgName(id, d['name'])
+        self.status[id] = "N"
+        param.params.db.setCfgName(id, d['name'])
         if sibling == None:
             vals = self.getCfg(parent)
         else:
             vals = sibling
         color = {}
         haveval = {}
-        for f in self.db.cfgflds:
+        for f in param.params.db.cfgflds:
             fld = f['fld']
             d[fld] = vals[fld]
             if sibling == None:
@@ -447,12 +468,16 @@ class CfgModel(QtGui.QStandardItemModel):
                     color[fld] = vals['_color'][fld]
         for fld in self.cfld:
             color[fld] = param.params.black
+            haveval[fld] = True
         d['_color'] = color
         d['_val'] = haveval
         self.editval[id] = {}
         self.cfgs[id] = d
         self.buildtree()
-        self.setCurIdx(id)
+        try:
+            param.params.ui.treeWidget.setCurrentItem(self.tree[id]['item'])
+        except:
+            pass
         return id
 
     def createnew(self, table, index):
@@ -517,26 +542,190 @@ class CfgModel(QtGui.QStandardItemModel):
                 d['_color'][f] = param.params.black
         self.dataChanged.emit(index, index)
 
+    def hasChildren(self, idx, checked=[]):
+        for c in self.tree[idx]['children']:
+            if not 'D' in self.status[c]:
+                return True
+        # Sigh.  We might have a circular dependency.
+        newchecked = list(checked)
+        newchecked[:0] = self.tree[idx]['children']
+        for c in self.tree[idx]['children']:
+            if not c in checked:
+                if self.hasChildren(c, newchecked):
+                    return True
+        return False
+
+    #
+    # Try to commit a change.  We assume we are in a transaction already.
+    #
+    # Returns True if done processing, False if we need to do something
+    # else first.
+    #
+    # If mustdo is True, cause an error if we can't do it.
+    #
+    def commit(self, idx, mustdo):
+        d = self.getCfg(idx)
+        if not utils.permission(d['owner'], d['security']):
+            param.params.db.transaction_error("Not Authorized!")
+            return True
+        if 'D' in self.status[idx]:
+            # We can process the delete only if *no one* is using this!
+            # We only have to check the configuration, the configDelete
+            # will check the objects.
+            if mustdo:
+                if self.tree[idx]['children'] != []:
+                    param.params.db.transaction_error("Configuration to be deleted has children!")
+                else:
+                    param.params.db.configDelete(idx)
+            else:
+                if self.hasChildren(idx):
+                    param.params.db.transaction_error("Configuration to be deleted has children!")
+                else:
+                    param.params.db.configDelete(idx)
+            return True
+        else:
+            # When is it OK to commit this?  If:
+            #    - All the parents already exist.
+            #    - We don't make a circular loop.
+            try:
+                p = self.edits[idx]['config']
+            except:
+                p = d['config']
+            while p != None:
+                if 'N' in self.status[p] and not p in param.params.db.cfgmap.keys():
+                    if mustdo:
+                        param.params.db.transaction_error("Config %s has new uncommitted ancestors!" %
+                                                          param.params.db.getCfgName(idx))
+                        return True
+                    else:
+                        return False
+                # If we are only committing one, we need to check the actual parents,
+                # otherwise, we check the edited parents!
+                if mustdo:
+                    p = self.getCfg(p)['config']
+                else:
+                    try:
+                        p = self.edits[p]['config']
+                    except:
+                        p = self.getCfg(p)['config']
+                if p == idx:
+                    return param.params.db.transaction_error("Config change for %s creates a dependency loop!" %
+                                                             param.params.db.getCfgName(idx))
+                    return True
+            if 'N' in self.status[idx]:
+                param.params.db.configInsert(d)
+            else:
+                try:
+                    e = self.edits[idx]  # We're being paranoid here.
+                except:
+                    e = {}
+                param.params.db.configChange(d, e, self.editval[idx])
+            return True
+
+    # Commit all of the changes.  Again, we assume we're in a transaction
+    # already.
+    def commitall(self):
+        todo = set([k for k in self.editval.keys() if self.editval[k] != {}])
+        try:
+            todo = todo.union(set(self.edits.keys()))
+        except:
+            pass
+        while todo != set([]):
+            done = set([])
+            for idx in todo:
+                if self.commit(idx, False):
+                    done = done.union(set([idx]))
+            todo = todo.difference(done)
+            if done == set([]):
+                param.params.db.transaction_error("Configuration commit is not making progress!")
+                return
+
     def commitone(self, table, index):
+        param.params.db.start_transaction()
         (idx, f) = self.index2db(index)
-        print "Commit Config %d" % idx
+        self.commit(idx, True)
+        if param.params.db.end_transaction():
+            self.cfgChangeDone(idx)
+        
+    def cfgChangeDone(self, idx=None):
+        if idx != None:
+            try:
+                del self.edits[idx]
+            except:
+                pass
+            try:
+                del self.editval[idx]
+            except:
+                pass
+            self.status[idx] = ""
+            if idx < 0:
+                del self.cfgs[idx]
+                self.renumberCfg(idx, param.params.db.cfgmap[idx])
+                if idx == self.curidx:
+                    self.setCurIdx(param.params.db.cfgmap[idx])
+        else:
+            self.edits = {}
+            self.editval = {}
+            self.cfgs = {}
+            for k in self.status.keys():
+                if k < 0:
+                    del self.status[k]
+                else:
+                    self.status[k] = ""
+            if self.curidx < 0:
+                self.curidx = param.params.db.cfgmap[self.curidx]
+        self.buildtree()
+        try:
+            param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
+        except:
+            param.params.ui.treeWidget.setCurrentItem(self.tree[0]['item'])
 
     def deletecfg(self, table, index):
         (idx, f) = self.index2db(index)
-        d = self.getCfg(idx)
-        if d['config'] != None:
-            d['status'] = "".join(sorted("D" + d['status']))
-            statidx = self.index(index.row(), self.statcol)
-            self.dataChanged.emit(statidx, statidx)
+        if idx >= 0:
+            d = self.getCfg(idx)
+            if d['config'] != None:
+                self.status[idx] = "".join(sorted("D" + self.status[idx]))
+                statidx = self.index(index.row(), self.statcol)
+                self.dataChanged.emit(statidx, statidx)
+            else:
+                QtGui.QMessageBox.critical(None, "Error",
+                                           "Cannot delete root configuration!",
+                                           QtGui.QMessageBox.Ok)
         else:
-            QtGui.QMessageBox.critical(None,
-                                       "Error", "Cannot delete root configuration!",
-                                       QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            del self.cfgs[idx]
+            del self.status[idx]
+            self.renumberCfg(idx, 0)
+            self.buildtree()
+            try:
+                param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
+            except:
+                param.params.ui.treeWidget.setCurrentItem(self.tree[0]['item'])
+
+    def renumberCfg(self, old, new):
+        print "Renumber %d -> %d" % (old, new)
+        name = param.params.db.getCfgName(new)
+        for d in self.cfgs.values():
+            if d['config'] == old:
+                d['config'] = new
+                d['cfgname'] = name
+        for d in param.params.db.cfgs.values():
+            if d['config'] == old:
+                d['config'] = new
+                d['cfgname'] = name
+        for d in param.params.objmodel.objs.values():
+            if d['config'] == old:
+                d['config'] = new
+                d['cfgname'] = name
+        for d in param.params.db.objs.values():
+            if d['config'] == old:
+                d['config'] = new
+                d['cfgname'] = name
 
     def undeletecfg(self, table, index):
         (idx, f) = self.index2db(index)
         d = self.getCfg(idx)
-        d['status'] = d['status'].replace("D", "")
+        self.status[idx] = self.status[idx].replace("D", "")
         statidx = self.index(index.row(), self.statcol)
         self.dataChanged.emit(statidx, statidx)
 
@@ -544,21 +733,14 @@ class CfgModel(QtGui.QStandardItemModel):
         (idx, f) = self.index2db(index)
         d = self.getCfg(idx)
         if d['config'] == None:
-            QtGui.QMessageBox.critical(None,
-                                 "Error", "Cannot change parent of root class!",
-                                 QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            QtGui.QMessageBox.critical(None, "Error",
+                                       "Cannot change parent of root class!",
+                                       QtGui.QMessageBox.Ok)
             return
         if (param.params.cfgdialog.exec_("Select new parent for %s" % d['name'], d['config']) ==
             QtGui.QDialog.Accepted):
             (idx, f) = self.index2db(index)
             p = param.params.cfgdialog.result
-            while p != None:
-                p = self.getCfg(p)['config']
-                if p == idx:
-                    QtGui.QMessageBox.critical(None,
-                                               "Error", "Configuration change is circular!",
-                                               QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                    return
             self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
             p = self.getCfg(param.params.cfgdialog.result)
             pcolor = p['_color']
