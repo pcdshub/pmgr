@@ -199,8 +199,8 @@ class CfgModel(QtGui.QStandardItemModel):
             f = param.params.db.cfgflds[c-self.coff]['fld']
         return (idx, f)
 
-    def getCfg(self, idx):
-        if idx == None:
+    def getCfg(self, idx, loop=[]):
+        if idx == None or idx in loop:
             return {}
         if idx >= 0:
             d = param.params.db.cfgs[idx]
@@ -215,14 +215,19 @@ class CfgModel(QtGui.QStandardItemModel):
             color = {}
             haveval = {}
             if d['config'] != None:
-                vals = self.getCfg(d['config'])
+                lp = list(loop)
+                lp.append(idx)
+                vals = self.getCfg(d['config'], lp)
                 pcolor = vals['_color']
             for (k, v) in d.items():
                 if k[:3] != 'PV_' and k[:4] != 'FLD_' and not k in self.cfld:
                     continue
                 if v == None:
                     haveval[k] = False
-                    d[k] = vals[k]
+                    try:
+                        d[k] = vals[k]
+                    except:
+                        d[k] = None
                     if pcolor[k] == param.params.red or pcolor[k] == param.params.purple:
                         color[k] = param.params.purple
                     else:
