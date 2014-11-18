@@ -97,15 +97,18 @@ class ObjModel(QtGui.QStandardItemModel):
                 return QtCore.QVariant(self.status[idx])
         d = self.getObj(idx)
         if role == QtCore.Qt.BackgroundRole:
-            if d[f] == None:
-                return QtCore.QVariant(param.params.gray)
-            elif d[f] == "":
-                v2 = self.getCfg(idx, f) # Configured value
-                if v2 == "":
-                    return QtCore.QVariant(param.params.white)
+            try:
+                if d[f] == None:
+                    return QtCore.QVariant(param.params.gray)
+                elif d[f] == "":
+                    v2 = self.getCfg(idx, f) # Configured value
+                    if v2 == "":
+                        return QtCore.QVariant(param.params.white)
+                    else:
+                        return QtCore.QVariant(param.params.ltblue)
                 else:
-                    return QtCore.QVariant(param.params.ltblue)
-            else:
+                    return QtCore.QVariant(param.params.white)
+            except:
                 return QtCore.QVariant(param.params.white)
         try:
             v = self.edits[idx][f]
@@ -114,6 +117,8 @@ class ObjModel(QtGui.QStandardItemModel):
             else:
                 return QtCore.QVariant(v)
         except:
+            pass
+        try:
             v = d[f]                 # Actual value
             v2 = self.getCfg(idx, f) # Configured value
             if role != QtCore.Qt.ForegroundRole or v == None:
@@ -127,6 +132,9 @@ class ObjModel(QtGui.QStandardItemModel):
                 return QtCore.QVariant(param.params.black)
             else:
                 return QtCore.QVariant(param.params.blue)
+        except:
+            pass
+        return QtCore.QVariant()
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
@@ -174,6 +182,7 @@ class ObjModel(QtGui.QStandardItemModel):
         if d != {}:
             if idx < 0:
                 self.objs[idx].update(d)
+                self.objs[idx]['_val'].update(d)
             else:
                 self.edits[idx] = d
         else:
@@ -279,7 +288,10 @@ class ObjModel(QtGui.QStandardItemModel):
 
     def connectAllPVs(self):
         for idx in self.rowmap:
-            self.connectPVs(idx)
+            try:
+                self.connectPVs(idx)
+            except:
+                pass
 
     def pv_handler(self, pv, e):
         if e is None:
@@ -373,6 +385,7 @@ class ObjModel(QtGui.QStandardItemModel):
              'rec_base': "", 'dt_created': now, 'dt_updated': now,
              'cfgname': param.params.db.getCfgName(0) }
         self.status[idx] = "N"
+        dd = {}
         for o in param.params.db.objflds:
             if o['obj']:
                 t = o['type']
@@ -385,6 +398,8 @@ class ObjModel(QtGui.QStandardItemModel):
                 d[o['fld']] = v
             else:
                 d[o['fld']] = None
+            dd[o['fld']] = d[o['fld']]
+        d['_val'] = dd
         self.objs[idx] = d
         self.rowmap.append(idx)
         self.adjustSize()
@@ -422,7 +437,16 @@ class ObjModel(QtGui.QStandardItemModel):
         d = self.getObj(idx)
         if not utils.permission(d['owner'], None):
             param.params.db.transaction_error("Not Authorized!")
-        elif 'D' in self.status[idx]:
+        try:
+            if self.edits[idx]['name'][0:10] == "NewObject-":
+                param.params.db.transaction_error("Object cannot be named %s!" % self.edits[idx]['name'])
+                return
+        except:
+            pass
+        if d['name'][0:10] == "NewObject-":
+            param.params.db.transaction_error("Object cannot be named %s!" % d['name'])
+            return
+        if 'D' in self.status[idx]:
             param.params.db.objectDelete(idx)
         elif 'N' in self.status[idx]:
             param.params.db.objectInsert(self.getObj(idx))

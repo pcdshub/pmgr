@@ -594,6 +594,15 @@ class CfgModel(QtGui.QStandardItemModel):
         if not utils.permission(d['owner'], d['security']):
             param.params.db.transaction_error("Not Authorized!")
             return True
+        try:
+            if self.edits[idx]['name'][0:10] == "NewConfig-":
+                param.params.db.transaction_error("Object cannot be named %s!" % self.edits[idx]['name'])
+                return
+        except:
+            pass
+        if d['name'][0:10] == "NewConfig-":
+            param.params.db.transaction_error("Object cannot be named %s!" % d['name'])
+            return
         if 'D' in self.status[idx]:
             # We can process the delete only if *no one* is using this!
             # We only have to check the configuration, the configDelete
@@ -731,7 +740,6 @@ class CfgModel(QtGui.QStandardItemModel):
                 param.params.ui.treeWidget.setCurrentItem(self.tree[0]['item'])
 
     def renumberCfg(self, old, new):
-        print "Renumber %d -> %d" % (old, new)
         name = param.params.db.getCfgName(new)
         for d in self.cfgs.values():
             if d['config'] == old:
