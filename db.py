@@ -217,6 +217,9 @@ class db(QtCore.QObject):
             objmap = {}
             for o in objs:
                 objmap[o['id']] = o
+                save = {}
+                save.update(o)
+                o['_val'] = save
             self.objs = objmap
             if self.initsig == None:
                 self.setObjNames()
@@ -324,7 +327,7 @@ class db(QtCore.QObject):
                 cmd += ", %s"
                 vlist.append(d[fld])
         cmd += ')'
-        print cmd
+        print cmd % tuple(vlist)
         try:
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as e:
@@ -409,7 +412,7 @@ class db(QtCore.QObject):
             cmd += ", %s"
             vlist.append(d[fld])
         cmd += ')'
-        print cmd
+        print cmd % tuple(vlist)
         try:
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as e:
@@ -448,7 +451,7 @@ class db(QtCore.QObject):
                 v = e[fld]           # We have a new value!
             except:
                 continue
-            cmd += "%s = %%s" % fld
+            cmd += ", %s = %%s" % fld
             vlist.append(v)
         cmd += ' where id = %s'
         vlist.append(idx)

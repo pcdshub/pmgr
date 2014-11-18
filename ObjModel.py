@@ -66,8 +66,10 @@ class ObjModel(QtGui.QStandardItemModel):
             return self.edits[idx][f]
         except:
             pass
-        if f in self.cfld or param.params.db.fldmap[f]['obj']:
+        if f in self.cfld:
             return self.getObj(idx)[f]
+        elif param.params.db.fldmap[f]['obj']:
+            return self.getObj(idx)['_val'][f]
         else:
             try:
                 cfg = self.edits[idx]['config']
@@ -106,9 +108,14 @@ class ObjModel(QtGui.QStandardItemModel):
                 return QtCore.QVariant(v)
         except:
             v = d[f]                 # Actual value
-            if role != QtCore.Qt.ForegroundRole or v == None:
-                return QtCore.QVariant(v)
             v2 = self.getCfg(idx, f) # Configured value
+            if role != QtCore.Qt.ForegroundRole or v == None:
+                try:
+                    if param.params.db.fldmap[f]['obj']:
+                        return QtCore.QVariant(v2)
+                except:
+                    pass
+                return QtCore.QVariant(v)
             if param.equal(v, v2):
                 return QtCore.QVariant(param.params.black)
             else:
@@ -302,18 +309,37 @@ class ObjModel(QtGui.QStandardItemModel):
                 return True
         return False
 
+    def haveObjPVDiff(self, table, index):
+        (idx, f) = self.index2db(index)
+        db = param.params.db
+        try:
+            v = self.edits[idx][f]
+        except:
+            try:
+                v = db.objs[idx]['_val'][f]
+            except:
+                return False
+        try:
+            return db.fldmap[f]['obj'] and not param.equal(db.objs[idx][f], v)
+        except:
+            return False
+
     def setupContextMenus(self, table):
         menu = utils.MyContextMenu()
         menu.addAction("Create new object", self.create)
         menu.addAction("Delete this object", self.delete,     lambda table, index: not self.checkStatus(index, 'D'))
         menu.addAction("Undelete this object", self.undelete, lambda table, index: self.checkStatus(index, 'D'))
         menu.addAction("Change configuration", self.chparent, lambda table, index: index.column() == self.cfgcol)
+        menu.addAction("Set from PV", self.setFromPV, self.haveObjPVDiff)
         menu.addAction("Create configuration from object", self.createcfg)
         menu.addAction("Commit this object", self.commitone,  lambda table, index: self.checkStatus(index, 'DMN'))
         menu.addAction("Apply to this object", self.applyone, lambda table, index: self.checkStatus(index, 'DMN'))
         table.addContextMenu(menu)
-
         colmgr.addColumnManagerMenu(table)
+
+    def setFromPV(self, table, index):
+        (idx, f) = self.index2db(index)
+        self.setData(index, QtCore.QVariant(param.params.db.objs[idx][f]))
 
     def create(self, table, index):
         idx = self.nextid;

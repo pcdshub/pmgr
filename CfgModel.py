@@ -306,6 +306,8 @@ class CfgModel(QtGui.QStandardItemModel):
         if e != {}:
             if idx < 0:
                 self.cfgs[idx].update(e)
+                for k in e.keys():
+                    self.cfgs[idx]['_val'][k] = True
             else:
                 self.edits[idx] = e
         else:
@@ -323,12 +325,6 @@ class CfgModel(QtGui.QStandardItemModel):
             d['_color'][f] = param.params.red
             chcolor = param.params.purple
         else:
-            try:
-                vv = d['_val'][f]
-            except:
-                print d
-                print f
-                print d['name']
             if d['_val'][f]:
                 d['_color'][f] = param.params.black
                 chcolor = param.params.blue
@@ -630,6 +626,8 @@ class CfgModel(QtGui.QStandardItemModel):
             todo = todo.union(set(self.edits.keys()))
         except:
             pass
+        todo = todo.union(set(self.cfgs.keys()))
+        todo = todo.union(set([idx for idx in self.status.keys() if 'D' in self.status[idx]]))
         while todo != set([]):
             done = set([])
             for idx in todo:
