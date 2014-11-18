@@ -326,7 +326,7 @@ class ObjModel(QtGui.QStandardItemModel):
                 return True
         return False
 
-    def haveObjPVDiff(self, table, index):
+    def haveObjPVDiff(self, index):
         (idx, f) = self.index2db(index)
         db = param.params.db
         try:
@@ -344,13 +344,20 @@ class ObjModel(QtGui.QStandardItemModel):
     def setupContextMenus(self, table):
         menu = utils.MyContextMenu()
         menu.addAction("Create new object", self.create)
-        menu.addAction("Delete this object", self.delete,     lambda table, index: not self.checkStatus(index, 'D'))
-        menu.addAction("Undelete this object", self.undelete, lambda table, index: self.checkStatus(index, 'D'))
-        menu.addAction("Change configuration", self.chparent, lambda table, index: index.column() == self.cfgcol)
-        menu.addAction("Set from PV", self.setFromPV, self.haveObjPVDiff)
-        menu.addAction("Create configuration from object", self.createcfg)
-        menu.addAction("Commit this object", self.commitone,  lambda table, index: self.checkStatus(index, 'DMN'))
-        menu.addAction("Apply to this object", self.applyone, lambda table, index: self.checkStatus(index, 'DMN'))
+        menu.addAction("Delete this object", self.delete,
+                       lambda table, index: index.row() >= 0 and not self.checkStatus(index, 'D'))
+        menu.addAction("Undelete this object", self.undelete,
+                       lambda table, index: index.row() >= 0 and self.checkStatus(index, 'D'))
+        menu.addAction("Change configuration", self.chparent,
+                       lambda table, index: index.column() == self.cfgcol)
+        menu.addAction("Set from PV", self.setFromPV,
+                       lambda table, index: index.row() >= 0 and self.haveObjPVDiff(index))
+        menu.addAction("Create configuration from object", self.createcfg,
+                       lambda table, index: index.row() >= 0)
+        menu.addAction("Commit this object", self.commitone,
+                       lambda table, index: index.row() >= 0 and self.checkStatus(index, 'DMN'))
+        menu.addAction("Apply to this object", self.applyone,
+                       lambda table, index: index.row() >= 0 and self.checkStatus(index, 'DMN'))
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table)
 
