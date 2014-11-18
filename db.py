@@ -269,8 +269,12 @@ class db(QtCore.QObject):
     def end_transaction(self):
         if self.errorlist != []:
             self.con.rollback()
+            if param.params.debug:
+                print "ROLLBACK!"
         else:
             self.con.commit()
+            if param.params.debug:
+                print "COMMIT!"
         try:
             self.cur.execute("unlock tables")
         except _mysql_exceptions.Error as e:
@@ -327,7 +331,8 @@ class db(QtCore.QObject):
                 cmd += ", %s"
                 vlist.append(d[fld])
         cmd += ')'
-        print cmd % tuple(vlist)
+        if param.params.debug:
+            print cmd % tuple(vlist)
         try:
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as e:
@@ -377,7 +382,8 @@ class db(QtCore.QObject):
             vlist.append(v)
         cmd += ' where id = %s'
         vlist.append(idx)
-        print cmd % tuple(vlist)
+        if param.params.debug:
+            print cmd % tuple(vlist)
         try:
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as err:
@@ -412,7 +418,8 @@ class db(QtCore.QObject):
             cmd += ", %s"
             vlist.append(d[fld])
         cmd += ')'
-        print cmd % tuple(vlist)
+        if param.params.debug:
+            print cmd % tuple(vlist)
         try:
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as e:
@@ -455,7 +462,8 @@ class db(QtCore.QObject):
             vlist.append(v)
         cmd += ' where id = %s'
         vlist.append(idx)
-        print cmd % tuple(vlist)
+        if param.params.debug:
+            print cmd % tuple(vlist)
         try:
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as err:

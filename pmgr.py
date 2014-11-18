@@ -100,7 +100,7 @@ if __name__ == '__main__':
     app = QtGui.QApplication([''])
   
     # Options( [mandatory list, optional list, switches list] )
-    options = Options(['hutch', 'type'], [], [])
+    options = Options(['hutch', 'type'], [], ['debug'])
     try:
         options.parse()
     except Exception, msg:
@@ -109,6 +109,7 @@ if __name__ == '__main__':
 
     param.params.hutch = options.hutch.lower()
     param.params.table = options.type
+    param.params.debug = False if options.debug == None else True
     gui = GraphicUserInterface()
     try:
         gui.show()

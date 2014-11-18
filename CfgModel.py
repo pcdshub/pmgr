@@ -63,7 +63,6 @@ class CfgModel(QtGui.QStandardItemModel):
                 self.status[d['id']] = ""
 
     def cfgchange(self):
-        print "CfgModel has changed!"
         self.createStatus()
         self.buildtree()
         try:
@@ -123,7 +122,7 @@ class CfgModel(QtGui.QStandardItemModel):
             idx = d['id']
             t[idx] = {'name': d['name'], 'link': d['config'], 'children' : []}
             try:
-                t[idx]['link'] = self.edits[idx]['link']
+                t[idx]['link'] = self.edits[idx]['config']
             except:
                 pass
         for d in self.cfgs.values():
@@ -136,6 +135,24 @@ class CfgModel(QtGui.QStandardItemModel):
                 r.append(k)
             else:
                 t[l]['children'].append(k)
+        #
+        # Sigh.  Since other users can be changing configs out from under us,
+        # we might inadvertently end up with loops.  We'll take care of this
+        # before we commit, but for now, we need to make sure everything is
+        # reachable.
+        #
+        d = list(r)
+        for id in d:                         # This loop builds all of the rooted trees.
+            d[len(d):] = t[id]['children']
+        for (k, v) in t.items():
+            if k in d:
+                continue
+            r.append(k)                      # If this isn't in a rooted tree, it must be in a loop!
+            d.append(k)
+            l = v['link']
+            while l != k:
+                d.append(l)
+                l = t[l]['link']
         r.sort(key=lambda v: t[v]['name'])
         for d in t.values():
             d['children'].sort(key=lambda v: t[v]['name'])
@@ -147,15 +164,20 @@ class CfgModel(QtGui.QStandardItemModel):
         tree.clear()
         r = list(self.root)  # Make a copy!
         t = self.tree
+        d = []
         for id in r:
-            if t[id]['link'] == None:
+            if id in d:
+                continue
+            d.append(id)
+            if id in self.root:
                 item = QtGui.QTreeWidgetItem(tree)
+                parent = None
             else:
                 item = QtGui.QTreeWidgetItem()
+                parent = t[id]['link']
             item.id = id
             item.setText(0, t[id]['name'])
             t[id][fld] = item
-            parent = t[id]['link']
             if parent != None:
                 t[parent][fld].addChild(item)
             try:
@@ -372,22 +394,25 @@ class CfgModel(QtGui.QStandardItemModel):
                     self.dataChanged.emit(index, index)
                 self.fixChildren(c, f, column, v, cd['_color'][f])
         
-    def setCurIdx(self, idx):
-        self.curidx = idx
+    def setCurIdx(self, id):
+        self.curidx = id
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
-        children = self.tree[idx]['children']
+        idx = id
         path = [idx];
         while self.tree[idx]['link'] != None:
             idx = self.tree[idx]['link']
+            if idx == self.curidx:
+                break
             path[:0] = [idx]
-        path[len(path):] = children
+        for c in self.tree[id]['children']:
+            if not c in path:
+                path.append(c)
         self.path = path
         self.setRowCount(len(path))
         self.emit(QtCore.SIGNAL("layoutChanged()"))
         
     def treeNavigation(self, cur, prev):
         if cur != None:
-            print "Current is %s (%d)" % (cur.text(0), cur.id)
             self.setCurIdx(cur.id)
 
     def treeCollapse(self, item):

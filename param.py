@@ -15,6 +15,7 @@ class param_structure(object):
         self.almond = QtGui.QColor(255,235,205)
         self.white  = QtGui.QColor(255,255,255)
         self.gray   = QtGui.QColor(237,233,227)
+        self.ltblue = QtGui.QColor(0,  255,255)
         self.blue   = QtGui.QColor(QtCore.Qt.blue)
         self.red    = QtGui.QColor(QtCore.Qt.red)
         self.black  = QtGui.QColor(QtCore.Qt.black)
@@ -23,6 +24,7 @@ class param_structure(object):
         self.colusedialog    = None
         self.colsavedialog   = None
         self.settings = ("SLAC", "ParamMgr")
+        self.debug  = False
 
         self.ui = None
         self.objmodel = None

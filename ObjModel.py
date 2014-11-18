@@ -4,6 +4,7 @@ import utils
 import colmgr
 import datetime
 import utils
+import pyca
 
 class ObjModel(QtGui.QStandardItemModel):
     cname   = ["Status", "Name", "Config", "PV Base"]
@@ -98,6 +99,12 @@ class ObjModel(QtGui.QStandardItemModel):
         if role == QtCore.Qt.BackgroundRole:
             if d[f] == None:
                 return QtCore.QVariant(param.params.gray)
+            elif d[f] == "":
+                v2 = self.getCfg(idx, f) # Configured value
+                if v2 == "":
+                    return QtCore.QVariant(param.params.white)
+                else:
+                    return QtCore.QVariant(param.params.ltblue)
             else:
                 return QtCore.QVariant(param.params.white)
         try:
@@ -204,13 +211,11 @@ class ObjModel(QtGui.QStandardItemModel):
             self.emit(QtCore.SIGNAL("layoutChanged()"))
 
     def objchange(self):
-        print "ObjModel has object change!"
         self.createStatus()
         self.connectAllPVs()
         self.sort(self.lastsort[0], self.lastsort[1])
 
     def cfgchange(self):
-        print "ObjModel has config change!"
         # This is really a sledgehammer.  Maybe we should check what really needs changing?
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
         self.emit(QtCore.SIGNAL("layoutChanged()"))
@@ -222,6 +227,12 @@ class ObjModel(QtGui.QStandardItemModel):
         except:
             pass
 
+    #
+    # Connect all of the PVs, and build a pv dictionary.  The dictionary
+    # has two mappings: field to PV and pv name to PV.  We use the second
+    # to find PVs we are already connected to, and we use the first to
+    # find the PV when we apply.
+    #
     def connectPVs(self, idx):
         try:
             oldpvdict = self.pvdict[idx]
@@ -240,6 +251,11 @@ class ObjModel(QtGui.QStandardItemModel):
                 n = base + ofld['pv']
                 f = ofld['fld']
                 try:
+                    del oldpvdict[f]   # Get rid of the field mapping
+                                       # so we don't disconnect the PV below!
+                except:
+                    pass
+                try:
                     pv = oldpvdict[n]
                     d[f] = pv.value
                     d['connstat'][ofld['objidx']] = True
@@ -250,6 +266,7 @@ class ObjModel(QtGui.QStandardItemModel):
                     if ofld['type'] == str:
                         pv.set_string_enum(True)
                 newpvdict[n] = pv
+                newpvdict[f] = pv
                 pv.obj = d
                 pv.fld = f
         if reduce(lambda a,b: a and b, d['connstat']):
@@ -411,6 +428,9 @@ class ObjModel(QtGui.QStandardItemModel):
         self.commit(idx)
         if param.params.db.end_transaction():
             self.objChangeDone(idx)
+            return True
+        else:
+            return False
 
     def commitall(self):
         param.params.db.start_transaction()
@@ -424,15 +444,38 @@ class ObjModel(QtGui.QStandardItemModel):
         if param.params.db.end_transaction():
             param.params.cfgmodel.cfgChangeDone()
             self.objChangeDone()
+            return True
+        else:
+            return False
+
+    def apply(self, idx):
+        d = self.getObj(idx)
+        pvd = self.pvdict[idx]
+        for fld in param.params.db.objflds:
+            f = fld['fld']
+            v = d[f]
+            v2 = self.getCfg(idx, f) # Configured value
+            if not param.equal(v, v2):
+                try:
+                    pv = pvd[f]
+                    if param.params.debug:
+                        print "Put %s to %s" % (str(v2), pv.name)
+                    else:
+                        pv.put(v2, -1.0)
+                except:
+                    pass
 
     def applyone(self, table, index):
         if self.commitone(table, index):
             (idx, f) = self.index2db(index)
-            print "Apply Object %d" % idx
+            self.apply(idx)
+            pyca.flush_io()
 
     def applyall(self):
         if self.commitall():
-            print "Apply All"
+            for idx in self.rowmap:
+                self.apply(idx)
+            pyca.flush_io()
 
     def objChangeDone(self, idx=None):
         if idx != None:
