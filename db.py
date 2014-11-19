@@ -243,7 +243,7 @@ class db(QtCore.QObject):
     def setCfgName(self, id, name):
         try:
             if self.cfgs[id]['name'] == name:
-                del self.cfgs[id]['name']
+                del self.nameedits[id]['name']
             else:
                 self.nameedits[id] = name
         except:
