@@ -247,6 +247,12 @@ class FreezeTableView(DropTableView):
 
         self.setFrozenColWidth()
         self.setFrozenRowHeight()
+
+        # Share a delegate!
+        delegate = self.itemDelegate()
+        self.fTV.setItemDelegate(delegate)
+        self.cTV.setItemDelegate(delegate)
+        self.rTV.setItemDelegate(delegate)
         
         self.connect(self.horizontalHeader(), QtCore.SIGNAL("sectionResized(int,int,int)"),
                      self.updateSectionWidth)

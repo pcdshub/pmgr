@@ -9,9 +9,9 @@ import dialogs
 import param
 from db import db
 import threading
+from MyEditorFactory import MyEditorFactory
 
 ######################################################################
-                
 
 class GraphicUserInterface(QtGui.QMainWindow):
     initdone = QtCore.pyqtSignal()
@@ -35,12 +35,15 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.db.start(self.initdone)
 
     def finishinit(self):
+        param.params.factory = MyEditorFactory()
+        
         param.params.ui.menuView.addAction(param.params.ui.configWidget.toggleViewAction())
         param.params.ui.configWidget.setWindowTitle(param.params.table + " configurations")
         param.params.cfgmodel = CfgModel()
         param.params.ui.configTable.init(param.params.cfgmodel, 0, 2)
         param.params.ui.configTable.setShowGrid(True)
         param.params.ui.configTable.resizeColumnsToContents()
+        param.params.ui.configTable.itemDelegate().setItemEditorFactory(param.params.factory)
 
         param.params.ui.menuView.addAction(param.params.ui.objectWidget.toggleViewAction())
         param.params.ui.objectWidget.setWindowTitle(param.params.table + " objects")
@@ -50,6 +53,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.ui.objectTable.resizeColumnsToContents()
         param.params.ui.objectTable.setSortingEnabled(True)
         param.params.ui.objectTable.sortByColumn(param.params.objmodel.namecol, QtCore.Qt.AscendingOrder)
+        param.params.ui.objectTable.itemDelegate().setItemEditorFactory(param.params.factory)
 
         param.params.objmodel.setupContextMenus(param.params.ui.objectTable)
         param.params.cfgmodel.setupContextMenus(param.params.ui.configTable)

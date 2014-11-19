@@ -285,7 +285,7 @@ class CfgModel(QtGui.QStandardItemModel):
             return QtCore.QVariant(v)
         except:
             return QtCore.QVariant(d[f])
-            
+        
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
             return QtGui.QStandardItemModel.setData(self, index, value, role)
