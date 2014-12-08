@@ -15,6 +15,7 @@ create table ims_motor_cfg (
         security varchar(30),             -- is this modifyable? --
 	owner varchar(10),
 	dt_updated datetime not null,
+        mutex varchar(16),                -- An ugly hack to deal with constraint sets.
 	-- pvs and fields --
 	FLD_ACCL  double,  -- Acceleration (seconds from SBAS to S) --
 	FLD_BACC  double,  -- Backlash Accel (seconds from SBAS to S) --
@@ -29,7 +30,6 @@ create table ims_motor_cfg (
 	FLD_EGU   varchar(40),  -- Engineering Units Name --
 	FLD_EL    double,  -- Encoder Lines --
 	FLD_ERBL  varchar(40),  -- External Gauge Readback Link [PV String] --
-	FLD_ERBV  double,  -- External Guage RBV --
 	FLD_ERES  double,  -- Encoder Step Size (EGU) --
 	FLD_ERSV  varchar(26),  -- Error Severity level for reporting [ENUM] --
 	FLD_ESKL  double,  -- External Guage Scale --
@@ -38,7 +38,6 @@ create table ims_motor_cfg (
 	FLD_HACC  double,  -- Homing Accel (seconds to velocity) --
 	FLD_HC    tinyint unsigned,  -- Holding current (%: 0..100) --
 	FLD_HCMX  tinyint unsigned,  -- Holding current maximum (%: 0..100) --
-	FLD_HCSV  tinyint unsigned,  -- Holding current last non-zero value (%: 0..100) --
 	FLD_HDST  double,  -- Back-off distance for limit-switch-homing (EGU) --
 	FLD_HEGE  varchar(26),  -- Homing edge of index or limit [ENUM] --
 	FLD_HLM   double,  -- User High Limit (EGU) --
@@ -95,7 +94,10 @@ create table ims_motor (
 
 create table ims_motor_name_map (
 	db_field_name	varchar(30) not null,
-	alias		varchar(16) not null
+	alias		varchar(16) not null,
+	col_order       int,
+	set_order	int,
+	mutex_mask	int unsigned
 );
 
 create table ims_motor_update (

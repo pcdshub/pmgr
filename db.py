@@ -86,24 +86,27 @@ class dbPoll(threading.Thread):
                 last = now
             if not self.do_db:
                 continue
-            cur.execute("select * from ims_motor_update where tbl_name = 'config' or tbl_name = %s",
-                        (param.params.hutch,))
-            v = 0
-            for d in cur.fetchall():
-                if d['tbl_name'] == 'config':
-                    if d['dt_updated'] != lastcfg:
-                        lastcfg = d['dt_updated']
-                        v = v | self.CONFIG
-                else:
-                    if d['dt_updated'] != lastobj:
-                        lastobj = d['dt_updated']
-                        v = v | self.OBJECT
-            if first:
-                first = False
-                v = 3
-            if v != 0:
-                self.sig.emit(v)
-            self.con.commit()
+            try:
+                cur.execute("select * from ims_motor_update where tbl_name = 'config' or tbl_name = %s",
+                            (param.params.hutch,))
+                v = 0
+                for d in cur.fetchall():
+                    if d['tbl_name'] == 'config':
+                        if d['dt_updated'] != lastcfg:
+                            lastcfg = d['dt_updated']
+                            v = v | self.CONFIG
+                    else:
+                        if d['dt_updated'] != lastobj:
+                            lastobj = d['dt_updated']
+                            v = v | self.OBJECT
+                if first:
+                    first = False
+                    v = 3
+                if v != 0:
+                    self.sig.emit(v)
+                self.con.commit()
+            except:
+                pass
 
     def start_transaction(self):
         self.do_db = False
@@ -149,40 +152,77 @@ class db(QtCore.QObject):
 
         self.cur.execute("describe %s_cfg" % param.params.table)
         fld = [(d['Field'], m2pType(d['Type'])) for d in self.cur.fetchall()]
-        fld = fld[6:]         # Skip the standard fields!
+        fld = fld[7:]         # Skip the standard fields!
         self.cfgfldcnt = len(fld)
         self.objfldcnt = len(locfld) + self.cfgfldcnt
 
         self.cur.execute("select * from %s_name_map" % param.params.table)
         result = self.cur.fetchall()
+
         alias = {}
+        colorder = {}
+        setorder = {}
+        mutex = {}
+        mutex_sets = []
+        for i in range(16):
+            mutex_sets.append([])
+        for (f, t) in locfld:
+            alias[f] = createAlias(f)
+            colorder[f] = 1000
+            setorder[f] = 0
+            mutex[f] = 0
+        for (f, t) in fld:
+            alias[f] = createAlias(f)
+            colorder[f] = 1000
+            setorder[f] = 0
+            mutex[f] = 0
+
         for d in result:
             f = d['db_field_name']
-            alias[f] = d['alias']
+            if d['alias'] != "":
+                alias[f] = d['alias']
+            colorder[f] = d['col_order']
+            setorder[f] = d['set_order']
+            v = d['mutex_mask']
+            if v != 0:
+                for i in range(16):
+                    if v & (1 << i) != 0:
+                        mutex_sets[i].append(f)
+        # We're assuming the bits are used from LSB to MSB, no gaps!
+        self.mutex_sets = [l for l in mutex_sets if l != []]
+        for d in result:
+            f = d['db_field_name']
+            mutex[f] = []
+            v = d['mutex_mask']
+            if v != 0:
+                for i in range(16):
+                    if v & (1 << i) != 0:
+                        mutex[f].append(i)
 
         self.objflds = []
-        
         for (f, t) in locfld:
             n = fixName(f)
-            if f in alias.keys():
-                self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'obj': True})
-            else:
-                self.objflds.append({'fld': f, 'pv': n, 'alias' : createAlias(f), 'type': t, 'obj': True})
+            self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
+                                 'colorder': colorder[f], 'setorder': setorder[f],
+                                 'mutex' : mutex[f], 'obj': True})
         for (f, t) in fld:
             n = fixName(f)
-            if f in alias.keys():
-                self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'obj': False})
-            else:
-                self.objflds.append({'fld': f, 'pv': n, 'alias' : createAlias(f), 'type': t, 'obj': False})
-        self.objflds.sort(key=lambda d: (not d['obj'], d['alias']))
+            self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
+                                 'colorder': colorder[f], 'setorder': setorder[f],
+                                 'mutex' : mutex[f], 'obj': False})
+        self.objflds.sort(key=lambda d: d['colorder'])   # New regime: col_order is manditory and unique!
         self.fldmap = {}
+        self.colmap = {}
         for i in range(len(self.objflds)):
             d = self.objflds[i]
             d['objidx'] = i
             self.fldmap[d['fld']] = d
+            self.colmap[d['colorder']] = d
         self.cfgflds = [d for d in self.objflds if d['obj'] == False]
         for i in range(len(self.cfgflds)):
             self.cfgflds[i]['cfgidx'] = i
+        self.setflds = [d['fld'] for d in self.objflds]
+        self.setflds.sort(key=lambda f: self.fldmap[f]['setorder'])
         self.con.commit()
         
     def readDB(self, is_hutch):
@@ -190,8 +230,11 @@ class db(QtCore.QObject):
             ext = " where owner = '%s'" % param.params.hutch
         else:
             ext = "_cfg"
-        self.cur.execute("select * from %s%s" % (param.params.table, ext))
-        return list(self.cur.fetchall())
+        try:
+            self.cur.execute("select * from %s%s" % (param.params.table, ext))
+            return list(self.cur.fetchall())
+        except:
+            return []
 
     def setObjNames(self):
         for o in self.objs.values():
@@ -202,27 +245,35 @@ class db(QtCore.QObject):
             return
         if (mask & dbPoll.CONFIG) != 0:
             cfgs = self.readDB(False)
-            map = {}
-            for d in cfgs:
-                map[d['id']] = d
-            self.cfgs = map
-            for d in cfgs:
-                r = d['config']
-                if r == None:
-                    d['cfgname'] = ""
-                else:
-                    d['cfgname'] = self.getCfgName(r)
+            if cfgs == []:
+                mask &= ~dbPoll.CONFIG
+            else:
+                map = {}
+                for d in cfgs:
+                    map[d['id']] = d
+                self.cfgs = map
+                for d in cfgs:
+                    r = d['config']
+                    if r == None:
+                        d['cfgname'] = ""
+                    else:
+                        d['cfgname'] = self.getCfgName(r)
         if (mask & dbPoll.OBJECT) != 0:
-            objs = self.readDB(True)
-            objmap = {}
-            for o in objs:
-                objmap[o['id']] = o
-                save = {}
-                save.update(o)
-                o['_val'] = save
-            self.objs = objmap
-            if self.initsig == None:
-                self.setObjNames()
+            if cfgs == []:
+                mask &= ~dbPoll.OBJECT
+            else:
+                objs = self.readDB(True)
+                objmap = {}
+                for o in objs:
+                    objmap[o['id']] = o
+                    save = {}
+                    save.update(o)
+                    o['_val'] = save
+                self.objs = objmap
+                if self.initsig == None:
+                    self.setObjNames()
+        if mask == 0:
+            return
         if not nosig:
             self.con.commit()
             if (mask & dbPoll.CONFIG) != 0:

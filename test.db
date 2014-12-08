@@ -1,6 +1,0 @@
--1	DEFAULT	\N	\N	\N	2014-10-29 17:22:37	0	0	0	0	0		0	0				0		0	0		0		0	0	0	0	0	0		0	0	0	0		0			0	0	0	0	0	0	0	0	0	0	0		0	0		0	type0	0		
-1	z axis	0	\N	\N	2014-10-29 17:22:37	4	\N	\N	7.6	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	type1	\N	\N	\N
-2	asdf	4	\N	\N	2014-10-29 17:22:37	\N	4	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	type2	\N	\N	\N
-3	random motor	0	\N	\N	2014-10-29 17:22:37	\N	\N	\N	6.5	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	type3	\N	\N	\N
-4	energy motor	1	\N	\N	2014-10-29 17:22:37	\N	\N	\N	9.2	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	type4	\N	\N	\N
-5	xcs motor	0	\N	\N	2014-10-29 17:22:37	0.1	0.1	0	0.4	200	Neg	-200	0	Enable	NO	mm	512		0	0.0003876953125	MINOR	1	Frozen	200	1	5	5	5	5	Neg	200	0	2	500	N/A	-200	NoDecel, CanHome	Normal	1.55078125e-05	50	0	0.01	50	50	0.004	1	1	0.1	15	No Stop	2	51200	MINOR	1		0.794	X+	X-

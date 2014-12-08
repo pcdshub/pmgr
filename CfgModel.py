@@ -199,6 +199,14 @@ class CfgModel(QtGui.QStandardItemModel):
             f = param.params.db.cfgflds[c-self.coff]['fld']
         return (idx, f)
 
+    def db2index(self, idx, f):
+        try:
+            c = param.params.db.fldmap[f]['cfgidx'] + self.coff
+            r = self.path.index(idx)
+            return self.index(r, c)
+        except:
+            return None
+
     def getCfg(self, idx, loop=[]):
         if idx == None or idx in loop:
             return {}
@@ -214,27 +222,46 @@ class CfgModel(QtGui.QStandardItemModel):
         if not '_color' in d.keys():
             color = {}
             haveval = {}
+            try:
+                v = self.edits['mutex']
+            except:
+                v = d['mutex']
             if d['config'] != None:
                 lp = list(loop)
                 lp.append(idx)
                 vals = self.getCfg(d['config'], lp)
                 pcolor = vals['_color']
+                pmutex = vals['curmutex']
+                mutex = ""
+                for i in range(len(param.params.db.mutex_sets)):
+                    if v[i] != ' ':
+                        mutex += v[i]
+                    else:
+                        mutex += pmutex[i]
+                d['curmutex'] = mutex
+            else:
+                d['curmutex'] = v
             for (k, v) in d.items():
                 if k[:3] != 'PV_' and k[:4] != 'FLD_' and not k in self.cfld:
                     continue
-                if v == None:
-                    haveval[k] = False
+                if v == None:   
+                    haveval[k] = chr(param.params.db.fldmap[k]['colorder']+0x40) in d['curmutex']
+                else:
+                    haveval[k] = True
+                if haveval[k]:
+                    color[k] = param.params.black
+                else:
                     try:
                         d[k] = vals[k]
                     except:
                         d[k] = None
-                    if pcolor[k] == param.params.red or pcolor[k] == param.params.purple:
-                        color[k] = param.params.purple
-                    else:
+                    try:
+                        if pcolor[k] == param.params.red or pcolor[k] == param.params.purple:
+                            color[k] = param.params.purple
+                        else:
+                            color[k] = param.params.blue
+                    except:
                         color[k] = param.params.blue
-                else:
-                    haveval[k] = True
-                    color[k] = param.params.black
                 if k in e:
                     color[k] = param.params.red
             d['_color'] = color
@@ -266,13 +293,15 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def data(self, index, role = QtCore.Qt.DisplayRole):
         if (role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and
-            role != QtCore.Qt.ForegroundRole):
+            role != QtCore.Qt.ForegroundRole and role != QtCore.Qt.BackgroundRole):
             return QtGui.QStandardItemModel.data(self, index, role)
         if not index.isValid():
             return QtCore.QVariant()
         (idx, f) = self.index2db(index)
         if f == "status":
-            if role == QtCore.Qt.ForegroundRole:
+            if role == QtCore.Qt.BackgroundRole:
+                return QtCore.QVariant(param.params.white)
+            elif role == QtCore.Qt.ForegroundRole:
                 return QtCore.QVariant(param.params.black)
             else:
                 return QtCore.QVariant(self.status[idx])
@@ -280,11 +309,19 @@ class CfgModel(QtGui.QStandardItemModel):
         if role == QtCore.Qt.ForegroundRole:
             color = d['_color'][f]
             return QtCore.QVariant(color)
-        try:
-            v = self.edits[idx][f]
-            return QtCore.QVariant(v)
-        except:
-            return QtCore.QVariant(d[f])
+        elif role == QtCore.Qt.BackgroundRole:
+            if f in self.cfld:
+                return QtCore.QVariant(param.params.white)
+            if chr(param.params.db.fldmap[f]['colorder']+0x40) in d['curmutex']:
+                return QtCore.QVariant(param.params.almond)
+            else:
+                return QtCore.QVariant(param.params.white)
+        else:
+            try:
+                v = self.edits[idx][f]
+                return QtCore.QVariant(v)
+            except:
+                return QtCore.QVariant(d[f])
         
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
@@ -296,6 +333,8 @@ class CfgModel(QtGui.QStandardItemModel):
             (v, ok) = value.toInt()
         elif t == QtCore.QMetaType.Double:
             (v, ok) = value.toDouble()
+        elif t == QtCore.QMetaType.Void:
+            v = None
         else:
             print "Unexpected QVariant type %d" % value.type()
             return False
@@ -364,15 +403,76 @@ class CfgModel(QtGui.QStandardItemModel):
                 else:
                     d['_color'][f] = param.params.purple
                     chcolor = param.params.purple
+        c = index.column()
+        cm = chr(param.params.db.fldmap[f]['colorder']+0x40)
+        if (d['_color'][f] != param.params.blue and
+            d['_color'][f] != param.params.purple and
+            cm in d['curmutex']):
+            # This is a calculated value!
+            i = d['curmutex'].find(cm)
+            d['curmutex'] = self.promote(idx, f, c, i, d['curmutex'])
         self.dataChanged.emit(index, index)
-        if index.column() == self.namecol:
+        if c == self.namecol:
             param.params.db.setCfgName(idx, v)
             self.newname.emit(idx, v)
         else:
             self.cfgChanged.emit(idx, f)
         # Now, fix up the children that inherit from us!
-        self.fixChildren(idx, f, index.column(), v, chcolor)
+        self.fixChildren(idx, f, c, v, chcolor)
         return True
+
+    #
+    # This is called when we set a value on (idx, f) and this is currently
+    # a calculated value.
+    #
+    def promote(self, idx, f, column, setidx, curmutex):
+        cfg = self.getCfg(idx)
+        mlist = param.params.db.mutex_sets[setidx]
+        if len(mlist) == 2:
+            # No need to prompt, the other has to be the derived value!
+            if mlist[0] == f:
+                derived = mlist[1]
+            else:
+                derived = mlist[0]
+        else:
+            d = param.params.deriveddialog
+            d.reset()
+            for fld in mlist:
+                if fld != f:
+                    d.addValue(param.params.db.fldmap[fld]['alias'], fld)
+            d.exec_()
+            # The user *must* give a value.  I'll take whatever is checked even if the
+            # window was just closed!!
+            derived = d.getValue()
+        for fld in mlist:
+            if fld == f:
+                if not self.hasValue(True, idx, fld):
+                    self.createval(None, idx, fld)
+            elif fld == derived:
+                if not self.hasValue(True, idx, fld):
+                    self.createval(None, idx, fld)
+                if cfg[fld] == None:
+                    try:
+                        del self.edits[idx][fld]
+                        if self.edits[idx] == {}:
+                            del self.edits[idx]
+                    except:
+                        pass
+                else:
+                    try:
+                        self.edits[idx][fld] = None
+                    except:
+                        self.edits[idx] = {fld: None}
+            else:
+                if not self.hasValue(True, idx, fld):
+                    self.createval(None, idx, fld)
+        cm = chr(param.params.db.fldmap[derived]['colorder']+0x40)
+        if cm in curmutex:
+            # Column is wrong here.
+            curmutex = curmutex[:setidx] + ' ' + curmutex[setidx+1:]
+            curmutex = self.promote(idx, derived, column, curmutex.index(cm), curmutex)
+        curmutex = curmutex[:setidx] + cm + curmutex[setidx+1:]
+        return curmutex
 
     def fixChildren(self, idx, f, column, v, chcolor):
         for c in self.tree[idx]['children']:
@@ -428,10 +528,13 @@ class CfgModel(QtGui.QStandardItemModel):
         if item != None:
             self.is_expanded[item.id] = True
 
-    def hasValue(self, v, table, index):
-        if index.column() < self.coff:  # These values just aren't deleteable!
-            return False
-        (idx, f) = self.index2db(index)
+    def hasValue(self, v, index, f=None):
+        if f == None:
+            if index.column() < self.coff:  # These values just aren't deleteable!
+                return False
+            (idx, f) = self.index2db(index)
+        else:
+            idx = index
         d = self.getCfg(idx)
         ev = self.geteditval(idx, f)
         if ev != None:
@@ -452,13 +555,12 @@ class CfgModel(QtGui.QStandardItemModel):
         menu.addAction("Clone existing", self.clone)
         menu.addAction("Clone values", self.clonevals)
         menu.addAction("Change parent", self.chparent, lambda table, index: index.column() == self.cfgcol)
-        menu.addAction("Delete value", self.deleteval, lambda t, i: self.hasValue(True, t, i))
-        menu.addAction("Create value", self.createval, lambda t, i: self.hasValue(False, t, i))
+        menu.addAction("Delete value", self.deleteval, lambda t, i: self.hasValue(True, i))
+        menu.addAction("Create value", self.createval, lambda t, i: self.hasValue(False, i))
         menu.addAction("Delete config", self.deletecfg, lambda table, index: not self.checkStatus(index, 'D'))
         menu.addAction("Undelete config", self.undeletecfg, lambda table, index: self.checkStatus(index, 'D'))
         menu.addAction("Commit this config", self.commitone, lambda table, index: self.checkStatus(index, 'DMN'))
         table.addContextMenu(menu)
-
         colmgr.addColumnManagerMenu(table)
 
     def create_child(self, parent, sibling=None, useval=False):
@@ -497,6 +599,8 @@ class CfgModel(QtGui.QStandardItemModel):
             haveval[fld] = True
         d['_color'] = color
         d['_val'] = haveval
+        d['curmutex'] = vals['curmutex']
+        d['mutex'] = vals['mutex']
         self.editval[id] = {}
         self.cfgs[id] = d
         self.buildtree()
@@ -520,8 +624,12 @@ class CfgModel(QtGui.QStandardItemModel):
         parent = self.getCfg(idx)['config']
         id = self.create_child(parent, self.getCfg(idx), True)
 
-    def deleteval(self, table, index):
-        (idx, f) = self.index2db(index)
+    def deleteval(self, table, index, f=None):
+        if f == None:
+            (idx, f) = self.index2db(index)
+        else:
+            idx = index
+            index = self.db2index(idx, f)
         d = self.getCfg(idx)
         pidx = d['config']
         if pidx != None:                     # Can't delete a value from a root class!
@@ -530,7 +638,8 @@ class CfgModel(QtGui.QStandardItemModel):
                 self.seteditval(idx, f, False)
             else:
                 self.seteditval(idx, f, None)
-            self.setModifiedStatus(index, idx, d)
+            if index != None:
+                self.setModifiedStatus(index, idx, d)
             if idx < 0:
                 d['_color'][f] = param.params.blue
             elif self.geteditval(idx, f) != None:
@@ -546,16 +655,22 @@ class CfgModel(QtGui.QStandardItemModel):
                     else:
                         d['_color'][f] = param.params.blue
             d[f] = p[f]
-        self.dataChanged.emit(index, index)
+        if index != None:
+            self.dataChanged.emit(index, index)
 
-    def createval(self, table, index):
-        (idx, f) = self.index2db(index)
+    def createval(self, table, index, f=None):
+        if f == None:
+            (idx, f) = self.index2db(index)
+        else:
+            idx = index
+            index = self.db2index(idx, f)
         d = self.getCfg(idx)
         if self.geteditval(idx, f) == None:
             self.seteditval(idx, f, True)
         else:
             self.seteditval(idx, f, None)
-        self.setModifiedStatus(index, idx, d)
+        if index != None:
+            self.setModifiedStatus(index, idx, d)
         if idx < 0:
             d['_color'][f] = param.params.black
         elif self.geteditval(idx, f) != None:
@@ -566,7 +681,8 @@ class CfgModel(QtGui.QStandardItemModel):
                 d['_color'][f] = param.params.red
             except:
                 d['_color'][f] = param.params.black
-        self.dataChanged.emit(index, index)
+        if index != None:
+            self.dataChanged.emit(index, index)
 
     def hasChildren(self, idx, checked=[]):
         for c in self.tree[idx]['children']:

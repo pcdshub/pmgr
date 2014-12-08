@@ -482,8 +482,7 @@ class ObjModel(QtGui.QStandardItemModel):
     def apply(self, idx):
         d = self.getObj(idx)
         pvd = self.pvdict[idx]
-        for fld in param.params.db.objflds:
-            f = fld['fld']
+        for f in param.params.db.setflds:
             v = d[f]
             v2 = self.getCfg(idx, f) # Configured value
             if not param.equal(v, v2):

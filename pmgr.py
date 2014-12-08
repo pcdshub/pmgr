@@ -61,6 +61,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.cfgdialog       = dialogs.cfgdialog(param.params.cfgmodel, self)
         param.params.colsavedialog   = dialogs.colsavedialog(self)
         param.params.colusedialog    = dialogs.colusedialog(self)
+        param.params.deriveddialog   = dialogs.deriveddialog(self)
 
         param.params.db.objchange.connect(param.params.objmodel.objchange)
         param.params.db.cfgchange.connect(param.params.objmodel.cfgchange)

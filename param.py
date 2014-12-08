@@ -23,6 +23,7 @@ class param_structure(object):
         self.cfgdialog       = None
         self.colusedialog    = None
         self.colsavedialog   = None
+        self.deriveddialog   = None
         self.settings = ("SLAC", "ParamMgr")
         self.debug  = False
 
