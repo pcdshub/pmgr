@@ -162,6 +162,8 @@ class db(QtCore.QObject):
         alias = {}
         colorder = {}
         setorder = {}
+        desc = {}
+        enum = {}
         mutex = {}
         mutex_sets = []
         for i in range(16):
@@ -171,11 +173,13 @@ class db(QtCore.QObject):
             colorder[f] = 1000
             setorder[f] = 0
             mutex[f] = 0
+            desc[f] = ''
         for (f, t) in fld:
             alias[f] = createAlias(f)
             colorder[f] = 1000
             setorder[f] = 0
             mutex[f] = 0
+            desc[f] = ''
 
         for d in result:
             f = d['db_field_name']
@@ -183,6 +187,10 @@ class db(QtCore.QObject):
                 alias[f] = d['alias']
             colorder[f] = d['col_order']
             setorder[f] = d['set_order']
+            desc[f] = d['desc']
+            v = d['enum']
+            if v != "":
+                enum[f] = v.split('|')
             v = d['mutex_mask']
             if v != 0:
                 for i in range(16):
@@ -203,14 +211,24 @@ class db(QtCore.QObject):
         self.objflds = []
         for (f, t) in locfld:
             n = fixName(f)
-            self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
-                                 'colorder': colorder[f], 'setorder': setorder[f],
-                                 'mutex' : mutex[f], 'obj': True})
+            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
+                 'colorder': colorder[f], 'setorder': setorder[f],
+                 'desc': desc[f], 'mutex' : mutex[f], 'obj': True}
+            try:
+                d['enum'] = enum[f]
+            except:
+                pass
+            self.objflds.append(d)
         for (f, t) in fld:
             n = fixName(f)
-            self.objflds.append({'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
-                                 'colorder': colorder[f], 'setorder': setorder[f],
-                                 'mutex' : mutex[f], 'obj': False})
+            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
+                 'colorder': colorder[f], 'setorder': setorder[f],
+                 'desc': desc[f], 'mutex' : mutex[f], 'obj': False}
+            try:
+                d['enum'] = enum[f]
+            except:
+                pass
+            self.objflds.append(d)
         self.objflds.sort(key=lambda d: d['colorder'])   # New regime: col_order is manditory and unique!
         self.fldmap = {}
         self.colmap = {}

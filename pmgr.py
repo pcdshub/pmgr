@@ -10,6 +10,7 @@ import param
 from db import db
 import threading
 from MyEditorFactory import MyEditorFactory
+from MyDelegate import MyDelegate
 
 ######################################################################
 
@@ -43,6 +44,8 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.ui.configTable.init(param.params.cfgmodel, 0, 2)
         param.params.ui.configTable.setShowGrid(True)
         param.params.ui.configTable.resizeColumnsToContents()
+        param.params.ui.configTable.setItemDelegate(MyDelegate(self, param.params.db.cfgflds,
+                                                               param.params.cfgmodel.coff))
         param.params.ui.configTable.itemDelegate().setItemEditorFactory(param.params.factory)
 
         param.params.ui.menuView.addAction(param.params.ui.objectWidget.toggleViewAction())
@@ -53,6 +56,8 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.ui.objectTable.resizeColumnsToContents()
         param.params.ui.objectTable.setSortingEnabled(True)
         param.params.ui.objectTable.sortByColumn(param.params.objmodel.namecol, QtCore.Qt.AscendingOrder)
+        param.params.ui.objectTable.setItemDelegate(MyDelegate(self, param.params.db.objflds,
+                                                               param.params.objmodel.coff))
         param.params.ui.objectTable.itemDelegate().setItemEditorFactory(param.params.factory)
 
         param.params.objmodel.setupContextMenus(param.params.ui.objectTable)
