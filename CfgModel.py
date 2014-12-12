@@ -233,7 +233,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 pcolor = vals['_color']
                 pmutex = vals['curmutex']
                 mutex = ""
-                for i in range(len(param.params.db.mutex_sets)):
+                for i in range(param.params.db.mutex_cnt):
                     if v[i] != ' ':
                         mutex += v[i]
                     else:
@@ -616,7 +616,12 @@ class CfgModel(QtGui.QStandardItemModel):
         d['_color'] = color
         d['_val'] = haveval
         d['curmutex'] = vals['curmutex']
-        d['mutex'] = vals['mutex']
+        if sibling == None:
+            d['mutex'] = param.params.db.mutex_sets*' '
+        elif useval:
+            d['mutex'] = vals['curmutex']
+        else:
+            d['mutex'] = vals['mutex']
         self.editval[id] = {}
         self.cfgs[id] = d
         self.buildtree()
@@ -836,7 +841,7 @@ class CfgModel(QtGui.QStandardItemModel):
             c = self.getCfg(cidx)
             v = self.getval(cidx, "mutex")
             mutex = ""
-            for i in range(len(param.params.db.mutex_sets)):
+            for i in range(param.params.db.mutex_cnt):
                 if v[i] != ' ':
                     mutex += v[i]
                 else:

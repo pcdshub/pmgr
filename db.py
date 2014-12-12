@@ -190,6 +190,7 @@ class db(QtCore.QObject):
                         mutex_sets[i].append(f)
         # We're assuming the bits are used from LSB to MSB, no gaps!
         self.mutex_sets = [l for l in mutex_sets if l != []]
+        self.mutex_cnt = len(self.mutex_sets)
         for d in result:
             f = d['db_field_name']
             mutex[f] = []
@@ -421,7 +422,7 @@ class db(QtCore.QObject):
             pass
         try:
             v = e['mutex']
-            cmd += ", mutex = '%s'"
+            cmd += ", mutex = %s"
             vlist.append(v)
         except:
             print "No mutex?!?"
