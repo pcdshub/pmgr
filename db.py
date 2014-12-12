@@ -148,7 +148,7 @@ class db(QtCore.QObject):
     def readFormat(self):
         self.cur.execute("describe %s" % param.params.table)
         locfld = [(d['Field'], m2pType(d['Type'])) for d in self.cur.fetchall()]
-        locfld = locfld[7:]   # Skip the standard fields!
+        locfld = locfld[8:]   # Skip the standard fields!
 
         self.cur.execute("describe %s_cfg" % param.params.table)
         fld = [(d['Field'], m2pType(d['Type'])) for d in self.cur.fetchall()]
