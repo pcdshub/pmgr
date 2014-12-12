@@ -363,19 +363,20 @@ class db(QtCore.QObject):
     # Security?
     #
     def configInsert(self, d):
-        cmd = "insert %s_cfg (name, config, owner, dt_updated" % param.params.table
+        cmd = "insert %s_cfg (name, config, owner, mutex, dt_updated" % param.params.table
         vals = d['_val']
         for f in self.cfgflds:
             fld = f['fld']
             if vals[fld]:
                 cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, now()"
+        cmd += ") values (%s, %s, %s, '%s', now()"
         vlist = [d['name']]
         try:
             vlist.append(self.cfgmap[d['config']])
         except:
             vlist.append(d['config'])
         vlist.append(param.params.hutch)
+        vlist.append(d['mutex'])
         for f in self.cfgflds:
             fld = f['fld']
             if vals[fld]:
@@ -384,6 +385,7 @@ class db(QtCore.QObject):
         cmd += ')'
         if param.params.debug:
             print cmd % tuple(vlist)
+            return
         try:
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as e:
@@ -417,6 +419,12 @@ class db(QtCore.QObject):
                 vlist.append(v)
         except:
             pass
+        try:
+            v = e['mutex']
+            cmd += ", mutex = '%s'"
+            vlist.append(v)
+        except:
+            print "No mutex?!?"
         for f in self.cfgflds:
             fld = f['fld']
             try:
@@ -435,6 +443,7 @@ class db(QtCore.QObject):
         vlist.append(idx)
         if param.params.debug:
             print cmd % tuple(vlist)
+            return
         try:
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as err:
@@ -471,6 +480,7 @@ class db(QtCore.QObject):
         cmd += ')'
         if param.params.debug:
             print cmd % tuple(vlist)
+            return
         try:
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as e:
@@ -515,6 +525,7 @@ class db(QtCore.QObject):
         vlist.append(idx)
         if param.params.debug:
             print cmd % tuple(vlist)
+            return
         try:
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as err:
