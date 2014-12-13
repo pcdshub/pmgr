@@ -44,7 +44,6 @@ create table ims_motor_cfg (
 	FLD_MODE  varchar(26), -- Run Mode [ENUM] --
 	FLD_MRES  double,  -- Motor Resolution (EGU/micro-step) --
 	FLD_MT    smallint unsigned,  -- Motor Settling Time (ms) --
-	FLD_OFF   double,  -- User Offset (EGU) --
 	FLD_PDBD  double,  -- Position Tolerance for monitoring (EGU) --
 	FLD_RC    tinyint unsigned, -- run current (%: 0..100) --
 	FLD_RCMX  tinyint unsigned, -- run current max (%: 0..100) --
@@ -86,6 +85,7 @@ create table ims_motor (
 	FLD_HLM   double,  -- User High Limit (EGU) --
 	FLD_LLM   double,  -- User High Limit (EGU) --
 	FLD_HOMD  double,  -- Dial value at home (EGU) --
+	FLD_OFF   double,  -- User Offset (EGU) --
 	
 	-- constraints --
 	primary key (id),

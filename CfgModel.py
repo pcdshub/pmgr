@@ -410,13 +410,16 @@ class CfgModel(QtGui.QStandardItemModel):
                     d['_color'][f] = param.params.purple
                     chcolor = param.params.purple
         c = index.column()
-        cm = chr(param.params.db.fldmap[f]['colorder']+0x40)
-        if (d['_color'][f] != param.params.blue and
-            d['_color'][f] != param.params.purple and
-            cm in d['curmutex']):
-            # This is a calculated value!
-            i = d['curmutex'].find(cm)
-            d['curmutex'] = self.promote(idx, f, c, i, d['curmutex'])
+        try:
+            cm = chr(param.params.db.fldmap[f]['colorder']+0x40)
+            if (d['_color'][f] != param.params.blue and
+                d['_color'][f] != param.params.purple and
+                cm in d['curmutex']):
+                # This is a calculated value!
+                i = d['curmutex'].find(cm)
+                d['curmutex'] = self.promote(idx, f, c, i, d['curmutex'])
+        except:
+            pass
         self.dataChanged.emit(index, index)
         if c == self.namecol:
             param.params.db.setCfgName(idx, v)

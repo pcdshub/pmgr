@@ -9,7 +9,6 @@ import dialogs
 import param
 from db import db
 import threading
-from MyEditorFactory import MyEditorFactory
 from MyDelegate import MyDelegate
 
 ######################################################################
@@ -36,8 +35,6 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.db.start(self.initdone)
 
     def finishinit(self):
-        param.params.factory = MyEditorFactory()
-        
         param.params.ui.menuView.addAction(param.params.ui.configWidget.toggleViewAction())
         param.params.ui.configWidget.setWindowTitle(param.params.table + " configurations")
         param.params.cfgmodel = CfgModel()
@@ -46,7 +43,6 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.ui.configTable.resizeColumnsToContents()
         param.params.ui.configTable.setItemDelegate(MyDelegate(self, param.params.db.cfgflds,
                                                                param.params.cfgmodel.coff))
-        param.params.ui.configTable.itemDelegate().setItemEditorFactory(param.params.factory)
 
         param.params.ui.menuView.addAction(param.params.ui.objectWidget.toggleViewAction())
         param.params.ui.objectWidget.setWindowTitle(param.params.table + " objects")
@@ -58,7 +54,6 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.ui.objectTable.sortByColumn(param.params.objmodel.namecol, QtCore.Qt.AscendingOrder)
         param.params.ui.objectTable.setItemDelegate(MyDelegate(self, param.params.db.objflds,
                                                                param.params.objmodel.coff))
-        param.params.ui.objectTable.itemDelegate().setItemEditorFactory(param.params.factory)
 
         param.params.objmodel.setupContextMenus(param.params.ui.objectTable)
         param.params.cfgmodel.setupContextMenus(param.params.ui.configTable)
