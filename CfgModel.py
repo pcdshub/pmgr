@@ -11,6 +11,7 @@ class CfgModel(QtGui.QStandardItemModel):
     
     cname   = ["Status", "Name", "Parent"]
     cfld    = ["status", "name", "cfgname"]
+    ctips   = ["D = Deleted\nM = Modified\nN = New", "Configuration Name", "Parent Configuration"]
     coff    = len(cname)
     statcol = 0
     namecol = 1
@@ -40,9 +41,14 @@ class CfgModel(QtGui.QStandardItemModel):
         font.setBold(True)
         for c in range(self.colcnt):
             if c < self.coff:
-                self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.cname[c]))
+                i = QtGui.QStandardItem(self.cname[c])
+                i.setToolTip(self.ctips[c])
             else:
-                self.setHorizontalHeaderItem(c, QtGui.QStandardItem(param.params.db.cfgflds[c-self.coff]['alias']))
+                i = QtGui.QStandardItem(param.params.db.cfgflds[c-self.coff]['alias'])
+                desc = param.params.db.cfgflds[c-self.coff]['tooltip']
+                if desc != "":
+                    i.setToolTip(desc)
+            self.setHorizontalHeaderItem(c, i)
         self.is_expanded = {}
         self.createStatus()
         self.buildtree()
@@ -51,9 +57,6 @@ class CfgModel(QtGui.QStandardItemModel):
         except:
             self.setCurIdx(0)
         param.params.ui.treeWidget.expandItem(self.tree[self.curidx]['item'])
-        self.setHeaderData(self.statcol, QtCore.Qt.Horizontal,
-                           QtCore.QVariant("D = Deleted\nM = Modified\nN = New"),
-                           QtCore.Qt.ToolTipRole)
 
     def createStatus(self):
         for d in param.params.db.cfgs.values():

@@ -162,7 +162,7 @@ class db(QtCore.QObject):
         alias = {}
         colorder = {}
         setorder = {}
-        desc = {}
+        tooltip = {}
         enum = {}
         mutex = {}
         mutex_sets = []
@@ -173,13 +173,13 @@ class db(QtCore.QObject):
             colorder[f] = 1000
             setorder[f] = 0
             mutex[f] = 0
-            desc[f] = ''
+            tooltip[f] = ''
         for (f, t) in fld:
             alias[f] = createAlias(f)
             colorder[f] = 1000
             setorder[f] = 0
             mutex[f] = 0
-            desc[f] = ''
+            tooltip[f] = ''
 
         for d in result:
             f = d['db_field_name']
@@ -187,7 +187,7 @@ class db(QtCore.QObject):
                 alias[f] = d['alias']
             colorder[f] = d['col_order']
             setorder[f] = d['set_order']
-            desc[f] = d['desc']
+            tooltip[f] = d['tooltip']
             v = d['enum']
             if v != "":
                 enum[f] = v.split('|')
@@ -213,7 +213,7 @@ class db(QtCore.QObject):
             n = fixName(f)
             d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
                  'colorder': colorder[f], 'setorder': setorder[f],
-                 'desc': desc[f], 'mutex' : mutex[f], 'obj': True}
+                 'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': True}
             try:
                 d['enum'] = enum[f]
             except:
@@ -223,7 +223,7 @@ class db(QtCore.QObject):
             n = fixName(f)
             d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
                  'colorder': colorder[f], 'setorder': setorder[f],
-                 'desc': desc[f], 'mutex' : mutex[f], 'obj': False}
+                 'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': False}
             try:
                 d['enum'] = enum[f]
             except:

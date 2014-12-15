@@ -95,7 +95,7 @@ create table ims_motor (
 create table ims_motor_name_map (
 	db_field_name	varchar(30) not null,
 	alias		varchar(16) not null,
-	desc          	varchar(60),
+	tooltip        	varchar(60),
 	enum            varchar(120),              -- List of enums, separated by |
 	col_order       int unique,
 	set_order	int,

@@ -3,12 +3,10 @@
 --
 
 DROP TABLE IF EXISTS `ims_motor_name_map`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `ims_motor_name_map` (
   `db_field_name` varchar(30) NOT NULL,
   `alias` varchar(16) NOT NULL,
-  `desc` varchar(60),
+  `tooltip` varchar(60),
   `enum` varchar(120),
   `col_order` int(11) UNIQUE,
   `set_order` int(11),
@@ -22,7 +20,7 @@ CREATE TABLE `ims_motor_name_map` (
 INSERT INTO `ims_motor_name_map` VALUES 
 ('FLD_DESC','DESC',   'Description', '',1,0,0),
 ('FLD_PORT','PORT',   'digi port address', '',2,0,0),
-('FLD_TYPE','TYPE', '', '',3,0,0),
+('FLD_TYPE','TYPE', 'User-defined type', '',3,0,0),
 ('FLD_LM','LM', 'Limit Stop Mode', 'Invalid|Decel, CanHome|Decel, NoHome|Decel, StopProg|NoDecel, CanHome|NoDecel, NoHome|NoDecel, StopProg',4,0,0),
 ('FLD_SM','SM', 'stall mode', 'Stop On Stall|No Stop',5,0,0),
 ('FLD_SF','SF', 'stall factor', '',6,0,0),
