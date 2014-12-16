@@ -68,11 +68,12 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             return self.objs[idx]
 
-    def getCfg(self, idx, f):
-        try:
-            return self.edits[idx][f]
-        except:
-            pass
+    def getCfg(self, idx, f, GetEdit=True):
+        if GetEdit:
+            try:
+                return self.edits[idx][f]
+            except:
+                pass
         if f in self.cfld or f == 'mutex':
             return self.getObj(idx)[f]
         elif param.params.db.fldmap[f]['obj']:
@@ -96,8 +97,24 @@ class ObjModel(QtGui.QStandardItemModel):
             return QtCore.QVariant()
         (idx, f) = self.index2db(index)
         if role == QtCore.Qt.ToolTipRole:
-            # We'll make this smarter later!
-            return QtGui.QStandardItemModel.data(self, index, role)
+            try:
+                ve = self.edits[idx][f]     # Edited value
+                if ve == None:
+                    ve = "None"
+            except:
+                ve = None
+            try:
+                va = self.getObj(idx)[f]    # Actual value
+            except:
+                va = None
+            vc = self.getCfg(idx, f, False) # Configured value
+            if ve == None and (vc == None or param.equal(va, vc)):
+                return QtGui.QStandardItemModel.data(self, index, role)
+            v = "Configured Value: %s" % str(vc)
+            v += "\nActual Value: %s" % str(va)
+            if ve != None:
+                v += "\nEdited Value: %s" % str(ve)
+            return QtCore.QVariant(v)
         if f == "status":
             if role == QtCore.Qt.ForegroundRole:
                 return QtCore.QVariant(param.params.black)
