@@ -3,12 +3,15 @@ from PyQt4 import QtGui, QtCore
 params = None
 
 def equal(v1, v2):
-    if type(v1) == float:
-        # I hate floating point.  OK, we need to be "close", but if we are *at* zero
-        # the "close" test fails!
-        return v1 == v2 or abs(v1 - v2) < (abs(v1) + abs(v2)) * 1e-12
-    else:
-        return v1 == v2
+    try:
+        if type(v1) == float:
+            # I hate floating point.  OK, we need to be "close", but if we are *at* zero
+            # the "close" test fails!
+            return v1 == v2 or abs(v1 - v2) < (abs(v1) + abs(v2)) * 1e-12
+        else:
+            return v1 == v2
+    except:
+        return False
 
 class param_structure(object):
     def __init__(self):

@@ -246,7 +246,7 @@ class db(QtCore.QObject):
         
     def readDB(self, is_hutch):
         if is_hutch:
-            ext = " where owner = '%s'" % param.params.hutch
+            ext = " where owner = '%s' or id = 0" % param.params.hutch
         else:
             ext = "_cfg"
         try:
@@ -278,10 +278,10 @@ class db(QtCore.QObject):
                     else:
                         d['cfgname'] = self.getCfgName(r)
         if (mask & dbPoll.OBJECT) != 0:
-            if cfgs == []:
+            objs = self.readDB(True)
+            if objs == []:
                 mask &= ~dbPoll.OBJECT
             else:
-                objs = self.readDB(True)
                 objmap = {}
                 for o in objs:
                     objmap[o['id']] = o

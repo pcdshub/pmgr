@@ -9,12 +9,16 @@ import pyca
 class ObjModel(QtGui.QStandardItemModel):
     cname   = ["Status", "Name", "Config", "PV Base"]
     cfld    = ["status", "name", "cfgname", "rec_base"]
+    ctips   = ["C = All PVs Connected\nD = Deleted\nM = Modified\nN = New",
+               "Object Name", "Configuration Name", "PV Base Name"]
     coff    = len(cname)
     statcol = 0
     namecol = 1
     cfgcol  = 2
     pvcol   = 3
     mutable = 2  # The first non-frozen column
+    defflds = ["status", "name", "config", "cfgname", "rec_base", "FLD_DESC", "FLD_PORT"]
+    fixflds = ["status", "name"]
     
     def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
@@ -33,12 +37,14 @@ class ObjModel(QtGui.QStandardItemModel):
         font.setBold(True)
         for c in range(self.colcnt):
             if c < self.coff:
-                self.setHorizontalHeaderItem(c, QtGui.QStandardItem(self.cname[c]))
+                i = QtGui.QStandardItem(self.cname[c])
+                i.setToolTip(self.ctips[c])
             else:
-                self.setHorizontalHeaderItem(c, QtGui.QStandardItem(param.params.db.objflds[c-self.coff]['alias']))
-        self.setHeaderData(self.statcol, QtCore.Qt.Horizontal,
-                           QtCore.QVariant("C = All PVs Connected\nD = Deleted\nM = Modified\nN = New"),
-                           QtCore.Qt.ToolTipRole)
+                i = QtGui.QStandardItem(param.params.db.objflds[c-self.coff]['alias'])
+                desc = param.params.db.objflds[c-self.coff]['tooltip']
+                if desc != "":
+                    i.setToolTip(desc)
+            self.setHorizontalHeaderItem(c, i)
         self.createStatus()
         self.connectAllPVs()
 
@@ -83,11 +89,15 @@ class ObjModel(QtGui.QStandardItemModel):
         
     def data(self, index, role = QtCore.Qt.DisplayRole):
         if (role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and
-            role != QtCore.Qt.ForegroundRole and role != QtCore.Qt.BackgroundRole):
+            role != QtCore.Qt.ForegroundRole and role != QtCore.Qt.BackgroundRole and
+            role != QtCore.Qt.ToolTipRole):
             return QtGui.QStandardItemModel.data(self, index, role)
         if not index.isValid():
             return QtCore.QVariant()
         (idx, f) = self.index2db(index)
+        if role == QtCore.Qt.ToolTipRole:
+            # We'll make this smarter later!
+            return QtGui.QStandardItemModel.data(self, index, role)
         if f == "status":
             if role == QtCore.Qt.ForegroundRole:
                 return QtCore.QVariant(param.params.black)
@@ -95,46 +105,53 @@ class ObjModel(QtGui.QStandardItemModel):
                 return QtCore.QVariant(param.params.white)
             else:
                 return QtCore.QVariant(self.status[idx])
-        d = self.getObj(idx)
-        if role == QtCore.Qt.BackgroundRole:
-            try:
-                if d[f] == None:
-                    return QtCore.QVariant(param.params.gray)
-                elif d[f] == "":
-                    v2 = self.getCfg(idx, f) # Configured value
-                    if v2 == "":
-                        return QtCore.QVariant(param.params.white)
-                    else:
-                        return QtCore.QVariant(param.params.ltblue)
-                else:
-                    return QtCore.QVariant(param.params.white)
-            except:
-                return QtCore.QVariant(param.params.white)
         try:
-            v = self.edits[idx][f]
-            if role == QtCore.Qt.ForegroundRole:
-                return QtCore.QVariant(param.params.red)
-            else:
-                return QtCore.QVariant(v)
+            v = self.getObj(idx)[f]  # Actual value
         except:
-            pass
-        try:
-            v = d[f]                 # Actual value
-            v2 = self.getCfg(idx, f) # Configured value
-            if role != QtCore.Qt.ForegroundRole or v == None:
-                try:
-                    if param.params.db.fldmap[f]['obj']:
-                        return QtCore.QVariant(v2)
-                except:
-                    pass
-                return QtCore.QVariant(v)
-            if param.equal(v, v2):
+            v = None
+        v2 = self.getCfg(idx, f) # Configured value
+        if role == QtCore.Qt.BackgroundRole:
+            # The default (idx == 0) is special.  It is never connected, so
+            # we never want to show grey for the derived rows!
+            if v == None and (idx != 0 or v2 != None or not param.params.db.fldmap[f]['obj']):
+                return QtCore.QVariant(param.params.gray)
+            elif v == "":
+                if v2 == "":
+                    return QtCore.QVariant(param.params.white)
+                else:
+                    return QtCore.QVariant(param.params.ltblue)
+            elif v2 == None:
+                return QtCore.QVariant(param.params.almond)
+            else:
+                return QtCore.QVariant(param.params.white)
+        elif role == QtCore.Qt.ForegroundRole:
+            try:
+                v = self.edits[idx][f]
+                return QtCore.QVariant(param.params.red)
+            except:
+                pass
+            if v2 == None or param.equal(v, v2):
                 return QtCore.QVariant(param.params.black)
             else:
                 return QtCore.QVariant(param.params.blue)
-        except:
-            pass
-        return QtCore.QVariant()
+            return QtCore.QVariant()
+        elif role == QtCore.Qt.DisplayRole:
+            try:
+                v = self.edits[idx][f]
+                return QtCore.QVariant(v)
+            except:
+                pass
+            return QtCore.QVariant(v)
+        else:   # QtCore.Qt.EditRole
+            try:
+                v = self.edits[idx][f]
+                return QtCore.QVariant(v)
+            except:
+                pass
+            if v2 != None:
+                return QtCore.QVariant(v2)
+            else:
+                return QtCore.QVariant(v)
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
@@ -284,7 +301,10 @@ class ObjModel(QtGui.QStandardItemModel):
             self.statchange(idx)
         self.pvdict[idx] = newpvdict
         for pv in oldpvdict.values():
-            pv.disconnect()
+            try:
+                pv.disconnect()
+            except:
+                pass
 
     def connectAllPVs(self):
         for idx in self.rowmap:
@@ -357,19 +377,24 @@ class ObjModel(QtGui.QStandardItemModel):
         menu = utils.MyContextMenu()
         menu.addAction("Create new object", self.create)
         menu.addAction("Delete this object", self.delete,
-                       lambda table, index: index.row() >= 0 and not self.checkStatus(index, 'D'))
+                       lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0 and
+                       not self.checkStatus(index, 'D'))
         menu.addAction("Undelete this object", self.undelete,
-                       lambda table, index: index.row() >= 0 and self.checkStatus(index, 'D'))
+                       lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0 and
+                       self.checkStatus(index, 'D'))
         menu.addAction("Change configuration", self.chparent,
-                       lambda table, index: index.column() == self.cfgcol)
+                       lambda table, index: self.rowmap[index.row()] != 0 and index.column() == self.cfgcol)
         menu.addAction("Set from PV", self.setFromPV,
-                       lambda table, index: index.row() >= 0 and self.haveObjPVDiff(index))
+                       lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0 and
+                       self.haveObjPVDiff(index))
         menu.addAction("Create configuration from object", self.createcfg,
-                       lambda table, index: index.row() >= 0)
+                       lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0)
         menu.addAction("Commit this object", self.commitone,
-                       lambda table, index: index.row() >= 0 and self.checkStatus(index, 'DMN'))
+                       lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0 and
+                       self.checkStatus(index, 'DMN'))
         menu.addAction("Apply to this object", self.applyone,
-                       lambda table, index: index.row() >= 0 and self.checkStatus(index, 'DMN'))
+                       lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0 and
+                       self.checkStatus(index, 'DMN'))
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table)
 
@@ -381,24 +406,19 @@ class ObjModel(QtGui.QStandardItemModel):
         idx = self.nextid;
         self.nextid -= 1
         now = datetime.datetime.now()
+        mutex = param.params.db.cfgs[0]['mutex']
         d = {'id': idx, 'config': 0, 'owner': param.params.hutch, 'name': "NewObject%d" % idx,
-             'rec_base': "", 'dt_created': now, 'dt_updated': now,
+             'rec_base': "", 'dt_created': now, 'dt_updated': now, 'mutex': mutex,
              'cfgname': param.params.db.getCfgName(0) }
         self.status[idx] = "N"
         dd = {}
         for o in param.params.db.objflds:
-            if o['obj']:
-                t = o['type']
-                if t == str:
-                    v = ""
-                elif t == int:
-                    v = 0
-                else:
-                    v = 0.0   # Must be float, since this is returned from db.m2pType.
-                d[o['fld']] = v
+            if o['obj'] and o['type'] == str:
+                d[o['fld']] = ""
+                dd[o['fld']] = ""
             else:
                 d[o['fld']] = None
-            dd[o['fld']] = d[o['fld']]
+                dd[o['fld']] = None
         d['_val'] = dd
         self.objs[idx] = d
         self.rowmap.append(idx)
@@ -577,13 +597,17 @@ class ObjModel(QtGui.QStandardItemModel):
     def flags(self, index):
         flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         if index.isValid():
-            row = index.row()
+            (idx, f) = self.index2db(index)
             col = index.column()
             if col < self.coff:
-                if col != self.cfgcol and col != self.statcol:
-                    flags = flags | QtCore.Qt.ItemIsEditable
+                if idx == 0:
+                    if not f in self.defflds:
+                        flags = flags | QtCore.Qt.ItemIsEditable
+                else:
+                    if not f in self.fixflds:
+                        flags = flags | QtCore.Qt.ItemIsEditable
             else:
-                if param.params.db.objflds[col-self.coff]['obj']:
+                if (idx != 0 or not f in self.defflds) and param.params.db.objflds[col-self.coff]['obj']:
                     flags = flags | QtCore.Qt.ItemIsEditable
         return flags
 

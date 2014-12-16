@@ -302,11 +302,15 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def data(self, index, role = QtCore.Qt.DisplayRole):
         if (role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and
-            role != QtCore.Qt.ForegroundRole and role != QtCore.Qt.BackgroundRole):
+            role != QtCore.Qt.ForegroundRole and role != QtCore.Qt.BackgroundRole and
+            role != QtCore.Qt.ToolTipRole):
             return QtGui.QStandardItemModel.data(self, index, role)
         if not index.isValid():
             return QtCore.QVariant()
         (idx, f) = self.index2db(index)
+        if role == QtCore.Qt.ToolTipRole:
+            # We'll make this smarter later!
+            return QtGui.QStandardItemModel.data(self, index, role)
         if f == "status":
             if role == QtCore.Qt.BackgroundRole:
                 return QtCore.QVariant(param.params.white)
@@ -556,10 +560,10 @@ class CfgModel(QtGui.QStandardItemModel):
             (idx, f) = self.index2db(index)
         else:
             idx = index
-        d = self.getCfg(idx)
         ev = self.geteditval(idx, f)
         if ev != None:
             return ev == v
+        d = self.getCfg(idx)
         return d['_val'][f] == v
 
     def checkStatus(self, index, vals):
@@ -576,8 +580,8 @@ class CfgModel(QtGui.QStandardItemModel):
         menu.addAction("Clone existing", self.clone)
         menu.addAction("Clone values", self.clonevals)
         menu.addAction("Change parent", self.chparent, lambda table, index: index.column() == self.cfgcol)
-        menu.addAction("Delete value", self.deleteval, lambda t, i: self.hasValue(True, i))
-        menu.addAction("Create value", self.createval, lambda t, i: self.hasValue(False, i))
+        menu.addAction("Delete value", self.deleteallval, lambda t, i: self.hasValue(True, i))
+        menu.addAction("Create value", self.createallval, lambda t, i: self.hasValue(False, i))
         menu.addAction("Delete config", self.deletecfg, lambda table, index: not self.checkStatus(index, 'D'))
         menu.addAction("Undelete config", self.undeletecfg, lambda table, index: self.checkStatus(index, 'D'))
         menu.addAction("Commit this config", self.commitone, lambda table, index: self.checkStatus(index, 'DMN'))
@@ -651,6 +655,17 @@ class CfgModel(QtGui.QStandardItemModel):
         parent = self.getCfg(idx)['config']
         id = self.create_child(parent, self.getCfg(idx), True)
 
+    def deleteallval(self, table, index):
+        (idx, f) = self.index2db(index)
+        m = param.params.db.fldmap[f]['mutex']
+        if m == []:
+            self.deleteval(table, index)
+            return
+        for mi in m:
+            for fld in param.params.db.mutex_sets[mi]:
+                if self.hasValue(True, idx, fld):
+                    self.deleteval(None, idx, fld)    # Everyone needs to have a value!
+
     def deleteval(self, table, index, f=None):
         if f == None:
             (idx, f) = self.index2db(index)
@@ -665,6 +680,15 @@ class CfgModel(QtGui.QStandardItemModel):
                 self.seteditval(idx, f, False)
             else:
                 self.seteditval(idx, f, None)
+            try:
+                e = self.edits[idx]
+                del e[f]
+                if e == {}:
+                    del self.edits[idx]
+                else:
+                    self.edits[idx] = e
+            except:
+                pass
             if index != None:
                 self.setModifiedStatus(index, idx, d)
             if idx < 0:
@@ -672,18 +696,31 @@ class CfgModel(QtGui.QStandardItemModel):
             elif self.geteditval(idx, f) != None:
                 d['_color'][f] = param.params.red
             else:
+                pcolor = p['_color'][f]
+                if pcolor == param.params.red or pcolor == param.params.purple:
+                    d['_color'][f] = param.params.purple
+                else:
+                    d['_color'][f] = param.params.blue
+            if d[f] != p[f]:
                 try:
-                    v = self.edits[idx][f]
-                    d['_color'][f] = param.params.red
+                    e = self.edits[idx]
+                    e[f] = p[f]
+                    self.edits[idx] = e
                 except:
-                    pcolor = p['_color'][f]
-                    if pcolor == param.params.red or pcolor == param.params.purple:
-                        d['_color'][f] = param.params.purple
-                    else:
-                        d['_color'][f] = param.params.blue
-            d[f] = p[f]
+                    self.edits[idx] = {f: p[f]}
         if index != None:
             self.dataChanged.emit(index, index)
+
+    def createallval(self, table, index):
+        (idx, f) = self.index2db(index)
+        m = param.params.db.fldmap[f]['mutex']
+        if m == []:
+            self.createval(table, index)
+            return
+        for mi in m:
+            for fld in param.params.db.mutex_sets[mi]:
+                if not self.hasValue(True, idx, fld):
+                    self.createval(None, idx, fld)    # Everyone needs to have a value!
 
     def createval(self, table, index, f=None):
         if f == None:

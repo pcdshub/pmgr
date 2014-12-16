@@ -64,6 +64,10 @@ class MyDelegate(QStyledItemDelegate):
         self.off  = off
 
     def createEditor(self, parent, option, index):
+        if index.column() < self.off:
+            editor = QItemEditorFactory.defaultFactory().createEditor(QVariant.String, parent)
+            editor.mydelegate = False
+            return editor
         try:
             e = self.cols[index.column() - self.off]['enum']
             editor = QComboBox(parent)
@@ -73,11 +77,14 @@ class MyDelegate(QStyledItemDelegate):
                 editor.addItem(item)
             editor.mydelegate = True
         except:
-            t = index.data(Qt.EditRole).userType()
-            if t == QVariant.Double:
+            print self.cols[index.column() - self.off]
+            t = self.cols[index.column() - self.off]['type']
+            if t == float:
                 editor = ScientificDoubleSpinBox(parent)
-            else:
-                editor = QItemEditorFactory.defaultFactory().createEditor(t, parent)
+            elif t == int:
+                editor = QItemEditorFactory.defaultFactory().createEditor(QVariant.Int, parent)
+            else: # str
+                editor = QItemEditorFactory.defaultFactory().createEditor(QVariant.String, parent)
             editor.mydelegate = False
         return editor
 
