@@ -424,7 +424,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 cm in d['curmutex']):
                 # This is a calculated value!
                 i = d['curmutex'].find(cm)
-                d['curmutex'] = self.promote(idx, f, c, i, d['curmutex'])
+                d['curmutex'] = self.promote(idx, f, i, d['curmutex'])
         except:
             pass
         self.dataChanged.emit(index, index)
@@ -441,7 +441,7 @@ class CfgModel(QtGui.QStandardItemModel):
     # This is called when we set a value on (idx, f) and this is currently
     # a calculated value.
     #
-    def promote(self, idx, f, column, setidx, curmutex):
+    def promote(self, idx, f, setidx, curmutex):
         cfg = self.getCfg(idx)
         mlist = param.params.db.mutex_sets[setidx]
         if len(mlist) == 2:
@@ -480,8 +480,7 @@ class CfgModel(QtGui.QStandardItemModel):
         cm = chr(param.params.db.fldmap[derived]['colorder']+0x40)
         if cm in curmutex:
             curmutex = curmutex[:setidx] + ' ' + curmutex[setidx+1:]
-            cnew = param.params.db.fldmap[derived]['cfgidx'] + self.coff
-            curmutex = self.promote(idx, derived, cnew, curmutex.index(cm), curmutex)
+            curmutex = self.promote(idx, derived, curmutex.index(cm), curmutex)
         curmutex = curmutex[:setidx] + cm + curmutex[setidx+1:]
         try:
             e = self.edits[idx]['mutex']

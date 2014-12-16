@@ -77,7 +77,6 @@ class MyDelegate(QStyledItemDelegate):
                 editor.addItem(item)
             editor.mydelegate = True
         except:
-            print self.cols[index.column() - self.off]
             t = self.cols[index.column() - self.off]['type']
             if t == float:
                 editor = ScientificDoubleSpinBox(parent)

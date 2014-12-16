@@ -476,13 +476,13 @@ class db(QtCore.QObject):
         pass
 
     def objectInsert(self, d):
-        cmd = "insert %s (name, config, owner, rec_base, dt_created, dt_updated" % param.params.table
+        cmd = "insert %s (name, config, owner, rec_base, mutex, dt_created, dt_updated" % param.params.table
         for f in self.objflds:
             if f['obj'] == False:
                 continue
             fld = f['fld']
             cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, %s, now(), now()"
+        cmd += ") values (%s, %s, %s, %s, %s, now(), now()"
         vlist = [d['name']]
         try:
             vlist.append(self.cfgmap[d['config']])
@@ -490,6 +490,7 @@ class db(QtCore.QObject):
             vlist.append(d['config'])
         vlist.append(param.params.hutch)
         vlist.append(d['rec_base'])
+        vlist.append(d['mutex'])
         for f in self.objflds:
             if f['obj'] == False:
                 continue
@@ -527,6 +528,12 @@ class db(QtCore.QObject):
         try:
             v = e['rec_base']
             cmd += ", rec_base = %s"
+            vlist.append(v)
+        except:
+            pass
+        try:
+            v = e['mutex']
+            cmd += ", mutex = %s"
             vlist.append(v)
         except:
             pass

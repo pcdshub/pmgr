@@ -73,7 +73,7 @@ class ObjModel(QtGui.QStandardItemModel):
             return self.edits[idx][f]
         except:
             pass
-        if f in self.cfld:
+        if f in self.cfld or f == 'mutex':
             return self.getObj(idx)[f]
         elif param.params.db.fldmap[f]['obj']:
             return self.getObj(idx)['_val'][f]
@@ -111,9 +111,8 @@ class ObjModel(QtGui.QStandardItemModel):
             v = None
         v2 = self.getCfg(idx, f) # Configured value
         if role == QtCore.Qt.BackgroundRole:
-            # The default (idx == 0) is special.  It is never connected, so
-            # we never want to show grey for the derived rows!
-            if v == None and (idx != 0 or v2 != None or not param.params.db.fldmap[f]['obj']):
+            # Derived rows shouldn't be grey!
+            if v == None and not param.params.db.fldmap[f]['obj']:
                 return QtCore.QVariant(param.params.gray)
             elif v == "":
                 if v2 == "":
@@ -205,8 +204,15 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             try:
                 del self.edits[idx]
+                self.status[idx] = self.status[idx].replace("M", "")
+                self.statchange(idx)
             except:
                 pass
+        mutex = self.getCfg(idx, 'mutex')
+        cm = chr(param.params.db.fldmap[f]['colorder']+0x40)
+        if cm in mutex:
+            i = mutex.find(cm)
+            self.promote(idx, f, i, mutex)
         if f == 'rec_base':
             self.connectPVs(idx)
             r = index.row()
@@ -214,6 +220,62 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             self.dataChanged.emit(index, index)
         return True
+
+    def promote(self, idx, f, setidx, curmutex):
+        mlist = param.params.db.mutex_sets[setidx]
+        if len(mlist) == 2:
+            # No need to prompt, the other has to be the derived value!
+            if mlist[0] == f:
+                derived = mlist[1]
+            else:
+                derived = mlist[0]
+        else:
+            d = param.params.deriveddialog
+            d.reset()
+            for fld in mlist:
+                if fld != f:
+                    d.addValue(param.params.db.fldmap[fld]['alias'], fld)
+            d.exec_()
+            # The user *must* give a value.  I'll take whatever is checked even if the
+            # window was just closed!!
+            derived = d.getValue()
+        for fld in mlist:
+            if fld == derived:
+                # The derived value must be None!
+                if self.getObj(idx)['_val'][fld] == None:
+                    try:
+                        del self.edits[idx][fld]
+                        if self.edits[idx] == {}:
+                            del self.edits[idx]
+                            self.status[idx] = self.status[idx].replace("M", "")
+                            self.statchange(idx)
+                    except:
+                        pass
+                else:
+                    try:
+                        self.edits[idx][fld] = None
+                    except:
+                        self.edits[idx] = {fld: None}
+        cm = chr(param.params.db.fldmap[derived]['colorder']+0x40)
+        if cm in curmutex:
+            curmutex = curmutex[:setidx] + ' ' + curmutex[setidx+1:]
+            curmutex = self.promote(idx, derived, curmutex.index(cm), curmutex)
+        curmutex = curmutex[:setidx] + cm + curmutex[setidx+1:]
+        if self.getObj(idx)['mutex'] == curmutex:
+            try:
+                del self.edits[idx]['mutex']
+                if self.edits[idx] == {}:
+                    del self.edits[idx]
+                    self.status[idx] = self.status[idx].replace("M", "")
+                    self.statchange(idx)
+            except:
+                pass
+        else:
+            try:
+                self.edits[idx]['mutex'] = curmutex
+            except:
+                self.edits[idx] = {'mutex': curmutex}
+        return curmutex
         
     def sortkey(self, idx, c):
         if c == self.statcol:
@@ -395,6 +457,8 @@ class ObjModel(QtGui.QStandardItemModel):
         menu.addAction("Apply to this object", self.applyone,
                        lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0 and
                        self.checkStatus(index, 'DMN'))
+        menu.addAction("Revert this object", self.revertone,
+                       lambda table, index: self.checkStatus(index, 'M'))
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table)
 
@@ -406,20 +470,13 @@ class ObjModel(QtGui.QStandardItemModel):
         idx = self.nextid;
         self.nextid -= 1
         now = datetime.datetime.now()
-        mutex = param.params.db.cfgs[0]['mutex']
-        d = {'id': idx, 'config': 0, 'owner': param.params.hutch, 'name': "NewObject%d" % idx,
-             'rec_base': "", 'dt_created': now, 'dt_updated': now, 'mutex': mutex,
-             'cfgname': param.params.db.getCfgName(0) }
+        d = dict(param.params.db.objs[0])
+        dd = {'id': idx, 'config': 0, 'owner': param.params.hutch, 'name': "NewObject%d" % idx,
+              'rec_base': "", 'dt_created': now, 'dt_updated': now,
+              'cfgname': param.params.db.getCfgName(0) }
+        d.update(dd)
         self.status[idx] = "N"
-        dd = {}
-        for o in param.params.db.objflds:
-            if o['obj'] and o['type'] == str:
-                d[o['fld']] = ""
-                dd[o['fld']] = ""
-            else:
-                d[o['fld']] = None
-                dd[o['fld']] = None
-        d['_val'] = dd
+        d['_val'] = dict(d)
         self.objs[idx] = d
         self.rowmap.append(idx)
         self.adjustSize()
@@ -526,6 +583,14 @@ class ObjModel(QtGui.QStandardItemModel):
             for idx in self.rowmap:
                 self.apply(idx)
             pyca.flush_io()
+
+    def revertone(self, table, index):
+        (idx, f) = self.index2db(index)
+        try:
+            del self.edits[idx]
+        except:
+            pass
+        self.status[idx] = self.status[idx].replace("M", "")
 
     def objChangeDone(self, idx=None):
         if idx != None:
