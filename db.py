@@ -443,7 +443,7 @@ class db(QtCore.QObject):
             cmd += ", mutex = %s"
             vlist.append(v)
         except:
-            print "No mutex?!?"
+            pass
         for f in self.cfgflds:
             fld = f['fld']
             try:

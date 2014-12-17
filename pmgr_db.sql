@@ -86,6 +86,8 @@ create table ims_motor (
 	FLD_LLM   double,  -- User High Limit (EGU) --
 	FLD_HOMD  double,  -- Dial value at home (EGU) --
 	FLD_OFF   double,  -- User Offset (EGU) --
+        FLD_SN   varchar(60),  -- serial number --
+        FLD_PN   varchar(60),  -- part number --
 	
 	-- constraints --
 	primary key (id),

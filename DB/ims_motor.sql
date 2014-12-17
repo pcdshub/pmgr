@@ -20,6 +20,8 @@ CREATE TABLE `ims_motor` (
   `FLD_HOMD` double,
   `FLD_LLM` double,
   `FLD_OFF` double,
+  `FLD_SN` varchar(60),
+  `FLD_PN` varchar(60),
   PRIMARY KEY (`id`),
   foreign key (config) references ims_motor_cfg(id)
 );
@@ -29,7 +31,11 @@ CREATE TABLE `ims_motor` (
 --
 
 INSERT INTO `ims_motor` VALUES 
-(1,2,'tst','Test Motor 16','TST:MMS:16','  _`','2014-11-18 14:00:45','2014-11-19 13:52:25','','digi-tst-02:2116',NULL, NULL, 25, 0, -25, 0),
-(2,2,'tst','Test Motor 15','TST:MMS:15','  _`','2014-11-18 14:09:07','2014-11-19 13:51:17','','digi-tst-02:2115',NULL, NULL, 25, 0, -25, 0),
-(3,3,'tst','Test Motor 14','TST:MMS:14','  _`','2014-11-18 14:09:38','2014-11-19 13:52:25','','digi-tst-02:2114',NULL, NULL, 25, 0, -25, 0),
-(4,3,'tst','Test Motor 13','TST:MMS:13','  _`','2014-11-18 14:10:06','2014-11-19 15:49:12','','digi-tst-02:2113',NULL, NULL, 25, 0, -25, 0);
+(-1,0,NULL,'DEFAULT','', '  _`', now(), now(),'','',NULL,NULL, 25, 0, -25, 0, '', ''),
+(1,2,'tst','Test Motor 16','TST:MMS:16','  _`','2014-11-18 14:00:45','2014-11-19 13:52:25','','digi-tst-02:2116',NULL, NULL, 25, 0, -25, 0, '', ''),
+(2,2,'tst','Test Motor 15','TST:MMS:15','  _`','2014-11-18 14:09:07','2014-11-19 13:51:17','','digi-tst-02:2115',NULL, NULL, 25, 0, -25, 0, '', ''),
+(3,3,'tst','Test Motor 14','TST:MMS:14','  _`','2014-11-18 14:09:38','2014-11-19 13:52:25','','digi-tst-02:2114',NULL, NULL, 25, 0, -25, 0, '', ''),
+(4,3,'tst','Test Motor 13','TST:MMS:13','  _`','2014-11-18 14:10:06','2014-11-19 15:49:12','','digi-tst-02:2113',NULL, NULL, 25, 0, -25, 0, '', '');
+
+/* Sigh. id = 0 in the file does an auto-increment, so we set it to -1 and fix it here. */
+update ims_motor set id = 0 where id = -1;

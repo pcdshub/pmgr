@@ -286,7 +286,7 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def seteditval(self, idx, f, v):
         if idx < 0:
-            self.cfgs[idx][f] = v
+            self.cfgs[idx]['_val'][f] = v
             return
         else:
             if v == None:
@@ -626,7 +626,7 @@ class CfgModel(QtGui.QStandardItemModel):
         d['_val'] = haveval
         d['curmutex'] = vals['curmutex']
         if sibling == None:
-            d['mutex'] = param.params.db.mutex_sets*' '
+            d['mutex'] = param.params.db.mutex_cnt*' '
         elif useval:
             d['mutex'] = vals['curmutex']
         else:
@@ -673,34 +673,38 @@ class CfgModel(QtGui.QStandardItemModel):
             index = self.db2index(idx, f)
         d = self.getCfg(idx)
         pidx = d['config']
-        if pidx != None:                     # Can't delete a value from a root class!
-            p = self.getCfg(pidx)
-            if self.geteditval(idx, f) == None:
-                self.seteditval(idx, f, False)
+        if pidx == None:
+            return                     # Can't delete a value from a root class!
+        p = self.getCfg(pidx)
+        if self.geteditval(idx, f) == None:
+            self.seteditval(idx, f, False)
+        else:
+            self.seteditval(idx, f, None)
+        try:
+            e = self.edits[idx]
+            del e[f]
+            if e == {}:
+                del self.edits[idx]
             else:
-                self.seteditval(idx, f, None)
-            try:
-                e = self.edits[idx]
-                del e[f]
-                if e == {}:
-                    del self.edits[idx]
-                else:
-                    self.edits[idx] = e
-            except:
-                pass
-            if index != None:
-                self.setModifiedStatus(index, idx, d)
-            if idx < 0:
+                self.edits[idx] = e
+        except:
+            pass
+        if index != None:
+            self.setModifiedStatus(index, idx, d)
+        if idx < 0:
+            d['_color'][f] = param.params.blue
+        elif self.geteditval(idx, f) != None:
+            d['_color'][f] = param.params.red
+        else:
+            pcolor = p['_color'][f]
+            if pcolor == param.params.red or pcolor == param.params.purple:
+                d['_color'][f] = param.params.purple
+            else:
                 d['_color'][f] = param.params.blue
-            elif self.geteditval(idx, f) != None:
-                d['_color'][f] = param.params.red
+        if d[f] != p[f]:
+            if idx < 0:
+                d[f] = p[f]
             else:
-                pcolor = p['_color'][f]
-                if pcolor == param.params.red or pcolor == param.params.purple:
-                    d['_color'][f] = param.params.purple
-                else:
-                    d['_color'][f] = param.params.blue
-            if d[f] != p[f]:
                 try:
                     e = self.edits[idx]
                     e[f] = p[f]
@@ -860,11 +864,15 @@ class CfgModel(QtGui.QStandardItemModel):
         param.params.db.start_transaction()
         (idx, f) = self.index2db(index)
         self.commit(idx, True)
-        if param.params.db.end_transaction():
+        if param.params.db.end_transaction() and not param.params.debug:
             self.cfgChangeDone(idx)
         
     def revertone(self, table, index):
         (idx, f) = self.index2db(index)
+        try:
+            newparent = self.edits[idx]['config']
+        except:
+            newparent = None
         try:
             del self.edits[idx]
         except:
@@ -875,6 +883,9 @@ class CfgModel(QtGui.QStandardItemModel):
         c = self.getCfg(idx)
         self.status[idx] = self.status[idx].replace("M", "")
         self.revertchildren(idx, c['curmutex'], [])
+        if newparent != None:
+            self.buildtree()
+            self.setCurIdx(self.curidx)
 
     def revertchildren(self, idx, pmutex, lp):
         for cidx in self.tree[idx]['children']:
@@ -992,6 +1003,11 @@ class CfgModel(QtGui.QStandardItemModel):
             QtGui.QDialog.Accepted):
             (idx, f) = self.index2db(index)
             p = param.params.cfgdialog.result
+            if p == d['id']:
+                QtGui.QMessageBox.critical(None, "Error",
+                                           "Cannot change parent to self!",
+                                           QtGui.QMessageBox.Ok)
+                return
             self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
             p = self.getCfg(param.params.cfgdialog.result)
             pcolor = p['_color']

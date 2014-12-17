@@ -18,7 +18,7 @@ class ObjModel(QtGui.QStandardItemModel):
     pvcol   = 3
     mutable = 2  # The first non-frozen column
     defflds = ["status", "name", "config", "cfgname", "rec_base", "FLD_DESC", "FLD_PORT"]
-    fixflds = ["status", "name"]
+    fixflds = ["status"]
     
     def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
@@ -97,6 +97,8 @@ class ObjModel(QtGui.QStandardItemModel):
             return QtCore.QVariant()
         (idx, f) = self.index2db(index)
         if role == QtCore.Qt.ToolTipRole:
+            if f == 'status':
+                return QtGui.QStandardItemModel.data(self, index, role)
             try:
                 ve = self.edits[idx][f]     # Edited value
                 if ve == None:
@@ -128,18 +130,28 @@ class ObjModel(QtGui.QStandardItemModel):
             v = None
         v2 = self.getCfg(idx, f) # Configured value
         if role == QtCore.Qt.BackgroundRole:
-            # Derived rows shouldn't be grey!
-            if v == None and not param.params.db.fldmap[f]['obj']:
-                return QtCore.QVariant(param.params.gray)
-            elif v == "":
-                if v2 == "":
-                    return QtCore.QVariant(param.params.white)
+            # If the actual value is None, the PV is not connected.
+            # If the configuration value is None, the PV is derived.
+            if f in self.cfld or param.params.db.fldmap[f]['obj']:
+                # An object value!  Let "derived" win!
+                if v2 == None:
+                    return QtCore.QVariant(param.params.almond)    # A derived value.
+                elif v == None:
+                    return QtCore.QVariant(param.params.gray)      # Not connected.
+                elif v == "" and v2 != "":
+                    return QtCore.QVariant(param.params.ltblue)    # Actually empty, but there is a configured value.
                 else:
-                    return QtCore.QVariant(param.params.ltblue)
-            elif v2 == None:
-                return QtCore.QVariant(param.params.almond)
+                    return QtCore.QVariant(param.params.white)    # An ordinary cell.
             else:
-                return QtCore.QVariant(param.params.white)
+                # A configuration value!  Let "not connected" win!
+                if v == None:
+                    return QtCore.QVariant(param.params.gray)      # Not connected.
+                elif v == "" and v2 != "":
+                    return QtCore.QVariant(param.params.ltblue)    # Actually empty, but there is a configured value.
+                elif v2 == None:
+                    return QtCore.QVariant(param.params.almond)    # A derived value.
+                else:
+                    return QtCore.QVariant(param.params.ltgray)     # An ordinary cell.
         elif role == QtCore.Qt.ForegroundRole:
             try:
                 v = self.edits[idx][f]
@@ -226,10 +238,13 @@ class ObjModel(QtGui.QStandardItemModel):
             except:
                 pass
         mutex = self.getCfg(idx, 'mutex')
-        cm = chr(param.params.db.fldmap[f]['colorder']+0x40)
-        if cm in mutex:
-            i = mutex.find(cm)
-            self.promote(idx, f, i, mutex)
+        try:
+            cm = chr(param.params.db.fldmap[f]['colorder']+0x40)
+            if cm in mutex:
+                i = mutex.find(cm)
+                self.promote(idx, f, i, mutex)
+        except:
+            pass
         if f == 'rec_base':
             self.connectPVs(idx)
             r = index.row()

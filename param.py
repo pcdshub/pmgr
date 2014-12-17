@@ -19,8 +19,10 @@ class param_structure(object):
         self.almond.name = "almond"
         self.white  = QtGui.QColor(255,255,255)
         self.white.name = "white"
-        self.gray   = QtGui.QColor(237,233,227)
+        self.gray   = QtGui.QColor(160,160,160)
         self.gray.name = "gray"
+        self.ltgray = QtGui.QColor(224,224,224)
+        self.ltgray.name = "ltgray"
         self.ltblue = QtGui.QColor(0,  255,255)
         self.ltblue.name = "ltblue"
         self.blue   = QtGui.QColor(QtCore.Qt.blue)
