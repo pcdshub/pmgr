@@ -9,7 +9,7 @@ import pyca
 class ObjModel(QtGui.QStandardItemModel):
     cname   = ["Status", "Name", "Config", "PV Base"]
     cfld    = ["status", "name", "cfgname", "rec_base"]
-    ctips   = ["C = All PVs Connected\nD = Deleted\nM = Modified\nN = New",
+    ctips   = ["C = All PVs Connected\nD = Deleted\nM = Modified\nN = New\nX = Inconsistent",
                "Object Name", "Configuration Name", "PV Base Name"]
     coff    = len(cname)
     statcol = 0
@@ -26,6 +26,7 @@ class ObjModel(QtGui.QStandardItemModel):
         self.edits = {}
         self.objs = {}
         self.status = {}
+        self.istatus = {}
         self.nextid = -1
         self.lastsort = (0, QtCore.Qt.DescendingOrder)
         # Setup headers
@@ -54,6 +55,17 @@ class ObjModel(QtGui.QStandardItemModel):
                 v = self.status[d['id']]
             except:
                 self.status[d['id']] = ""
+            try:
+                v = self.istatus[d['id']]
+            except:
+                self.istatus[d['id']] = set([])
+
+    def getStatus(self, idx):
+        v = self.status[idx]
+        if self.istatus[idx] != set([]):
+            return "".join(sorted("X" + v))
+        else:
+            return v
 
     def index2db(self, index):
         c = index.column()
@@ -123,12 +135,21 @@ class ObjModel(QtGui.QStandardItemModel):
             elif role == QtCore.Qt.BackgroundRole:
                 return QtCore.QVariant(param.params.white)
             else:
-                return QtCore.QVariant(self.status[idx])
+                return QtCore.QVariant(self.getStatus(idx))
         try:
             v = self.getObj(idx)[f]  # Actual value
         except:
             v = None
         v2 = self.getCfg(idx, f) # Configured value
+        if v == None or v2 == None or param.equal(v, v2):
+            try:
+                self.istatus[idx].remove(f)     # If we don't have a value (either the PV isn't connected, or
+                                                # it is a derived value in the configuration), or the PV is
+                                                # equal to the configuration, we're not inconsistent.
+            except:
+                pass
+        else:
+            self.istatus[idx].add(f)          # Otherwise, we are!
         if role == QtCore.Qt.BackgroundRole:
             # If the actual value is None, the PV is not connected.
             # If the configuration value is None, the PV is derived.
@@ -311,7 +332,7 @@ class ObjModel(QtGui.QStandardItemModel):
         
     def sortkey(self, idx, c):
         if c == self.statcol:
-            return self.status[idx]
+            return self.getStatus(idx)
         if c < self.coff:
             f = self.cfld[c]
         else:
@@ -446,7 +467,7 @@ class ObjModel(QtGui.QStandardItemModel):
 
     def checkStatus(self, index, vals):
         (idx, f) = self.index2db(index)
-        s = self.status[idx]
+        s = self.getStatus(idx)
         for v in vals:
             if v in s:
                 return True
@@ -508,6 +529,7 @@ class ObjModel(QtGui.QStandardItemModel):
               'cfgname': param.params.db.getCfgName(0) }
         d.update(dd)
         self.status[idx] = "N"
+        self.istatus[idx] = set([])
         d['_val'] = dict(d)
         self.objs[idx] = d
         self.rowmap.append(idx)
@@ -531,6 +553,7 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             del self.objs[idx]
             del self.status[idx]
+            del self.istatus[idx]
             self.rowmap.remove(idx)
             self.adjustSize()
 
@@ -623,6 +646,7 @@ class ObjModel(QtGui.QStandardItemModel):
         except:
             pass
         self.status[idx] = self.status[idx].replace("M", "")
+        self.statchange(idx)
 
     def objChangeDone(self, idx=None):
         if idx != None:
@@ -630,12 +654,16 @@ class ObjModel(QtGui.QStandardItemModel):
                 del self.edits[idx]
             except:
                 pass
-            if 'C' in self.status[idx]:
-                self.status[idx] = "C"
-            else:
-                self.status[idx] = ""
             if idx < 0:
                 del self.objs[idx]
+                del self.status[idx]
+                del self.istatus[idx]
+            else:
+                if 'C' in self.status[idx]:
+                    self.status[idx] = "C"
+                else:
+                    self.status[idx] = ""
+                self.statchange(idx)
             self.rowmap = param.params.db.objs.keys()
             self.rowmap[:0] = self.objs.keys()
         else:
@@ -644,11 +672,13 @@ class ObjModel(QtGui.QStandardItemModel):
             for k in self.status.keys():
                 if k < 0:
                     del self.status[k]
+                    del self.istatus[k]
                 else:
                     if 'C' in self.status[k]:
                         self.status[k] = "C"
                     else:
                         self.status[k] = ""
+                    self.statchange(k)
             self.rowmap = param.params.db.objs.keys()
         self.adjustSize()
 
