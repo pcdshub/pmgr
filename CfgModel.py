@@ -764,6 +764,28 @@ class CfgModel(QtGui.QStandardItemModel):
                     return True
         return False
 
+    def checkSetMutex(self, d, e):
+        for s in param.params.db.setflds:
+            f = param.params.db.fldmap[s[0]]
+            if not f['setmutex'] or f['obj']:
+                continue
+            try:
+                z = f['enum'][0]
+            except:
+                z = 0
+            vlist = []
+            for f in s:
+                try:
+                    v = e[f]
+                except:
+                    v = d[f]
+                if v != None and not param.equal(v, z):
+                    if v in vlist:
+                        return [param.params.db.fldmap[f]['alias'] for f in s]
+                    else:
+                        vlist.append(v)
+        return []
+
     #
     # Try to commit a change.  We assume we are in a transaction already.
     #
@@ -805,6 +827,16 @@ class CfgModel(QtGui.QStandardItemModel):
             # When is it OK to commit this?  If:
             #    - All the parents already exist.
             #    - We don't make a circular loop.
+            #    - Any setmutex sets are OK. (All inherited or all different.)
+            try:
+                e = self.edits[idx]
+            except:
+                e = {}
+            s = self.checkSetMutex(d, e)
+            if s != []:
+                param.params.db.transaction_error("Config %s does not have unique values for %s!" %
+                                                  (param.params.db.getCfgName(idx), str(s)))
+                return True
             try:
                 p = self.edits[idx]['config']
             except:
@@ -833,10 +865,6 @@ class CfgModel(QtGui.QStandardItemModel):
             if 'N' in self.status[idx]:
                 param.params.db.configInsert(d)
             else:
-                try:
-                    e = self.edits[idx]  # We're being paranoid here.
-                except:
-                    e = {}
                 param.params.db.configChange(d, e, self.editval[idx])
             return True
 

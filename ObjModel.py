@@ -630,11 +630,15 @@ class ObjModel(QtGui.QStandardItemModel):
                     #
                     if v2 != None and (not param.equal(v, v2) or param.params.db.fldmap[f]['mustwrite']):
                         try:
+                            z = param.params.db.fldmap[f]['enum'][0]
+                        except:
+                            z = 0
+                        try:
                             pv = pvd[f]
                             if param.params.debug:
-                                print "Put 0 to %s" % (pv.name)
+                                print "Put %s to %s" % (str(z), pv.name)
                             else:
-                                pv.put(0, -1.0)
+                                pv.put(z, -1.0)
                         except:
                             pass
             pyca.flush_io()

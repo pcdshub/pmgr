@@ -233,7 +233,7 @@ class db(QtCore.QObject):
             try:
                 d['enum'] = enum[f]
             except:
-                pass
+                pass 
             self.objflds.append(d)
         for (f, t) in fld:
             n = fixName(f)
