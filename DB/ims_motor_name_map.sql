@@ -41,7 +41,7 @@ INSERT INTO `ims_motor_name_map` VALUES
 ('FLD_UREV','UREV', 'Units per Revolution (EGU/Rev)', '',21,1,2),
 ('FLD_FREV','FREV', 'Full Steps per Rev', '',22,0,0),
 ('FLD_SREV','SREV', 'micro-steps per revolution', '',23,0,0),
-('FLD_ERES','ERES', 'Encoder Step Size (EGU)', '',24,-2,1),
+('FLD_ERES','ERES', 'Encoder Step Size (EGU)', '',24,1026,1),
 ('FLD_MRES','MRES', 'Motor Resolution (EGU/micro-step)', '',25,0,2),
 ('FLD_DIR','DIR', 'Direction', 'Pos|Neg',26,0,0),
 ('FLD_OFF','OFF', 'User Offset', '',27,0,0),
@@ -70,5 +70,9 @@ INSERT INTO `ims_motor_name_map` VALUES
 ('FLD_EGAG','EGAG', 'Use External Gauge', 'NO|YES',50,0,0),
 ('FLD_ESKL','ESKL', 'External Guage Scale', '',51,0,0),
 ('FLD_DLVL','DLVL', 'Debugging Level', '',52,0,0),
-('PV_FW__MEANS','FW_MEANS', 'Name of forward direction', '',53,0,0),
-('PV_REV__MEANS','REV_MEANS', 'Name of reverse direction','', 54,0,0);
+('FLD_S1', 'S1', 'Limit switch setting 1', 'Not Used|Home L|Home H|Limit+ L|Limit+ H|Limit- L|Limit- H|5V Out|Invalid', 53, 3584, 0),
+('FLD_S2', 'S2', 'Limit switch setting 2', 'Not Used|Home L|Home H|Limit+ L|Limit+ H|Limit- L|Limit- H|5V Out|Invalid', 54, 3584, 0),
+('FLD_S3', 'S3', 'Limit switch setting 3', 'Not Used|Home L|Home H|Limit+ L|Limit+ H|Limit- L|Limit- H|5V Out|Invalid', 55, 3584, 0),
+('FLD_S4', 'S4', 'Limit switch setting 4', 'Not Used|Home L|Home H|Limit+ L|Limit+ H|Limit- L|Limit- H|5V Out|Invalid', 56, 3584, 0),
+('PV_FW__MEANS','FW_MEANS', 'Name of forward direction', '',57,0,0),
+('PV_REV__MEANS','REV_MEANS', 'Name of reverse direction','', 58,0,0);

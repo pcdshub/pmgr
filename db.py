@@ -119,6 +119,11 @@ class db(QtCore.QObject):
     objchange     = QtCore.pyqtSignal()
     readsig       = QtCore.pyqtSignal(int)
 
+    ORDER_MASK    = 0x0003ff
+    SETMUTEX_MASK = 0x000200
+    MUST_WRITE    = 0x000400
+    WRITE_ZERO    = 0x000800
+
     def __init__(self):
         super(db, self).__init__()
         self.cfgs = None
@@ -209,11 +214,22 @@ class db(QtCore.QObject):
                         mutex[f].append(i)
 
         self.objflds = []
+        setflds = {}
+        setset = set([])
         for (f, t) in locfld:
             n = fixName(f)
+            so = setorder[f] & self.ORDER_MASK
+            setset.add(so)
             d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
-                 'colorder': colorder[f], 'setorder': setorder[f],
+                 'colorder': colorder[f], 'setorder': so,
+                 'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
+                 'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
+                 'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
                  'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': True}
+            try:
+                setflds[so].append(f)
+            except:
+                setflds[so] = [f]
             try:
                 d['enum'] = enum[f]
             except:
@@ -221,9 +237,18 @@ class db(QtCore.QObject):
             self.objflds.append(d)
         for (f, t) in fld:
             n = fixName(f)
+            so = setorder[f] & self.ORDER_MASK
+            setset.add(so)
             d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
-                 'colorder': colorder[f], 'setorder': setorder[f],
+                 'colorder': colorder[f], 'setorder': so,
+                 'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
+                 'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
+                 'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
                  'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': False}
+            try:
+                setflds[so].append(f)
+            except:
+                setflds[so] = [f]
             try:
                 d['enum'] = enum[f]
             except:
@@ -240,8 +265,9 @@ class db(QtCore.QObject):
         self.cfgflds = [d for d in self.objflds if d['obj'] == False]
         for i in range(len(self.cfgflds)):
             self.cfgflds[i]['cfgidx'] = i
-        self.setflds = [d['fld'] for d in self.objflds]
-        self.setflds.sort(key=lambda f: abs(self.fldmap[f]['setorder']))
+        setset = list(setset)
+        setset.sort()
+        self.setflds = [setflds[i] for i in setset]
         self.con.commit()
         
     def readDB(self, is_hutch):

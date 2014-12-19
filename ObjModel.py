@@ -614,36 +614,56 @@ class ObjModel(QtGui.QStandardItemModel):
     def apply(self, idx):
         d = self.getObj(idx)
         pvd = self.pvdict[idx]
-        for f in param.params.db.setflds:
-            v = d[f]
-            v2 = self.getCfg(idx, f) # Configured value
-            #
-            # Write a value if:
-            #     1. It's not derived (the value isn't None), and either
-            #     2a. It's a change, or
-            #     2b. It's a "must write" value (negative setorder).
-            #
-            if v2 != None and (not param.equal(v, v2) or self.fldmap[f]['setorder'] < 0):
+        for s in param.params.db.setflds:
+            for f in s:
+                if param.params.db.fldmap[f]['writezero']:
+                    try:
+                        v = d[f]             # PV value
+                    except:
+                        continue
+                    v2 = self.getCfg(idx, f) # Configured value
+                    #
+                    # Write a value if:
+                    #     1. It's not derived (the value isn't None), and either
+                    #     2a. It's a change, or
+                    #     2b. It's a "must write" value.
+                    #
+                    if v2 != None and (not param.equal(v, v2) or param.params.db.fldmap[f]['mustwrite']):
+                        try:
+                            pv = pvd[f]
+                            if param.params.debug:
+                                print "Put 0 to %s" % (pv.name)
+                            else:
+                                pv.put(0, -1.0)
+                        except:
+                            pass
+            pyca.flush_io()
+            for f in s:
                 try:
-                    pv = pvd[f]
-                    if param.params.debug:
-                        print "Put %s to %s" % (str(v2), pv.name)
-                    else:
-                        pv.put(v2, -1.0)
+                    v = d[f]             # PV value
                 except:
-                    pass
+                    continue
+                v2 = self.getCfg(idx, f) # Configured value
+                if v2 != None and (not param.equal(v, v2) or param.params.db.fldmap[f]['mustwrite']):
+                    try:
+                        pv = pvd[f]
+                        if param.params.debug:
+                            print "Put %s to %s" % (str(v2), pv.name)
+                        else:
+                            pv.put(v2, -1.0)
+                    except:
+                        pass
+            pyca.flush_io()
 
     def applyone(self, table, index):
         if self.commitone(table, index):
             (idx, f) = self.index2db(index)
             self.apply(idx)
-            pyca.flush_io()
 
     def applyall(self):
         if self.commitall():
             for idx in self.rowmap:
                 self.apply(idx)
-            pyca.flush_io()
 
     def revertone(self, table, index):
         (idx, f) = self.index2db(index)
