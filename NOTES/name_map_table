@@ -11,11 +11,16 @@ The *_name_map table has the following fields:
 		        will be a QComboBox with the listed values.)
         col_order     - A unique identifier for the field which also gives the
 			default column order (low numbers first).
-	set_order     - The order in which this PV should be written.  Negative
-			values indicate the PV should *always* be written, even if
-			there is no change.  Otherwise, the absolute value gives
-			the ordering: zero set_order will be written first, then
-			one, etc.
+	set_order     - A field giving PV setting information.  This has several
+			bitfields:
+			    - The low 10 bits are the order.  Order 0 is written
+			      first, then order 1, etc.
+			    - 0x200 flags this order as a mutex group as well.
+			      Fields in a mutex group must have distinct non-zero
+                              values.
+			    - 0x400 flags a PV that must be written, even if the
+			      value doesn't seem to change.
+			    - 0x800 flags a PV that must be set to zero first.
 	mutex_mask    - If several values are interrelated, this value will be
 			non-zero.  It is a bitmask of values in the interrelated
 			set.  Several bits can be 1 if this field is in several
