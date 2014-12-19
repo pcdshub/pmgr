@@ -562,6 +562,28 @@ class ObjModel(QtGui.QStandardItemModel):
         self.status[idx] = self.status[idx].replace("D", "")
         self.statchange(idx)
 
+    def checkSetMutex(self, d, e):
+        for s in param.params.db.setflds:
+            f = param.params.db.fldmap[s[0]]
+            if not f['setmutex'] or not f['obj']:
+                continue
+            try:
+                z = f['enum'][0]
+            except:
+                z = 0
+            vlist = []
+            for f in s:
+                try:
+                    v = e[f]
+                except:
+                    v = d[f]
+                if v != None and not param.equal(v, z):
+                    if v in vlist:
+                        return [param.params.db.fldmap[f]['alias'] for f in s]
+                    else:
+                        vlist.append(v)
+        return []
+
     #
     # Try to commit a change.  We assume we are in a transaction already.
     #
@@ -570,20 +592,28 @@ class ObjModel(QtGui.QStandardItemModel):
         if not utils.permission(d['owner'], None):
             param.params.db.transaction_error("Not Authorized!")
         try:
-            if self.edits[idx]['name'][0:10] == "NewObject-":
-                param.params.db.transaction_error("Object cannot be named %s!" % self.edits[idx]['name'])
-                return
+            name = self.edits[idx]['name']
         except:
-            pass
-        if d['name'][0:10] == "NewObject-":
-            param.params.db.transaction_error("Object cannot be named %s!" % d['name'])
+            name = d['name']
+        if name[0:10] == "NewObject-":
+            param.params.db.transaction_error("Object cannot be named %s!" % name)
             return
         if 'D' in self.status[idx]:
             param.params.db.objectDelete(idx)
-        elif 'N' in self.status[idx]:
-            param.params.db.objectInsert(self.getObj(idx))
-        elif 'M' in self.status[idx]:
-            param.params.db.objectChange(self.getObj(idx), self.edits[idx])
+        else:
+            try:
+                e = self.edits[idx]
+            except:
+                e = {}
+            s = self.checkSetMutex(d, e)
+            if s != []:
+                param.params.db.transaction_error("Object %s does not have unique values for %s!" %
+                                                  (name, str(s)))
+                return
+            if 'N' in self.status[idx]:
+                param.params.db.objectInsert(self.getObj(idx))
+            elif 'M' in self.status[idx]:
+                param.params.db.objectChange(self.getObj(idx), self.edits[idx])
 
     def commitone(self, table, index):
         param.params.db.start_transaction()

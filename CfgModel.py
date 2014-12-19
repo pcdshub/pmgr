@@ -800,13 +800,11 @@ class CfgModel(QtGui.QStandardItemModel):
             param.params.db.transaction_error("Not Authorized!")
             return True
         try:
-            if self.edits[idx]['name'][0:10] == "NewConfig-":
-                param.params.db.transaction_error("Object cannot be named %s!" % self.edits[idx]['name'])
-                return
+            name = self.edits[idx]['name']
         except:
-            pass
-        if d['name'][0:10] == "NewConfig-":
-            param.params.db.transaction_error("Object cannot be named %s!" % d['name'])
+            name = d['name']
+        if name[0:10] == "NewConfig-":
+            param.params.db.transaction_error("Object cannot be named %s!" % name)
             return
         if 'D' in self.status[idx]:
             # We can process the delete only if *no one* is using this!
@@ -835,7 +833,7 @@ class CfgModel(QtGui.QStandardItemModel):
             s = self.checkSetMutex(d, e)
             if s != []:
                 param.params.db.transaction_error("Config %s does not have unique values for %s!" %
-                                                  (param.params.db.getCfgName(idx), str(s)))
+                                                  (name, str(s)))
                 return True
             try:
                 p = self.edits[idx]['config']
