@@ -1,0 +1,23 @@
+The *_name_map table has the following fields:
+	db_field_name - The name of the field, used to access the PV.  It either
+	                starts "FLD_" (indicating that the name is to be appended
+			to the base name with a period) or "PV_" (indicating that
+			the name is to be appended to the base name with a colon.)
+			Double underscores are converted to single throughout.
+	alias         - The short name of the field, put into the column header.
+	tooltip	      - The tooltip for the field.
+        enum          - If the PV is an enum, the possible values are listed here,
+			separated by |.  (If this isn't an empty string, the editor
+		        will be a QComboBox with the listed values.)
+        col_order     - A unique identifier for the field which also gives the
+			default column order (low numbers first).
+	set_order     - The order in which this PV should be written.  Negative
+			values indicate the PV should *always* be written, even if
+			there is no change.  Otherwise, the absolute value gives
+			the ordering: zero set_order will be written first, then
+			one, etc.
+	mutex_mask    - If several values are interrelated, this value will be
+			non-zero.  It is a bitmask of values in the interrelated
+			set.  Several bits can be 1 if this field is in several
+			sets.
+	

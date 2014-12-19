@@ -241,7 +241,7 @@ class db(QtCore.QObject):
         for i in range(len(self.cfgflds)):
             self.cfgflds[i]['cfgidx'] = i
         self.setflds = [d['fld'] for d in self.objflds]
-        self.setflds.sort(key=lambda f: self.fldmap[f]['setorder'])
+        self.setflds.sort(key=lambda f: abs(self.fldmap[f]['setorder']))
         self.con.commit()
         
     def readDB(self, is_hutch):

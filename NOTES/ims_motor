@@ -1,0 +1,21 @@
+The weirdness for IMS motors is that we have some derived values:
+	ERES = UREV / (4 * EL)
+	MRES = UREV / (FREV * MS)
+
+Now, FREV and MS are not really changeable (they are hardware parameters),
+so we can solve the latter by saying that [MRES, UREV] is a mutual exclusion
+set.
+
+The situation is a little weirder for the first equation.
+    - If you set UREV, ERES changes.
+    - If you set ERES or EL, the other one changes.
+
+So, we solve this by calling [ERES, EL] a mutual exclusion set, and ordering
+writes:
+    - UREV is first (setorder 1).
+    - ERES and EL are later (setorder 2).
+    - ERES is also "must write" (setorder is negative!).
+
+So if we want EL to be the derived value:
+    - We write UREV (which changes ERES).
+    - We write ERES (which changes EL).
