@@ -17,6 +17,7 @@ import param
 #     cfgfldcnt, cfgflds   - The count and a dictionary of configuration field information.
 #     objfldcnt, objflds   - The count and a dictionary of object field information (a superset of
 #                            configuration field information).
+#     setflds              - A list of lists of field names, partitioned by set_order value.
 #     fldmap               - A field name to information dictionary mapping.
 #     cfgs                 - The configurations, indexed by ID.
 #     objs                 - The objects, indexed by ID.

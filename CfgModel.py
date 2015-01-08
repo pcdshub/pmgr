@@ -378,6 +378,7 @@ class CfgModel(QtGui.QStandardItemModel):
             e[f] = v
             if f == 'cfgname':
                 e['config'] = vlink
+            self.createallval(None, index)
         else:
             chg = False
             # No change?
@@ -656,14 +657,19 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def deleteallval(self, table, index):
         (idx, f) = self.index2db(index)
+        self.deleteval(table, index)
         m = param.params.db.fldmap[f]['mutex']
-        if m == []:
-            self.deleteval(table, index)
-            return
         for mi in m:
             for fld in param.params.db.mutex_sets[mi]:
                 if self.hasValue(True, idx, fld):
                     self.deleteval(None, idx, fld)    # Everyone needs to have a value!
+        if not param.params.db.fldmap[f]['setmutex']:
+            return
+        for s in param.params.db.setflds:
+            if f in s:
+                for fld in s:
+                    if self.hasValue(True, idx, fld):
+                        self.deleteval(None, idx, fld)
 
     def deleteval(self, table, index, f=None):
         if f == None:
@@ -716,14 +722,19 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def createallval(self, table, index):
         (idx, f) = self.index2db(index)
+        self.createval(table, index)
         m = param.params.db.fldmap[f]['mutex']
-        if m == []:
-            self.createval(table, index)
-            return
         for mi in m:
             for fld in param.params.db.mutex_sets[mi]:
                 if not self.hasValue(True, idx, fld):
-                    self.createval(None, idx, fld)    # Everyone needs to have a value!
+                    self.createval(None, idx, fld)
+        if not param.params.db.fldmap[f]['setmutex']:
+            return
+        for s in param.params.db.setflds:
+            if f in s:
+                for fld in s:
+                    if not self.hasValue(True, idx, fld):
+                        self.createval(None, idx, fld)
 
     def createval(self, table, index, f=None):
         if f == None:
