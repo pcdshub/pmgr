@@ -88,6 +88,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.ui.objectTable.colmgr = "%s/objcol" % param.params.table
 
         self.connect(param.params.ui.saveButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
+        self.connect(param.params.ui.revertButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.revertall)
         self.connect(param.params.ui.applyButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)
 
     def closeEvent(self, event):

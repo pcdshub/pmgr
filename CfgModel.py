@@ -903,9 +903,18 @@ class CfgModel(QtGui.QStandardItemModel):
         self.commit(idx, True)
         if param.params.db.end_transaction() and not param.params.debug:
             self.cfgChangeDone(idx)
+
+    def revertall(self):
+        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        for idx in self.edits.keys():
+            self.revertone(None, idx, True)
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
         
-    def revertone(self, table, index):
-        (idx, f) = self.index2db(index)
+    def revertone(self, table, index, f=False):
+        if f:
+            idx = index
+        else:
+            (idx, f) = self.index2db(index)
         try:
             newparent = self.edits[idx]['config']
         except:

@@ -634,12 +634,23 @@ class ObjModel(QtGui.QStandardItemModel):
         for (idx, s) in self.status.items():
             if ('N' in s or 'M' in s) and not 'D' in s:  # Paranoia.  We should never have DM or DN.
                 self.commit(idx)
-        if param.params.db.end_transaction():
+        if param.params.db.end_transaction(): 
             param.params.cfgmodel.cfgChangeDone()
             self.objChangeDone()
             return True
         else:
             return False
+
+    def revertall(self):
+        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        for idx in self.edits.keys():
+            try:
+                del self.edits[idx]
+            except:
+                pass
+            self.status[idx] = self.status[idx].replace("M", "")
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        param.params.cfgmodel.revertall()
 
     def apply(self, idx):
         d = self.getObj(idx)
