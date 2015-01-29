@@ -583,3 +583,15 @@ class db(QtCore.QObject):
             self.cur.execute(cmd, tuple(vlist))
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
+
+    def countInstance(self, chg):
+        cmd = "select count(*) from %s where " % param.params.table
+        p = ""
+        for v in chg:
+            cmd += "%sconfig = %d" % (p, v)
+            p = " or "
+        try:
+            self.cur.execute(cmd)
+            return self.cur.fetchone().values()[0]
+        except _mysql_exceptions.Error as err:
+            self.errorlist.append(err)

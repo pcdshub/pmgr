@@ -879,12 +879,16 @@ class CfgModel(QtGui.QStandardItemModel):
 
     # Commit all of the changes.  Again, we assume we're in a transaction
     # already.
-    def commitall(self):
+    def commitall(self, verify=True):
         todo = set([k for k in self.editval.keys() if self.editval[k] != {}])
         try:
             todo = todo.union(set(self.edits.keys()))
         except:
             pass
+        # We only need to confirm the changes.  The new configs are always OK, and
+        # we forbid the deletion of a used config!
+        if verify and not self.confirmCommit(list(todo)):
+            return
         todo = todo.union(set(self.cfgs.keys()))
         todo = todo.union(set([idx for idx in self.status.keys() if 'D' in self.status[idx]]))
         while todo != set([]):
@@ -898,8 +902,10 @@ class CfgModel(QtGui.QStandardItemModel):
                 return
 
     def commitone(self, table, index):
-        param.params.db.start_transaction()
         (idx, f) = self.index2db(index)
+        if not self.confirmCommit([idx]):
+            return
+        param.params.db.start_transaction()
         self.commit(idx, True)
         if param.params.db.end_transaction() and not param.params.debug:
             self.cfgChangeDone(idx)
@@ -1090,3 +1096,58 @@ class CfgModel(QtGui.QStandardItemModel):
             if col != self.cfgcol and col != self.statcol:
                 flags = flags | QtCore.Qt.ItemIsEditable
         return flags
+
+    #
+    # Return the set of changed configurations.
+    #
+    # idx is the config we are currently looking at.
+    # e is a list of values that have edits in this configuration.
+    # s is the set of previously examined configurations.
+    # l is the list of things we want to consider changed.  (That is
+    # the configurations in l should have their edited values considered,
+    # and the ones *not* in l should have their *original* values
+    # considered.)
+    #
+    def findChange(self, idx, e, s, l):
+        if idx in s:
+            return s
+        s.add(idx)
+        for c in self.tree[idx]['children']:
+            # OK, idx has changed fields in e and we want to check if this affects c.
+            # However, c might be changed as well!
+            #
+            # Therefore, we pass in the list l of things that are concurrently changing
+            # right now so we know where to look!
+            if c in l:
+                el = [f for f in e if not self.hasValue(True, c, f)]
+            else:
+                d = self.getCfg(c)
+                el = [f for f in e if not d['_val'][f]]
+            if el != []:
+                s = self.findChange(c, el, s, l)
+        return s
+
+    def confirmCommit(self, l=None):
+        if l == None:
+            todo = set([k for k in self.editval.keys() if self.editval[k] != {}])
+            try:
+                todo = todo.union(set(self.edits.keys()))
+            except:
+                pass
+            l = list(todo)
+        chg = {}
+        chgall = set([])
+        for idx in l:
+            try:
+                e = self.edits[idx].keys()
+                chg[idx] = self.findChange(idx, e, set([]), l)
+            except:
+                # No changed values --> no child changes!
+                chg[idx] = set([idx])
+            chgall = chgall.union(chg[idx])
+        nc = len(chgall)
+        no = param.params.db.countInstance(chgall)
+        d = param.params.confirmdialog
+        d.ui.label.setText("This commit will affect %d configurations and %d motors." %
+                           (nc, no))
+        return d.exec_() == QtGui.QDialog.Accepted

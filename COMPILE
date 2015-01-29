@@ -5,3 +5,4 @@ pyuic4 -o colsave_ui.py colsave.ui
 pyuic4 -o colchoose_ui.py colchoose.ui
 pyuic4 -o errordialog_ui.py errordialog.ui
 pyuic4 -o deriveddialog_ui.py deriveddialog.ui
+pyuic4 -o confirmdialog_ui.py confirmdialog.ui

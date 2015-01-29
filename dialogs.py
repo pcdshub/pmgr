@@ -4,6 +4,7 @@ import coluse_ui
 import colsave_ui
 import errordialog_ui
 import deriveddialog_ui
+import confirmdialog_ui
 
 class cfgdialog(QtGui.QDialog):
     def __init__(self, model, parent=None):
@@ -42,6 +43,12 @@ class errordialog(QtGui.QDialog):
     def __init__(self, parent=None):
         QtGui.QDialog.__init__(self, parent)
         self.ui = errordialog_ui.Ui_Dialog()
+        self.ui.setupUi(self)
+
+class confirmdialog(QtGui.QDialog):
+    def __init__(self, parent=None):
+        QtGui.QDialog.__init__(self, parent)
+        self.ui = confirmdialog_ui.Ui_Dialog()
         self.ui.setupUi(self)
 
 class deriveddialog(QtGui.QDialog):

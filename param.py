@@ -37,6 +37,7 @@ class param_structure(object):
         self.colusedialog    = None
         self.colsavedialog   = None
         self.deriveddialog   = None
+        self.confirmdialog   = None
         self.settings = ("SLAC", "ParamMgr")
         self.debug  = False
 

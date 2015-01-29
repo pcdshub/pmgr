@@ -626,11 +626,13 @@ class ObjModel(QtGui.QStandardItemModel):
             return False
 
     def commitall(self):
+        if not param.params.cfgmodel.confirmCommit():
+            return False
         param.params.db.start_transaction()
         for (idx, s) in self.status.items():
             if 'D' in s:
                 self.commit(idx)
-        param.params.cfgmodel.commitall()
+        param.params.cfgmodel.commitall(False)
         for (idx, s) in self.status.items():
             if ('N' in s or 'M' in s) and not 'D' in s:  # Paranoia.  We should never have DM or DN.
                 self.commit(idx)
