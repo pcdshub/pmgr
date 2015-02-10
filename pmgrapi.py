@@ -326,3 +326,19 @@ class pmgrapi(object):
         except:
             return None
             
+    def createObject(self, name, d):
+        pass
+
+    def createConfiguration(self, name, d):
+        pass
+
+    def updateObject(self, name, d):
+        pass
+
+    def updateConfiguration(self, name, d):
+        pass
+
+    def applyConfiguration(self, olist=None):
+        if olist == None:
+            olist = self.getAllObjects()
+        pass

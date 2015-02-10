@@ -74,6 +74,8 @@ class CfgModel(QtGui.QStandardItemModel):
             self.setCurIdx(0)
 
     def setModifiedStatus(self, index, idx, d):
+        if idx < 0:
+            return
         try:
             v = self.status[idx].index("M")
             wasmod = True
@@ -723,7 +725,11 @@ class CfgModel(QtGui.QStandardItemModel):
     def createallval(self, table, index):
         (idx, f) = self.index2db(index)
         self.createval(table, index)
-        m = param.params.db.fldmap[f]['mutex']
+        try:
+            m = param.params.db.fldmap[f]['mutex']
+        except:
+            return   # Some fields (like name) don't actually have a fldmap entry.
+                     # But these don't have mutex/setmutex fields either.
         for mi in m:
             for fld in param.params.db.mutex_sets[mi]:
                 if not self.hasValue(True, idx, fld):
