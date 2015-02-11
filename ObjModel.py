@@ -476,15 +476,29 @@ class ObjModel(QtGui.QStandardItemModel):
     def haveObjPVDiff(self, index):
         (idx, f) = self.index2db(index)
         db = param.params.db
-        try:
-            v = self.edits[idx][f]
-        except:
+        if idx < 0:
             try:
-                v = db.objs[idx]['_val'][f]
+                vc = self.objs[idx]['_val'][f]
+            except:
+                pass
+            try:
+                va = self.objs[idx][f]
+            except:
+                pass
+        else:
+            try:
+                vc = self.edits[idx][f]
+            except:
+                try:
+                    vc = db.objs[idx]['_val'][f]
+                except:
+                    return False
+            try:
+                va = db.objs[idx][f]
             except:
                 return False
         try:
-            return db.fldmap[f]['obj'] and not param.equal(db.objs[idx][f], v)
+            return db.fldmap[f]['obj'] and not param.equal(va, vc)
         except:
             return False
 
@@ -517,13 +531,18 @@ class ObjModel(QtGui.QStandardItemModel):
 
     def setFromPV(self, table, index):
         (idx, f) = self.index2db(index)
-        self.setData(index, QtCore.QVariant(param.params.db.objs[idx][f]))
+        if idx >= 0:
+            self.setData(index, QtCore.QVariant(param.params.db.objs[idx][f]))
+        else:
+            self.setData(index, QtCore.QVariant(self.objs[idx][f]))
 
     def create(self, table, index):
         idx = self.nextid;
         self.nextid -= 1
         now = datetime.datetime.now()
         d = dict(param.params.db.objs[0])
+        del d['_val']
+        del d['connstat']
         dd = {'id': idx, 'config': 0, 'owner': param.params.hutch, 'name': "NewObject%d" % idx,
               'rec_base': "", 'dt_created': now, 'dt_updated': now,
               'cfgname': param.params.db.getCfgName(0) }

@@ -585,11 +585,14 @@ class db(QtCore.QObject):
             self.errorlist.append(err)
 
     def countInstance(self, chg):
+        if len(chg) == 0:
+            return 0
         cmd = "select count(*) from %s where " % param.params.table
         p = ""
         for v in chg:
             cmd += "%sconfig = %d" % (p, v)
             p = " or "
+        print cmd
         try:
             self.cur.execute(cmd)
             return self.cur.fetchone().values()[0]

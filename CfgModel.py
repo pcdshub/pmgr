@@ -1154,6 +1154,8 @@ class CfgModel(QtGui.QStandardItemModel):
         nc = len(chgall)
         no = param.params.db.countInstance(chgall)
         d = param.params.confirmdialog
+        if nc == 0 and no == 0:
+            return True
         d.ui.label.setText("This commit will affect %d configurations and %d motors." %
                            (nc, no))
         return d.exec_() == QtGui.QDialog.Accepted
