@@ -61,7 +61,7 @@ class dbPoll(threading.Thread):
     def __init__(self, sig, interval):
         super(dbPoll, self).__init__()
         try:
-            self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols');
+            self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols')
             cur = self.con.cursor(mdb.cursors.DictCursor)
             cur.execute("call init_pcds()")
         except:
@@ -415,7 +415,7 @@ class db(QtCore.QObject):
             fld = f['fld']
             if vals[fld]:
                 cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, '%s', now()"
+        cmd += ") values (%s, %s, %s, %s, now()"
         vlist = [d['name']]
         try:
             vlist.append(self.cfgmap[d['config']])

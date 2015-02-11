@@ -123,7 +123,7 @@ class pmgrapi(object):
         self.table = type
         self.hutch = hutch
         try:
-            self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols');
+            self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols')
             self.cur = self.con.cursor(mdb.cursors.DictCursor)
             self.cur.execute("call init_pcds()")
         except:
