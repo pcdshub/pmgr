@@ -17,8 +17,7 @@ class ObjModel(QtGui.QStandardItemModel):
     cfgcol  = 2
     pvcol   = 3
     mutable = 2  # The first non-frozen column
-    defflds = ["status", "name", "config", "cfgname", "rec_base", "FLD_DESC", "FLD_PORT"]
-    fixflds = ["status"]
+    fixflds = ["status", "cfgname"]
     
     def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
@@ -269,7 +268,7 @@ class ObjModel(QtGui.QStandardItemModel):
         if f == 'rec_base':
             self.connectPVs(idx)
             r = index.row()
-            self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt))
+            self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt - 1))
         else:
             self.dataChanged.emit(index, index)
         return True
@@ -738,7 +737,8 @@ class ObjModel(QtGui.QStandardItemModel):
         except:
             pass
         self.status[idx] = self.status[idx].replace("M", "")
-        self.statchange(idx)
+        row = self.rowmap.index(idx)
+        self.dataChanged.emit(self.index(row, 0), self.index(row, self.colcnt - 1))
 
     def objChangeDone(self, idx=None):
         if idx != None:
@@ -819,14 +819,10 @@ class ObjModel(QtGui.QStandardItemModel):
             (idx, f) = self.index2db(index)
             col = index.column()
             if col < self.coff:
-                if idx == 0:
-                    if not f in self.defflds:
-                        flags = flags | QtCore.Qt.ItemIsEditable
-                else:
-                    if not f in self.fixflds:
-                        flags = flags | QtCore.Qt.ItemIsEditable
+                if idx != 0 and not f in self.fixflds:
+                    flags = flags | QtCore.Qt.ItemIsEditable
             else:
-                if (idx != 0 or not f in self.defflds) and param.params.db.objflds[col-self.coff]['obj']:
+                if idx != 0 and param.params.db.objflds[col-self.coff]['obj']:
                     flags = flags | QtCore.Qt.ItemIsEditable
         return flags
 

@@ -576,18 +576,29 @@ class CfgModel(QtGui.QStandardItemModel):
                 return True
         return False
 
+    def ownTest(self, index):
+        idx = self.path[index.row()]
+        return idx < 0 or param.params.db.cfgs[idx]['owner'] == param.params.hutch
+        
     def setupContextMenus(self, table):
         menu = utils.MyContextMenu()
         menu.addAction("Create new child", self.createnew)
         menu.addAction("Clone existing", self.clone)
         menu.addAction("Clone values", self.clonevals)
-        menu.addAction("Change parent", self.chparent, lambda table, index: index.column() == self.cfgcol)
-        menu.addAction("Delete value", self.deleteallval, lambda t, i: self.hasValue(True, i))
-        menu.addAction("Create value", self.createallval, lambda t, i: self.hasValue(False, i))
-        menu.addAction("Delete config", self.deletecfg, lambda table, index: not self.checkStatus(index, 'D'))
-        menu.addAction("Undelete config", self.undeletecfg, lambda table, index: self.checkStatus(index, 'D'))
-        menu.addAction("Commit this config", self.commitone, lambda table, index: self.checkStatus(index, 'DMN'))
-        menu.addAction("Revert this config", self.revertone, lambda table, index: self.checkStatus(index, 'M'))
+        menu.addAction("Change parent", self.chparent,
+                       lambda t, i: self.ownTest(i) and i.column() == self.cfgcol)
+        menu.addAction("Delete value", self.deleteallval,
+                       lambda t, i: self.ownTest(i) and self.hasValue(True, i))
+        menu.addAction("Create value", self.createallval,
+                       lambda t, i: self.ownTest(i) and self.hasValue(False, i))
+        menu.addAction("Delete config", self.deletecfg,
+                       lambda t, i: self.ownTest(i) and not self.checkStatus(i, 'D'))
+        menu.addAction("Undelete config", self.undeletecfg,
+                       lambda t, i: self.checkStatus(i, 'D'))
+        menu.addAction("Commit this config", self.commitone,
+                       lambda t, i: self.checkStatus(i, 'DMN'))
+        menu.addAction("Revert this config", self.revertone,
+                       lambda t, i: self.checkStatus(i, 'M'))
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table)
 
@@ -596,7 +607,7 @@ class CfgModel(QtGui.QStandardItemModel):
         self.nextid -= 1
         now = datetime.datetime.now()
         d = {'name': "NewConfig%d" % id, 'config': parent,
-             'cfgname': param.params.db.getCfgName(parent), 'id': id, 'owner': None,
+             'cfgname': param.params.db.getCfgName(parent), 'id': id, 'owner': param.params.hutch,
              'security': None, 'dt_created': now, 'dt_updated': now}
         self.status[id] = "N"
         param.params.db.setCfgName(id, d['name'])
@@ -922,8 +933,8 @@ class CfgModel(QtGui.QStandardItemModel):
             self.revertone(None, idx, True)
         self.emit(QtCore.SIGNAL("layoutChanged()"))
         
-    def revertone(self, table, index, f=False):
-        if f:
+    def revertone(self, table, index, doall=False):
+        if doall:
             idx = index
         else:
             (idx, f) = self.index2db(index)
@@ -940,12 +951,15 @@ class CfgModel(QtGui.QStandardItemModel):
         del c['_color']
         c = self.getCfg(idx)
         self.status[idx] = self.status[idx].replace("M", "")
-        self.revertchildren(idx, c['curmutex'], [])
+        self.revertchildren(idx, c['curmutex'], [], doall)
         if newparent != None:
             self.buildtree()
             self.setCurIdx(self.curidx)
+        elif not doall:
+            r = index.row()
+            self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt - 1))
 
-    def revertchildren(self, idx, pmutex, lp):
+    def revertchildren(self, idx, pmutex, lp, doall):
         for cidx in self.tree[idx]['children']:
             if cidx in lp:
                 continue
@@ -966,7 +980,7 @@ class CfgModel(QtGui.QStandardItemModel):
             c = self.getCfg(cidx)
         lp.append(idx)
         for cidx in self.tree[idx]['children']:
-            self.revertchildren(cidx, self.getCfg(cidx)['curmutex'], lp)
+            self.revertchildren(cidx, self.getCfg(cidx)['curmutex'], lp, doall)
         
     def cfgChangeDone(self, idx=None):
         if idx != None:
@@ -1099,7 +1113,9 @@ class CfgModel(QtGui.QStandardItemModel):
         if index.isValid():
             row = index.row()
             col = index.column()
-            if col != self.cfgcol and col != self.statcol:
+            idx = self.path[row]
+            if (col != self.cfgcol and col != self.statcol and
+                (idx < 0 or param.params.db.cfgs[idx]['owner'] == param.params.hutch)):
                 flags = flags | QtCore.Qt.ItemIsEditable
         return flags
 
