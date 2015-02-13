@@ -7,7 +7,7 @@ CREATE TABLE `ims_motor` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `config` int(11) NOT NULL,
   `owner` varchar(10),
-  `name` varchar(30) NOT NULL UNIQUE,
+  `name` varchar(30) NOT NULL,
   `rec_base` varchar(40) NOT NULL,
   `mutex` varchar(16),
   `dt_created` datetime NOT NULL,
