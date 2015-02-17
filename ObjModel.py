@@ -473,33 +473,41 @@ class ObjModel(QtGui.QStandardItemModel):
         return False
 
     def haveObjPVDiff(self, index):
-        (idx, f) = self.index2db(index)
         db = param.params.db
-        if idx < 0:
-            try:
-                vc = self.objs[idx]['_val'][f]
-            except:
-                pass
-            try:
-                va = self.objs[idx][f]
-            except:
-                pass
-        else:
-            try:
-                vc = self.edits[idx][f]
-            except:
+        try:
+            (idx, f) = self.index2db(index)
+            flist = [f]
+        except:
+            idx = self.rowmap[index]
+            flist = [d['fld'] for d in param.params.db.objflds if d['obj'] == True]
+        for f in flist:
+            if idx < 0:
                 try:
-                    vc = db.objs[idx]['_val'][f]
+                    vc = self.objs[idx]['_val'][f]
+                except:
+                    pass
+                try:
+                    va = self.objs[idx][f]
+                except:
+                    pass
+            else:
+                try:
+                    vc = self.edits[idx][f]
+                except:
+                    try:
+                        vc = db.objs[idx]['_val'][f]
+                    except:
+                        return False
+                try:
+                    va = db.objs[idx][f]
                 except:
                     return False
             try:
-                va = db.objs[idx][f]
+                if db.fldmap[f]['obj'] and not param.equal(va, vc) and vc != None:
+                    return True
             except:
-                return False
-        try:
-            return db.fldmap[f]['obj'] and not param.equal(va, vc)
-        except:
-            return False
+                pass
+        return False
 
     def setupContextMenus(self, table):
         menu = utils.MyContextMenu()
@@ -513,8 +521,11 @@ class ObjModel(QtGui.QStandardItemModel):
         menu.addAction("Change configuration", self.chparent,
                        lambda table, index: self.rowmap[index.row()] != 0 and index.column() == self.cfgcol)
         menu.addAction("Set from PV", self.setFromPV,
-                       lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0 and
-                       self.haveObjPVDiff(index))
+                       lambda table, index: self.checkStatus(index, 'C') and index.row() >= 0 and
+                       self.rowmap[index.row()] != 0 and self.haveObjPVDiff(index))
+        menu.addAction("Set all from PV", self.setAllFromPV,
+                       lambda table, index: self.checkStatus(index, 'C') and index.row() >= 0 and
+                       self.rowmap[index.row()] != 0 and self.haveObjPVDiff(index.row()))
         menu.addAction("Create configuration from object", self.createcfg,
                        lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0)
         menu.addAction("Commit this object", self.commitone,
@@ -535,6 +546,22 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             self.setData(index, QtCore.QVariant(self.objs[idx][f]))
 
+    def setAllFromPV(self, table, index):
+        (idx, f) = self.index2db(index)
+        flist = [(d['fld'], self.coff + d['objidx']) for d in param.params.db.objflds if d['obj'] == True]
+        for (f, c) in flist:
+            if idx >= 0:
+                va = param.params.db.objs[idx][f]
+                try:
+                    vc = self.edits[idx][f]
+                except:
+                    vc = db.objs[idx]['_val'][f]
+            else:
+                va = self.objs[idx][f]
+                vc = self.objs[idx]['_val'][f]
+            if vc != None:
+                self.setData(self.index(index.row(), c), QtCore.QVariant(va))
+        
     def create(self, table, index):
         idx = self.nextid;
         self.nextid -= 1
