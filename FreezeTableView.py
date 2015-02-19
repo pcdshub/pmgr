@@ -324,6 +324,14 @@ class FreezeTableView(DropTableView):
         self.rTV.selectionModel().clear()
         self.fTV.selectionModel().clear()
 
+    def setRowHidden(self, row, hide):
+        DropTableView.setRowHidden(self, row, hide)
+        self.cTV.setRowHidden(row, hide)
+        if row < self.frows:
+            self.fTV.setRowHidden(row, hide)
+        else:
+            self.rTV.setRowHidden(row, hide)
+
     def setSortingEnabled(self, value):
         DropTableView.setSortingEnabled(self, value)
         self.cTV.setSortingEnabled(value)

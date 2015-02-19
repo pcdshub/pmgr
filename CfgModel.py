@@ -9,14 +9,16 @@ class CfgModel(QtGui.QStandardItemModel):
     newname = QtCore.pyqtSignal(int, QtCore.QString)
     cfgChanged = QtCore.pyqtSignal(int, QtCore.QString)
     
-    cname   = ["Status", "Name", "Parent"]
-    cfld    = ["status", "name", "cfgname"]
-    ctips   = ["D = Deleted\nM = Modified\nN = New", "Configuration Name", "Parent Configuration"]
+    cname   = ["Status", "Name", "Parent", "Owner"]
+    cfld    = ["status", "name", "cfgname", "owner"]
+    ctips   = ["D = Deleted\nM = Modified\nN = New", "Configuration Name", "Parent Configuration", "Owner"]
     coff    = len(cname)
     statcol = 0
     namecol = 1
     cfgcol  = 2
+    owncol  = 3
     mutable = 2   # The first non-frozen column
+    fixflds = ["status", "cfgname", "owner"]
     
     def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
@@ -249,7 +251,7 @@ class CfgModel(QtGui.QStandardItemModel):
             for (k, v) in d.items():
                 if k[:3] != 'PV_' and k[:4] != 'FLD_' and not k in self.cfld:
                     continue
-                if v == None:   
+                if v == None and k != "owner":
                     haveval[k] = chr(param.params.db.fldmap[k]['colorder']+0x40) in d['curmutex']
                     color[k] = param.params.almond
                 else:
@@ -542,6 +544,9 @@ class CfgModel(QtGui.QStandardItemModel):
         self.path = path
         self.setRowCount(len(path))
         self.emit(QtCore.SIGNAL("layoutChanged()"))
+
+    def selectConfig(self, cfg):
+        param.params.ui.treeWidget.setCurrentItem(self.tree[cfg]['item'])
         
     def treeNavigation(self, cur, prev):
         if cur != None:
@@ -1114,7 +1119,7 @@ class CfgModel(QtGui.QStandardItemModel):
             row = index.row()
             col = index.column()
             idx = self.path[row]
-            if (col != self.cfgcol and col != self.statcol and
+            if (col != self.cfgcol and col != self.statcol and col != self.owncol and
                 (idx < 0 or param.params.db.cfgs[idx]['owner'] == param.params.hutch)):
                 flags = flags | QtCore.Qt.ItemIsEditable
         return flags
@@ -1175,3 +1180,13 @@ class CfgModel(QtGui.QStandardItemModel):
         d.ui.label.setText("This commit will affect %d configurations and %d motors." %
                            (nc, no))
         return d.exec_() == QtGui.QDialog.Accepted
+
+    def editorInfo(self, index):
+        c = index.column()
+        if c < self.coff:
+            return str
+        try:
+            e = param.params.db.cfgflds[c - self.coff]['enum']
+            return e
+        except:
+            return param.params.db.cfgflds[c - self.coff]['type']

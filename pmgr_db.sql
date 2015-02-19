@@ -72,7 +72,8 @@ create table ims_motor (
 	id int auto_increment,
 	config int not null,
 	owner varchar(10),
-	name varchar(30) not null unique,
+	name varchar(30) not null,
+	category varchar(10),
 	rec_base varchar(40) not null,  -- pv/field base prefix --
         mutex varchar(16),              -- An ugly hack to deal with constraint sets.
 	dt_created datetime not null,

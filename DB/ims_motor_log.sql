@@ -12,6 +12,7 @@ CREATE TABLE `ims_motor_log` (
   `config` int(11) NOT NULL,
   `owner` varchar(10),
   `name` varchar(30) NOT NULL,
+  `category` varchar(10),
   `rec_base` varchar(40) NOT NULL,
   `mutex` varchar(16),
   `dt_created` datetime NOT NULL,

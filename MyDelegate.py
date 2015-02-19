@@ -58,33 +58,28 @@ def format_float(value):
     return string
 
 class MyDelegate(QStyledItemDelegate):
-    def __init__(self, parent, cols, off):
+    def __init__(self, parent):
         QStyledItemDelegate.__init__(self, parent)
-        self.cols = cols
-        self.off  = off
 
     def createEditor(self, parent, option, index):
-        if index.column() < self.off:
+        e = index.model().editorInfo(index)
+        if e == str:
             editor = QItemEditorFactory.defaultFactory().createEditor(QVariant.String, parent)
             editor.mydelegate = False
-            return editor
-        try:
-            e = self.cols[index.column() - self.off]['enum']
+        elif e == int:
+            editor = QItemEditorFactory.defaultFactory().createEditor(QVariant.Int, parent)
+            editor.mydelegate = False
+        elif e == float:
+            editor = ScientificDoubleSpinBox(parent)
+            editor.mydelegate = False
+        else:
+            # Must be a list for an enum!
             editor = QComboBox(parent)
             editor.enum = e
             editor.setAutoFillBackground(True)
             for item in e:
                 editor.addItem(item)
             editor.mydelegate = True
-        except:
-            t = self.cols[index.column() - self.off]['type']
-            if t == float:
-                editor = ScientificDoubleSpinBox(parent)
-            elif t == int:
-                editor = QItemEditorFactory.defaultFactory().createEditor(QVariant.Int, parent)
-            else: # str
-                editor = QItemEditorFactory.defaultFactory().createEditor(QVariant.String, parent)
-            editor.mydelegate = False
         return editor
 
     def setEditorData(self, editor, index):

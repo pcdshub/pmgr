@@ -19,44 +19,46 @@ class GraphicUserInterface(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
         param.params.ui = Ui_MainWindow()
-        param.params.ui.setupUi(self)
+        ui = param.params.ui
+
+        ui.setupUi(self)
         self.setWindowTitle("Parameter Manager for %s (%s)" % (param.params.hutch.upper(), param.params.table))
 
-        param.params.ui.objectTable.verticalHeader().hide()
-        param.params.ui.objectTable.setCornerButtonEnabled(False)
-        param.params.ui.objectTable.horizontalHeader().setMovable(True)
+        ui.objectTable.verticalHeader().hide()
+        ui.objectTable.setCornerButtonEnabled(False)
+        ui.objectTable.horizontalHeader().setMovable(True)
 
-        param.params.ui.configTable.verticalHeader().hide()
-        param.params.ui.configTable.setCornerButtonEnabled(False)
-        param.params.ui.configTable.horizontalHeader().setMovable(True)
+        ui.configTable.verticalHeader().hide()
+        ui.configTable.setCornerButtonEnabled(False)
+        ui.configTable.horizontalHeader().setMovable(True)
 
         param.params.db = db()
         self.initdone.connect(self.finishinit)
         param.params.db.start(self.initdone)
 
     def finishinit(self):
-        param.params.ui.menuView.addAction(param.params.ui.configWidget.toggleViewAction())
-        param.params.ui.configWidget.setWindowTitle(param.params.table + " configurations")
+        ui = param.params.ui
+
+        ui.menuView.addAction(ui.configWidget.toggleViewAction())
+        ui.configWidget.setWindowTitle(param.params.table + " configurations")
         param.params.cfgmodel = CfgModel()
-        param.params.ui.configTable.init(param.params.cfgmodel, 0, 2)
-        param.params.ui.configTable.setShowGrid(True)
-        param.params.ui.configTable.resizeColumnsToContents()
-        param.params.ui.configTable.setItemDelegate(MyDelegate(self, param.params.db.cfgflds,
-                                                               param.params.cfgmodel.coff))
+        ui.configTable.init(param.params.cfgmodel, 0, 2)
+        ui.configTable.setShowGrid(True)
+        ui.configTable.resizeColumnsToContents()
+        ui.configTable.setItemDelegate(MyDelegate(self))
 
-        param.params.ui.menuView.addAction(param.params.ui.objectWidget.toggleViewAction())
-        param.params.ui.objectWidget.setWindowTitle(param.params.table + " objects")
+        ui.menuView.addAction(ui.objectWidget.toggleViewAction())
+        ui.objectWidget.setWindowTitle(param.params.table + " objects")
         param.params.objmodel = ObjModel()
-        param.params.ui.objectTable.init(param.params.objmodel, 0, 2)
-        param.params.ui.objectTable.setShowGrid(True)
-        param.params.ui.objectTable.resizeColumnsToContents()
-        param.params.ui.objectTable.setSortingEnabled(True)
-        param.params.ui.objectTable.sortByColumn(param.params.objmodel.namecol, QtCore.Qt.AscendingOrder)
-        param.params.ui.objectTable.setItemDelegate(MyDelegate(self, param.params.db.objflds,
-                                                               param.params.objmodel.coff))
+        ui.objectTable.init(param.params.objmodel, 0, 2)
+        ui.objectTable.setShowGrid(True)
+        ui.objectTable.resizeColumnsToContents()
+        ui.objectTable.setSortingEnabled(True)
+        ui.objectTable.sortByColumn(param.params.objmodel.namecol, QtCore.Qt.AscendingOrder)
+        ui.objectTable.setItemDelegate(MyDelegate(self))
 
-        param.params.objmodel.setupContextMenus(param.params.ui.objectTable)
-        param.params.cfgmodel.setupContextMenus(param.params.ui.configTable)
+        param.params.objmodel.setupContextMenus(ui.objectTable)
+        param.params.cfgmodel.setupContextMenus(ui.configTable)
 
         param.params.cfgdialog       = dialogs.cfgdialog(param.params.cfgmodel, self)
         param.params.colsavedialog   = dialogs.colsavedialog(self)
@@ -76,21 +78,33 @@ class GraphicUserInterface(QtGui.QMainWindow):
         settings.beginGroup(param.params.table)
         self.restoreGeometry(settings.value("geometry").toByteArray())
         self.restoreState(settings.value("windowState").toByteArray())
-        param.params.ui.configTable.restoreHeaderState(settings.value("cfgcol/default").toByteArray())
-        param.params.ui.objectTable.restoreHeaderState(settings.value("objcol/default").toByteArray())
+        ui.configTable.restoreHeaderState(settings.value("cfgcol/default").toByteArray())
+        ui.objectTable.restoreHeaderState(settings.value("objcol/default").toByteArray())
+        param.params.objmodel.setObjSel(str(settings.value("objsel").toByteArray()))
 
         # MCB - Sigh.  I don't know why this is needed, but it is.
-        h = param.params.ui.configTable.horizontalHeader()
+        h = ui.configTable.horizontalHeader()
         h.resizeSection(1, h.sectionSize(1) + 1)
-        h = param.params.ui.objectTable.horizontalHeader()
+        h = ui.objectTable.horizontalHeader()
         h.resizeSection(1, h.sectionSize(1) + 1)
 
-        param.params.ui.configTable.colmgr = "%s/cfgcol" % param.params.table
-        param.params.ui.objectTable.colmgr = "%s/objcol" % param.params.table
+        ui.configTable.colmgr = "%s/cfgcol" % param.params.table
+        ui.objectTable.colmgr = "%s/objcol" % param.params.table
 
-        self.connect(param.params.ui.saveButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
-        self.connect(param.params.ui.revertButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.revertall)
-        self.connect(param.params.ui.applyButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)
+        self.connect(ui.saveButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
+        self.connect(ui.revertButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.revertall)
+        self.connect(ui.applyButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)
+        self.connect(ui.actionAuto,      QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
+        self.connect(ui.actionProtected, QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
+        self.connect(ui.actionManual,    QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
+        self.connect(ui.actionTrack,     QtCore.SIGNAL("triggered()"), param.params.objmodel.doTrack)
+        self.connect(ui.objectTable.selectionModel(),
+                     QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
+                     param.params.objmodel.selectionChanged)
+        # MCB - Sigh. I should just make FreezeTableView actually work.
+        self.connect(ui.objectTable.cTV.selectionModel(),
+                     QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
+                     param.params.objmodel.selectionChanged)
 
     def closeEvent(self, event):
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
@@ -99,6 +113,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         settings.setValue("windowState", self.saveState())
         settings.setValue("cfgcol/default", param.params.ui.configTable.saveHeaderState())
         settings.setValue("objcol/default", param.params.ui.objectTable.saveHeaderState())
+        settings.setValue("objsel", param.params.objmodel.getObjSel())
         QtGui.QMainWindow.closeEvent(self, event)
 
 if __name__ == '__main__':

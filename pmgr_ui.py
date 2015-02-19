@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pmgr.ui'
 #
-# Created: Thu Jan  8 15:26:17 2015
+# Created: Wed Feb 18 14:36:30 2015
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -17,7 +17,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(880, 608)
+        MainWindow.resize(882, 608)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
@@ -45,19 +45,21 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.applyButton, 0, 1, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 880, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 882, 23))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
         self.menuView = QtGui.QMenu(self.menubar)
         self.menuView.setObjectName(_fromUtf8("menuView"))
+        self.menuFilter = QtGui.QMenu(self.menubar)
+        self.menuFilter.setObjectName(_fromUtf8("menuFilter"))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtGui.QStatusBar(MainWindow)
         self.statusbar.setObjectName(_fromUtf8("statusbar"))
         MainWindow.setStatusBar(self.statusbar)
         self.objectWidget = QtGui.QDockWidget(MainWindow)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setHorizontalStretch(6)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.objectWidget.sizePolicy().hasHeightForWidth())
         self.objectWidget.setSizePolicy(sizePolicy)
@@ -70,7 +72,7 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(2), self.objectWidget)
         self.configWidget = QtGui.QDockWidget(MainWindow)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setHorizontalStretch(6)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.configWidget.sizePolicy().hasHeightForWidth())
         self.configWidget.setSizePolicy(sizePolicy)
@@ -85,21 +87,42 @@ class Ui_MainWindow(object):
         self.actionObjects.setObjectName(_fromUtf8("actionObjects"))
         self.actionConfigurations = QtGui.QAction(MainWindow)
         self.actionConfigurations.setObjectName(_fromUtf8("actionConfigurations"))
+        self.actionAuto = QtGui.QAction(MainWindow)
+        self.actionAuto.setCheckable(True)
+        self.actionAuto.setChecked(True)
+        self.actionAuto.setObjectName(_fromUtf8("actionAuto"))
+        self.actionManual = QtGui.QAction(MainWindow)
+        self.actionManual.setCheckable(True)
+        self.actionManual.setChecked(True)
+        self.actionManual.setObjectName(_fromUtf8("actionManual"))
+        self.actionProtected = QtGui.QAction(MainWindow)
+        self.actionProtected.setCheckable(True)
+        self.actionProtected.setChecked(True)
+        self.actionProtected.setObjectName(_fromUtf8("actionProtected"))
+        self.actionTrack = QtGui.QAction(MainWindow)
+        self.actionTrack.setCheckable(True)
+        self.actionTrack.setObjectName(_fromUtf8("actionTrack"))
+        self.menuFilter.addAction(self.actionAuto)
+        self.menuFilter.addAction(self.actionManual)
+        self.menuFilter.addAction(self.actionProtected)
+        self.menuFilter.addAction(self.actionTrack)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
+        self.menubar.addAction(self.menuFilter.menuAction())
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtGui.QApplication.translate("MainWindow", "MainWindow", None, QtGui.QApplication.UnicodeUTF8))
-        self.saveButton.setText(QtGui.QApplication.translate("MainWindow", "Save All", None, QtGui.QApplication.UnicodeUTF8))
+        self.saveButton.setText(QtGui.QApplication.translate("MainWindow", "Save", None, QtGui.QApplication.UnicodeUTF8))
         self.treeWidget.setToolTip(QtGui.QApplication.translate("MainWindow", "Click to select a configuration to display in the Configurations window. \n"
 "All ancestors and all children of the selected configuration will be displayed.", None, QtGui.QApplication.UnicodeUTF8))
-        self.revertButton.setText(QtGui.QApplication.translate("MainWindow", "Revert All", None, QtGui.QApplication.UnicodeUTF8))
-        self.applyButton.setText(QtGui.QApplication.translate("MainWindow", "Apply All", None, QtGui.QApplication.UnicodeUTF8))
+        self.revertButton.setText(QtGui.QApplication.translate("MainWindow", "Revert", None, QtGui.QApplication.UnicodeUTF8))
+        self.applyButton.setText(QtGui.QApplication.translate("MainWindow", "Apply", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("MainWindow", "File", None, QtGui.QApplication.UnicodeUTF8))
         self.menuView.setTitle(QtGui.QApplication.translate("MainWindow", "View", None, QtGui.QApplication.UnicodeUTF8))
+        self.menuFilter.setTitle(QtGui.QApplication.translate("MainWindow", "Filter", None, QtGui.QApplication.UnicodeUTF8))
         self.objectWidget.setToolTip(QtGui.QApplication.translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -129,5 +152,9 @@ class Ui_MainWindow(object):
         self.configWidget.setWindowTitle(QtGui.QApplication.translate("MainWindow", "Configurations", None, QtGui.QApplication.UnicodeUTF8))
         self.actionObjects.setText(QtGui.QApplication.translate("MainWindow", "Objects", None, QtGui.QApplication.UnicodeUTF8))
         self.actionConfigurations.setText(QtGui.QApplication.translate("MainWindow", "Configurations", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionAuto.setText(QtGui.QApplication.translate("MainWindow", "Show Auto", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionManual.setText(QtGui.QApplication.translate("MainWindow", "Show Manual", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionProtected.setText(QtGui.QApplication.translate("MainWindow", "Show Protected", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionTrack.setText(QtGui.QApplication.translate("MainWindow", "Track Object Config", None, QtGui.QApplication.UnicodeUTF8))
 
 from FreezeTableView import FreezeTableView

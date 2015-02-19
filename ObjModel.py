@@ -7,17 +7,20 @@ import utils
 import pyca
 
 class ObjModel(QtGui.QStandardItemModel):
-    cname   = ["Status", "Name", "Config", "PV Base"]
-    cfld    = ["status", "name", "cfgname", "rec_base"]
+    cname   = ["Status", "Name", "Config", "PV Base", "Owner", "Category"]
+    cfld    = ["status", "name", "cfgname", "rec_base", "owner", "category"]
     ctips   = ["C = All PVs Connected\nD = Deleted\nM = Modified\nN = New\nX = Inconsistent",
-               "Object Name", "Configuration Name", "PV Base Name"]
+               "Object Name", "Configuration Name", "PV Base Name", "Owner",
+               "Protected = Fixed, no modification without auth.\nManual = Fixed, all can change.\nAuto = Can be dynamically reconfigured."]
     coff    = len(cname)
     statcol = 0
     namecol = 1
     cfgcol  = 2
     pvcol   = 3
+    owncol  = 4
+    catcol  = 5
     mutable = 2  # The first non-frozen column
-    fixflds = ["status", "cfgname"]
+    fixflds = ["status", "cfgname", "owner"]
     
     def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
@@ -27,6 +30,8 @@ class ObjModel(QtGui.QStandardItemModel):
         self.status = {}
         self.istatus = {}
         self.nextid = -1
+        self.selrow = -1
+        self.track = False
         self.lastsort = (0, QtCore.Qt.DescendingOrder)
         # Setup headers
         self.colcnt = param.params.db.objfldcnt + self.coff
@@ -47,6 +52,9 @@ class ObjModel(QtGui.QStandardItemModel):
             self.setHorizontalHeaderItem(c, i)
         self.createStatus()
         self.connectAllPVs()
+
+        self.connect(self, QtCore.SIGNAL("layoutAboutToBeChanged()"), self.doShowAll)
+        self.connect(self, QtCore.SIGNAL("layoutChanged()"), self.doShow)
 
     def createStatus(self):
         for d in param.params.db.objs.values():
@@ -85,7 +93,7 @@ class ObjModel(QtGui.QStandardItemModel):
                 return self.edits[idx][f]
             except:
                 pass
-        if f in self.cfld or f == 'mutex':
+        if f in self.cfld or f == 'mutex' or f == 'config':
             return self.getObj(idx)[f]
         elif param.params.db.fldmap[f]['obj']:
             return self.getObj(idx)['_val'][f]
@@ -213,6 +221,7 @@ class ObjModel(QtGui.QStandardItemModel):
             (v, ok) = value.toDouble()
         else:
             print "Unexpected QVariant type %d" % value.type()
+            print index.row(), index.column()
             return False
         (idx, f) = self.index2db(index)
         try:
@@ -521,10 +530,10 @@ class ObjModel(QtGui.QStandardItemModel):
         menu.addAction("Change configuration", self.chparent,
                        lambda table, index: self.rowmap[index.row()] != 0 and index.column() == self.cfgcol)
         menu.addAction("Set from PV", self.setFromPV,
-                       lambda table, index: self.checkStatus(index, 'C') and index.row() >= 0 and
+                       lambda table, index: index.row() >= 0 and
                        self.rowmap[index.row()] != 0 and self.haveObjPVDiff(index))
         menu.addAction("Set all from PV", self.setAllFromPV,
-                       lambda table, index: self.checkStatus(index, 'C') and index.row() >= 0 and
+                       lambda table, index: index.row() >= 0 and
                        self.rowmap[index.row()] != 0 and self.haveObjPVDiff(index.row()))
         menu.addAction("Create configuration from object", self.createcfg,
                        lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0)
@@ -547,6 +556,7 @@ class ObjModel(QtGui.QStandardItemModel):
             self.setData(index, QtCore.QVariant(self.objs[idx][f]))
 
     def setAllFromPV(self, table, index):
+        db = param.params.db
         (idx, f) = self.index2db(index)
         flist = [(d['fld'], self.coff + d['objidx']) for d in param.params.db.objflds if d['obj'] == True]
         for (f, c) in flist:
@@ -570,7 +580,7 @@ class ObjModel(QtGui.QStandardItemModel):
         del d['_val']
         del d['connstat']
         dd = {'id': idx, 'config': 0, 'owner': param.params.hutch, 'name': "NewObject%d" % idx,
-              'rec_base': "", 'dt_created': now, 'dt_updated': now,
+              'rec_base': "", 'dt_created': now, 'dt_updated': now, 'category': 'Manual',
               'cfgname': param.params.db.getCfgName(0) }
         d.update(dd)
         self.status[idx] = "N"
@@ -853,40 +863,67 @@ class ObjModel(QtGui.QStandardItemModel):
                     flags = flags | QtCore.Qt.ItemIsEditable
         return flags
 
-    #
-    # Drag/Drop stuff.
-    #
-    # The "application/pmgr" mime type encodes the source position (row, col).
-    #
+    def editorInfo(self, index):
+        c = index.column()
+        if c == self.catcol:
+            return param.params.catenum
+        if c < self.coff:
+            return str
+        try:
+            return param.params.db.objflds[c - self.coff]['enum']
+        except:
+            return param.params.db.objflds[c - self.coff]['type']
 
-    def supportedDropActions(self):
-        return QtCore.Qt.CopyAction | QtCore.Qt.MoveAction
+    def doShow(self):
+        ui = param.params.ui
+        v = []
+        if ui.actionAuto.isChecked():
+            v.append("Auto")
+        if ui.actionManual.isChecked():
+            v.append("Manual")
+        if ui.actionProtected.isChecked():
+            v.append("Protected")
+        for i in range(len(self.rowmap)):
+            if self.rowmap[i] == 0 or self.getCfg(self.rowmap[i], 'category', True) in v:
+                param.params.ui.objectTable.setRowHidden(i, False)
+            else:
+                param.params.ui.objectTable.setRowHidden(i, True)
 
-    def mimeTypes(self):
-        return ["application/pmgr"]
+    def doShowAll(self):
+        for i in range(len(self.rowmap)):
+            param.params.ui.objectTable.setRowHidden(i, False)
 
-    def mimeData(self, indexes):
-        md = QtCore.QMimeData()
-        ba = QtCore.QByteArray()
-        ds = QtCore.QDataStream(ba, QtCore.QIODevice.WriteOnly)
-        ds << QtCore.QString("%d %d" % (indexes[0].row(), indexes[0].column()))
-        md.setData("application/pmgr", ba)
-        return md
+    def doTrack(self):
+        self.track = param.params.ui.actionTrack.isChecked()
+        if self.track and self.selrow >= 0:
+            param.params.cfgmodel.selectConfig(self.getCfg(self.rowmap[self.selrow], 'config', True))
 
-    def dropMimeData(self, data, action, row, column, parent):
-        if action == QtCore.Qt.IgnoreAction:
-            return True
-        if not data.hasFormat("application/pmgr"):
-            return False
-        if not parent.isValid():
-            return False
-        
-        ba = data.data("application/pmgr")
-        ds = QtCore.QDataStream(ba, QtCore.QIODevice.ReadOnly)
+    def selectionChanged(self, selected, deselected):
+        if not selected.isEmpty():
+            i = selected.indexes()[0];
+            self.selrow = i.row()
+        else:
+            self.selrow = -1
+        if self.track and self.selrow >= 0:
+            param.params.cfgmodel.selectConfig(self.getCfg(self.rowmap[self.selrow], 'config', True))
 
-        text = QtCore.QString()
-        ds >> text
-        source = [int(l) for l in str(text).split()]
-        # source[0] = from row, source[1] = from column
-        # return True if the drop succeeds!
-        return False
+    def getObjSel(self):
+        ui = param.params.ui
+        d = {True: "1", False: "0"}
+        v = ""
+        v += d[ui.actionAuto.isChecked()]
+        v += d[ui.actionProtected.isChecked()]
+        v += d[ui.actionManual.isChecked()]
+        v += d[ui.actionTrack.isChecked()]
+        return v
+
+    def setObjSel(self, v):
+        if v != "" and v != None:
+            ui = param.params.ui
+            d = {"1" : True, "0": False}
+            ui.actionAuto.setChecked(d[v[0]])
+            ui.actionProtected.setChecked(d[v[1]])
+            ui.actionManual.setChecked(d[v[2]])
+            ui.actionTrack.setChecked(d[v[3]])
+            self.doShow()
+            self.doTrack()

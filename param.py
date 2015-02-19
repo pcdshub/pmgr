@@ -48,3 +48,8 @@ class param_structure(object):
 
         self.hutch = None
         self.table = None
+
+        self.PROTECTED = 0
+        self.MANUAL    = 1
+        self.AUTO      = 2
+        self.catenum   = ["Protected", "Manual", "Auto"]
