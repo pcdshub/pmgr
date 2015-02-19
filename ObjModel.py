@@ -665,7 +665,7 @@ class ObjModel(QtGui.QStandardItemModel):
                                                   (name, str(s)))
                 return
             if 'N' in self.status[idx]:
-                param.params.db.objectInsert(self.getObj(idx))
+                param.params.db.objectInsert(self.getObj(idx)['_val'])
             elif 'M' in self.status[idx]:
                 param.params.db.objectChange(self.getObj(idx), self.edits[idx])
 
