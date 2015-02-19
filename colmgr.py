@@ -14,7 +14,7 @@ import colchoose_ui
 # in our QSettings.  The QSettings parameters are in param.params.settings.
 #
 
-def addColumnManagerMenu(table):
+def addColumnManagerMenu(table, extra = []):
     menu = utils.MyContextMenu()
     menu.addAction("Hide column",        hidecol)
     menu.addAction("Reset columns",      resetcol)
@@ -22,6 +22,8 @@ def addColumnManagerMenu(table):
     menu.addAction("Run column chooser", choosecol)
     menu.addAction("Save column config", savecol)
     menu.addAction("Use column config",  restorecol)
+    for (t, f) in extra:
+        menu.addAction(t, f)
     table.addHeaderContextMenu(menu)
 
 def hidecol(table, index):

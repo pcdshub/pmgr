@@ -209,20 +209,7 @@ class ObjModel(QtGui.QStandardItemModel):
             else:
                 return QtCore.QVariant(v)
 
-    def setData(self, index, value, role=QtCore.Qt.EditRole):
-        if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
-            return QtGui.QStandardItemModel.setData(self, index, value, role)
-        t = value.type()
-        if t == QtCore.QMetaType.QString:
-            v = str(value.toString())
-        elif t == QtCore.QMetaType.Int:
-            (v, ok) = value.toInt()
-        elif t == QtCore.QMetaType.Double:
-            (v, ok) = value.toDouble()
-        else:
-            print "Unexpected QVariant type %d" % value.type()
-            return False
-        (idx, f) = self.index2db(index)
+    def setValue(self, idx, f, v):
         try:
             d = self.edits[idx]
         except:
@@ -273,6 +260,24 @@ class ObjModel(QtGui.QStandardItemModel):
                 self.promote(idx, f, i, mutex)
         except:
             pass
+
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
+        if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
+            return QtGui.QStandardItemModel.setData(self, index, value, role)
+        t = value.type()
+        if t == QtCore.QMetaType.QString:
+            v = str(value.toString())
+        elif t == QtCore.QMetaType.Int:
+            (v, ok) = value.toInt()
+        elif t == QtCore.QMetaType.Double:
+            (v, ok) = value.toDouble()
+        else:
+            print "Unexpected QVariant type %d" % value.type()
+            return False
+        (idx, f) = self.index2db(index)
+        
+        self.setValue(idx, f, v)
+        
         if f == 'rec_base':
             self.connectPVs(idx)
             r = index.row()
@@ -347,7 +352,10 @@ class ObjModel(QtGui.QStandardItemModel):
         try:
             return self.edits[idx][f]
         except:
-            return self.getObj(idx)[f]
+            try:
+                return self.getObj(idx)[f]
+            except:
+                return ""
 
     def sort(self, Ncol, order):
         if (Ncol, order) != self.lastsort:
@@ -544,9 +552,18 @@ class ObjModel(QtGui.QStandardItemModel):
                        self.checkStatus(index, 'DMN'))
         menu.addAction("Revert this object", self.revertone,
                        lambda table, index: self.checkStatus(index, 'M'))
+        menu.addAction("Auto config this object", self.autoone, self.testAuto)
         table.addContextMenu(menu)
-        colmgr.addColumnManagerMenu(table)
+        colmgr.addColumnManagerMenu(table, [("Auto config all by column", self.autoconfig)])
 
+    def testAuto(self, table, index):
+        try:
+            return (index.column() >= self.coff and self.checkStatus(index, 'C') and
+                    self.getCfg(self.rowmap[index.row()], 'category', True) == 'Auto' and
+                    param.params.db.colmap[index.column() - self.coff + 1]['obj'])
+        except:
+            return False
+    
     def setFromPV(self, table, index):
         (idx, f) = self.index2db(index)
         if idx >= 0:
@@ -931,3 +948,32 @@ class ObjModel(QtGui.QStandardItemModel):
             ui.actionTrack.setChecked(d[v[3]])
             self.doShow()
             self.doTrack()
+
+    def doAuto(self, idx, f):
+        d = param.params.db.getLatest(f, self.getObj(idx)[f])
+        for (k, v) in d.iteritems():
+            if v != None:
+                self.setValue(idx, k, v)
+
+    def autoone(self, table, index):
+        (idx, f) = self.index2db(index)
+        self.doAuto(idx, f)
+        self.dataChanged.emit(self.index(index.row(), 0), self.index(index.row(), self.colcnt - 1))
+
+    #
+    # Sigh.  Our column manager doesn't support conditional menu items.
+    # So we need to make sure that the header position is valid before
+    # we start doing anything.
+    #
+    def autoconfig(self, table, index):
+        if index < self.coff:
+            return
+        d = param.params.db.colmap[index - self.coff + 1]
+        if not d['obj']:
+            return
+        f = d['fld']
+        for r in range(len(self.rowmap)):
+            idx = self.rowmap[r]
+            if self.getCfg(idx, 'category', True) == "Auto" and 'C' in self.getStatus(idx):
+                self.doAuto(idx, f)
+                self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt - 1))

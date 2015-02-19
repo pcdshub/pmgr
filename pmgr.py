@@ -91,9 +91,9 @@ class GraphicUserInterface(QtGui.QMainWindow):
         ui.configTable.colmgr = "%s/cfgcol" % param.params.table
         ui.objectTable.colmgr = "%s/objcol" % param.params.table
 
-        self.connect(ui.saveButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
-        self.connect(ui.revertButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.revertall)
-        self.connect(ui.applyButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)
+        self.connect(ui.saveButton,      QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
+        self.connect(ui.revertButton,    QtCore.SIGNAL("clicked()"), param.params.objmodel.revertall)
+        self.connect(ui.applyButton,     QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)
         self.connect(ui.actionAuto,      QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
         self.connect(ui.actionProtected, QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
         self.connect(ui.actionManual,    QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>882</width>
+    <width>962</width>
     <height>608</height>
    </rect>
   </property>
@@ -22,7 +22,7 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="0" colspan="4">
+    <item row="1" column="0" colspan="3">
      <widget class="QTreeWidget" name="treeWidget">
       <property name="sizePolicy">
        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
@@ -73,13 +73,6 @@ All ancestors and all children of the selected configuration will be displayed.<
       </property>
      </widget>
     </item>
-    <item row="0" column="3">
-     <widget class="QPushButton" name="autoButton">
-      <property name="text">
-       <string>Auto Config</string>
-      </property>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -87,7 +80,7 @@ All ancestors and all children of the selected configuration will be displayed.<
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>882</width>
+     <width>962</width>
      <height>23</height>
     </rect>
    </property>

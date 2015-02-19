@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pmgr.ui'
 #
-# Created: Wed Feb 18 16:43:32 2015
+# Created: Thu Feb 19 13:18:20 2015
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -17,7 +17,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(882, 608)
+        MainWindow.resize(962, 608)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
@@ -36,19 +36,16 @@ class Ui_MainWindow(object):
         self.treeWidget.headerItem().setText(0, _fromUtf8("1"))
         self.treeWidget.header().setVisible(False)
         self.treeWidget.header().setStretchLastSection(True)
-        self.gridLayout.addWidget(self.treeWidget, 1, 0, 1, 4)
+        self.gridLayout.addWidget(self.treeWidget, 1, 0, 1, 3)
         self.revertButton = QtGui.QPushButton(self.centralwidget)
         self.revertButton.setObjectName(_fromUtf8("revertButton"))
         self.gridLayout.addWidget(self.revertButton, 0, 2, 1, 1)
         self.applyButton = QtGui.QPushButton(self.centralwidget)
         self.applyButton.setObjectName(_fromUtf8("applyButton"))
         self.gridLayout.addWidget(self.applyButton, 0, 1, 1, 1)
-        self.autoButton = QtGui.QPushButton(self.centralwidget)
-        self.autoButton.setObjectName(_fromUtf8("autoButton"))
-        self.gridLayout.addWidget(self.autoButton, 0, 3, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 882, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 962, 23))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -123,7 +120,6 @@ class Ui_MainWindow(object):
 "All ancestors and all children of the selected configuration will be displayed.", None, QtGui.QApplication.UnicodeUTF8))
         self.revertButton.setText(QtGui.QApplication.translate("MainWindow", "Revert", None, QtGui.QApplication.UnicodeUTF8))
         self.applyButton.setText(QtGui.QApplication.translate("MainWindow", "Apply", None, QtGui.QApplication.UnicodeUTF8))
-        self.autoButton.setText(QtGui.QApplication.translate("MainWindow", "Auto Config", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("MainWindow", "File", None, QtGui.QApplication.UnicodeUTF8))
         self.menuView.setTitle(QtGui.QApplication.translate("MainWindow", "View", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFilter.setTitle(QtGui.QApplication.translate("MainWindow", "Filter", None, QtGui.QApplication.UnicodeUTF8))

@@ -125,6 +125,9 @@ class db(QtCore.QObject):
     MUST_WRITE    = 0x000400
     WRITE_ZERO    = 0x000800
 
+    unwanted = ['seq', 'owner', 'id', 'category', 'dt_created',
+                'date', 'dt_updated', 'name', 'action', 'rec_base']
+
     def __init__(self):
         super(db, self).__init__()
         self.cfgs = None
@@ -603,3 +606,43 @@ class db(QtCore.QObject):
             return self.cur.fetchone().values()[0]
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
+
+    def getLatest(self, f, v):
+        cmd = "select max(seq) from %s_log where %s = %%s and owner = %%s and action != 'delete' group by id" % \
+              (param.params.table, f)
+        if param.params.debug:
+            print cmd % (v, param.params.hutch)
+        try:
+            if self.cur.execute(cmd, (v, param.params.hutch)) != 1:
+                # Couldn't find it in our hutch, look in any!
+                cmd = "select max(seq) from %s_log where %s = %%s and action != 'delete' group by id" % \
+                      (param.params.table, f)
+                if param.params.debug:
+                    print cmd % (v)
+                self.cur.execute(cmd, (v))
+            seq = self.cur.fetchone().values()[0]
+            cmd = "select * from %s_log where seq = %%s" % (param.params.table)
+            if param.params.debug:
+                print cmd % seq
+            self.cur.execute(cmd, seq)
+            r = self.cur.fetchone()
+            try:
+                del r[f]
+            except:
+                pass
+            for f in self.unwanted:
+                try:
+                    del r[f]
+                except:
+                    pass
+            try:
+                # See the comment in ObjModel.setValue.  This is just bizarreness.
+                r['cfgname'] = r['config']
+                del r['config']
+            except:
+                pass
+            return r
+        except _mysql_exceptions.Error as err:
+            print err
+            return {}
+    
