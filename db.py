@@ -499,7 +499,6 @@ class db(QtCore.QObject):
             self.cur.execute("delete from %s where id = %%s" % param.params.table, (idx,))
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
-        pass
 
     def objectInsert(self, d):
         cmd = "insert %s (name, config, owner, rec_base, category, mutex, dt_created, dt_updated" % param.params.table
@@ -508,7 +507,7 @@ class db(QtCore.QObject):
                 continue
             fld = f['fld']
             cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, %s, %s, now(), now()"
+        cmd += ") values (%s, %s, %s, %s, %s, %s, now(), now()"
         vlist = [d['name']]
         try:
             vlist.append(self.cfgmap[d['config']])

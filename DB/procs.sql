@@ -44,7 +44,7 @@ for each row
 begin
    insert into ims_motor_update values ("config", now())
    on duplicate key update dt_updated = values(dt_updated);
-   insert into ims_motor_cfg_log select 0, 'insert', ims_motor_cfg.* from ims_motor_cfg where id = NEW.id;
+   insert into ims_motor_cfg_log select now(), 0, 'insert', ims_motor_cfg.* from ims_motor_cfg where id = NEW.id;
 end;
 //
 
@@ -53,7 +53,7 @@ for each row
 begin
    insert into ims_motor_update values ("config", now())
    on duplicate key update dt_updated = values(dt_updated);
-   insert into ims_motor_cfg_log (action, id) values("delete", OLD.id);
+   insert into ims_motor_cfg_log (date, action, id) values(now(), "delete", OLD.id);
 end;
 //
 
@@ -62,7 +62,7 @@ for each row
 begin
    insert into ims_motor_update values ("config", now())
    on duplicate key update dt_updated = values(dt_updated);
-   insert into ims_motor_cfg_log select 0, 'update', ims_motor_cfg.* from ims_motor_cfg where id = NEW.id;
+   insert into ims_motor_cfg_log select now(), 0, 'update', ims_motor_cfg.* from ims_motor_cfg where id = NEW.id;
 end;
 //
 
@@ -71,7 +71,7 @@ for each row
 begin
    insert into ims_motor_update values (NEW.owner, now())
    on duplicate key update dt_updated = values(dt_updated);
-   insert into ims_motor_log select 0, 'insert', ims_motor.* from ims_motor where id = NEW.id;
+   insert into ims_motor_log select now(), 0, 'insert', ims_motor.* from ims_motor where id = NEW.id;
 end;
 //
 
@@ -80,7 +80,7 @@ for each row
 begin
    insert into ims_motor_update values (OLD.owner, now())
    on duplicate key update dt_updated = values(dt_updated);
-   insert into ims_motor_log (action, id) values("delete", OLD.id);
+   insert into ims_motor_log (date, action, id) values(now(), "delete", OLD.id);
 end;
 //
 
@@ -91,7 +91,7 @@ begin
    on duplicate key update dt_updated = values(dt_updated);
    insert into ims_motor_update values (NEW.owner, now())
    on duplicate key update dt_updated = values(dt_updated);
-   insert into ims_motor_log select 0, 'update', ims_motor.* from ims_motor where id = NEW.id;
+   insert into ims_motor_log select now(), 0, 'update', ims_motor.* from ims_motor where id = NEW.id;
 end;
 //
 

@@ -221,7 +221,6 @@ class ObjModel(QtGui.QStandardItemModel):
             (v, ok) = value.toDouble()
         else:
             print "Unexpected QVariant type %d" % value.type()
-            print index.row(), index.column()
             return False
         (idx, f) = self.index2db(index)
         try:
@@ -884,10 +883,15 @@ class ObjModel(QtGui.QStandardItemModel):
         if ui.actionProtected.isChecked():
             v.append("Protected")
         for i in range(len(self.rowmap)):
-            if self.rowmap[i] == 0 or self.getCfg(self.rowmap[i], 'category', True) in v:
-                param.params.ui.objectTable.setRowHidden(i, False)
-            else:
-                param.params.ui.objectTable.setRowHidden(i, True)
+            # Sometimes, we get a little ahead of ourselves after a deletion and this fails.
+            # However, we'll get the *real* update soon enough, so just stop the error.
+            try:
+                if self.rowmap[i] == 0 or self.getCfg(self.rowmap[i], 'category', True) in v:
+                    param.params.ui.objectTable.setRowHidden(i, False)
+                else:
+                    param.params.ui.objectTable.setRowHidden(i, True)
+            except:
+                pass
 
     def doShowAll(self):
         for i in range(len(self.rowmap)):

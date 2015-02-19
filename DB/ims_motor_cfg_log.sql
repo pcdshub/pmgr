@@ -6,14 +6,15 @@
 
 DROP TABLE IF EXISTS `ims_motor_cfg_log`;
 CREATE TABLE `ims_motor_cfg_log` (
+  `date` datetime,
   `seq` int(31) NOT NULL AUTO_INCREMENT,
   `action` varchar(10) NOT NULL,
   `id` int(11) NOT NULL,
-  `name` varchar(15) NOT NULL,
+  `name` varchar(15),
   `config` int(11),
   `security` varchar(30),
   `owner` varchar(10),
-  `dt_updated` datetime NOT NULL,
+  `dt_updated` datetime,
   `mutex` varchar(16),
   `FLD_ACCL` double,
   `FLD_BACC` double,
@@ -55,7 +56,7 @@ CREATE TABLE `ims_motor_cfg_log` (
   `FLD_SREV` int(10) unsigned,
   `FLD_STSV` varchar(26),
   `FLD_TWV` double,
-  `FLD_TYPE` varchar(40) NOT NULL,
+  `FLD_TYPE` varchar(40),
   `FLD_UREV` double,
   `FLD_S1` varchar(26),
   `FLD_S2` varchar(26),
