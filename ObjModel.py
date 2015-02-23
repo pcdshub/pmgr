@@ -7,7 +7,7 @@ import utils
 import pyca
 
 class ObjModel(QtGui.QStandardItemModel):
-    cname   = ["Status", "Name", "Config", "PV Base", "Owner", "Category"]
+    cname   = ["Status", "Name", "Config", "PV Base", "Owner", "Config Mode"]
     cfld    = ["status", "name", "cfgname", "rec_base", "owner", "category"]
     ctips   = ["C = All PVs Connected\nD = Deleted\nM = Modified\nN = New\nX = Inconsistent",
                "Object Name", "Configuration Name", "PV Base Name", "Owner",
@@ -194,20 +194,18 @@ class ObjModel(QtGui.QStandardItemModel):
         elif role == QtCore.Qt.DisplayRole:
             try:
                 v = self.edits[idx][f]
-                return QtCore.QVariant(v)
             except:
                 pass
-            return QtCore.QVariant(v)
         else:   # QtCore.Qt.EditRole
             try:
                 v = self.edits[idx][f]
-                return QtCore.QVariant(v)
             except:
-                pass
-            if v2 != None:
-                return QtCore.QVariant(v2)
-            else:
-                return QtCore.QVariant(v)
+                if v2 != None:
+                    v = v2
+        # DisplayRole or EditRole fall through... v has our value!
+        if f == 'category':
+            v = param.params.catenum2[param.params.catenum.index(v)]
+        return QtCore.QVariant(v)
 
     def setValue(self, idx, f, v):
         try:
@@ -227,6 +225,8 @@ class ObjModel(QtGui.QStandardItemModel):
                 del d['config']
         except:
             pass
+        if f == 'category':
+            v = param.params.catenum[param.params.catenum2.index(v)]
         v2 = self.getCfg(idx, f)
         if not param.equal(v, v2):
             d[f] = v
@@ -882,7 +882,7 @@ class ObjModel(QtGui.QStandardItemModel):
     def editorInfo(self, index):
         c = index.column()
         if c == self.catcol:
-            return param.params.catenum
+            return param.params.catenum2
         if c < self.coff:
             return str
         try:

@@ -130,7 +130,7 @@ if __name__ == '__main__':
         sys.exit()
 
     param.params.hutch = options.hutch.lower()
-    param.params.table = options.type
+    param.params.setTable(options.type)
     param.params.debug = False if options.debug == None else True
     gui = GraphicUserInterface()
     try:
