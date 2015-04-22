@@ -1186,7 +1186,6 @@ class CfgModel(QtGui.QStandardItemModel):
         if c < self.coff:
             return str
         try:
-            e = param.params.db.cfgflds[c - self.coff]['enum']
-            return e
+            return param.params.db.cfgflds[c - self.coff]['enum']
         except:
             return param.params.db.cfgflds[c - self.coff]['type']

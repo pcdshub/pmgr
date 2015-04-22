@@ -73,7 +73,7 @@ class MyDelegate(QStyledItemDelegate):
             editor = ScientificDoubleSpinBox(parent)
             editor.mydelegate = False
         else:
-            # Must be a list for an enum!
+            # Must be an enum list!
             editor = QComboBox(parent)
             editor.enum = e
             editor.setAutoFillBackground(True)

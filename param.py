@@ -44,6 +44,7 @@ class param_structure(object):
         self.ui = None
         self.objmodel = None
         self.cfgmodel = None
+        self.grpmodel = None
         self.db = None
 
         self.hutch = None

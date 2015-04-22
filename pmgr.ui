@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>962</width>
+    <width>990</width>
     <height>608</height>
    </rect>
   </property>
@@ -14,11 +14,37 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="minimumSize">
+    <size>
+     <width>0</width>
+     <height>0</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>16777215</width>
+     <height>16777215</height>
+    </size>
+   </property>
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
      <widget class="QPushButton" name="saveButton">
       <property name="text">
        <string>Save</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QPushButton" name="applyButton">
+      <property name="text">
+       <string>Apply</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="2">
+     <widget class="QPushButton" name="revertButton">
+      <property name="text">
+       <string>Revert</string>
       </property>
      </widget>
     </item>
@@ -46,31 +72,11 @@ All ancestors and all children of the selected configuration will be displayed.<
       <attribute name="headerStretchLastSection">
        <bool>true</bool>
       </attribute>
-      <attribute name="headerVisible">
-       <bool>false</bool>
-      </attribute>
-      <attribute name="headerStretchLastSection">
-       <bool>true</bool>
-      </attribute>
       <column>
        <property name="text">
         <string notr="true">1</string>
        </property>
       </column>
-     </widget>
-    </item>
-    <item row="0" column="2">
-     <widget class="QPushButton" name="revertButton">
-      <property name="text">
-       <string>Revert</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QPushButton" name="applyButton">
-      <property name="text">
-       <string>Apply</string>
-      </property>
      </widget>
     </item>
    </layout>
@@ -80,8 +86,8 @@ All ancestors and all children of the selected configuration will be displayed.<
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>962</width>
-     <height>23</height>
+     <width>990</width>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -110,7 +116,7 @@ All ancestors and all children of the selected configuration will be displayed.<
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="objectWidget">
    <property name="sizePolicy">
-    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+    <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
      <horstretch>6</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
@@ -150,7 +156,7 @@ p, li { white-space: pre-wrap; }
   </widget>
   <widget class="QDockWidget" name="configWidget">
    <property name="sizePolicy">
-    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+    <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
      <horstretch>6</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
@@ -184,6 +190,33 @@ p, li { white-space: pre-wrap; }
     <number>2</number>
    </attribute>
    <widget class="FreezeTableView" name="configTable"/>
+  </widget>
+  <widget class="QDockWidget" name="groupWidget">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+     <horstretch>6</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>600</width>
+     <height>116</height>
+    </size>
+   </property>
+   <property name="allowedAreas">
+    <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+   </property>
+   <property name="windowTitle">
+    <string>Cfg Groups</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="FreezeTableView" name="groupTable"/>
   </widget>
   <action name="actionObjects">
    <property name="text">

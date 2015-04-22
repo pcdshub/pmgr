@@ -12,7 +12,7 @@ create table ims_motor_cfg (
 	id int auto_increment,
 	name varchar(15) not null unique, -- name or serial number --
 	config int,                       -- recursive fk (parent) --
-        security varchar(30),             -- is this modifyable? --
+        security varchar(30),             -- is this modifiable? --
 	owner varchar(10),
 	dt_updated datetime not null,
         mutex varchar(16),                -- An ugly hack to deal with constraint sets.
@@ -93,6 +93,28 @@ create table ims_motor (
 	-- constraints --
 	primary key (id),
 	foreign key (config) references ims_motor_cfg(id)
+);
+
+create table ims_motor_grp (
+	id int auto_increment,
+	name varchar(30) not null,
+	owner varchar(10),
+
+	-- constraints --
+	primary key (id)
+);
+
+create table ims_motor_cfg_grp (
+	group_id int,
+	config_id int,
+	port_id int,
+	seq int,
+
+	-- constraints --
+	unique key (config_id, group_id),	
+	foreign key (config_id) references ims_motor_cfg(id),
+	foreign key (group_id) references ims_motor_grp(id),
+	foreign key (port_id) references ims_motor(id)
 );
 
 create table ims_motor_name_map (

@@ -977,3 +977,21 @@ class ObjModel(QtGui.QStandardItemModel):
             if self.getCfg(idx, 'category', True) == "Auto" and 'C' in self.getStatus(idx):
                 self.doAuto(idx, f)
                 self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt - 1))
+
+    def getObjName(self, idx):
+        try:
+            return self.edits[idx]['name']
+        except:
+            return self.getObj(idx)['name']
+
+    def getObjList(self, types=None):
+        if types == None:
+            types = param.params.catenum
+        return [self.getObjName(idx) for idx in self.rowmap
+                if self.getCfg(idx, 'category', True) in types]
+
+    def getObjId(self, name):
+        for i in self.rowmap:
+            if self.getObjName(i) == name:
+                return i
+        return 0

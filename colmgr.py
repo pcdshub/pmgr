@@ -14,12 +14,13 @@ import colchoose_ui
 # in our QSettings.  The QSettings parameters are in param.params.settings.
 #
 
-def addColumnManagerMenu(table, extra = []):
+def addColumnManagerMenu(table, extra = [], hideOK=True):
     menu = utils.MyContextMenu()
-    menu.addAction("Hide column",        hidecol)
-    menu.addAction("Reset columns",      resetcol)
+    if hideOK:
+        menu.addAction("Hide column",        hidecol)
+        menu.addAction("Reset columns",      resetcol)
+        menu.addAction("Run column chooser", choosecol)
     menu.addAction("Autosize columns",   sizecol)
-    menu.addAction("Run column chooser", choosecol)
     menu.addAction("Save column config", savecol)
     menu.addAction("Use column config",  restorecol)
     for (t, f) in extra:

@@ -57,6 +57,9 @@ def createAlias(name):
 class dbPoll(threading.Thread):
     CONFIG = 1
     OBJECT = 2
+    GROUP  = 4
+    CFGGRP = 8
+    ALL    = 7
     
     def __init__(self, sig, interval):
         super(dbPoll, self).__init__()
@@ -75,6 +78,7 @@ class dbPoll(threading.Thread):
         last = 0
         lastcfg = datetime.datetime(1900,1,1,0,0,1)
         lastobj = datetime.datetime(1900,1,1,0,0,1)
+        lastgrp = datetime.datetime(1900,1,1,0,0,1)
         first = True
         cur = self.con.cursor(mdb.cursors.DictCursor)
         while True:
@@ -88,21 +92,25 @@ class dbPoll(threading.Thread):
             if not self.do_db:
                 continue
             try:
-                cur.execute("select * from ims_motor_update where tbl_name = 'config' or tbl_name = %s",
-                            (param.params.hutch,))
+                cur.execute("select * from ims_motor_update where tbl_name = 'config' or tbl_name = %s or tbl_name = %s",
+                            (param.params.hutch, "grp_" + param.params.hutch))
                 v = 0
                 for d in cur.fetchall():
                     if d['tbl_name'] == 'config':
                         if d['dt_updated'] != lastcfg:
                             lastcfg = d['dt_updated']
                             v = v | self.CONFIG
-                    else:
+                    elif d['tbl_name'] == param.params.hutch:
                         if d['dt_updated'] != lastobj:
                             lastobj = d['dt_updated']
                             v = v | self.OBJECT
+                    else:
+                        if d['dt_updated'] != lastgrp:
+                            lastgrp = d['dt_updated']
+                            v = v | self.GROUP
                 if first:
                     first = False
-                    v = 3
+                    v = self.ALL
                 if v != 0:
                     self.sig.emit(v)
                 self.con.commit()
@@ -118,6 +126,7 @@ class dbPoll(threading.Thread):
 class db(QtCore.QObject):
     cfgchange     = QtCore.pyqtSignal()
     objchange     = QtCore.pyqtSignal()
+    grpchange     = QtCore.pyqtSignal()
     readsig       = QtCore.pyqtSignal(int)
 
     ORDER_MASK    = 0x0003ff
@@ -132,6 +141,8 @@ class db(QtCore.QObject):
         super(db, self).__init__()
         self.cfgs = None
         self.objs = None
+        self.groups = {}
+        self.groupnames = {}
         self.initsig = None
         self.errorlist = []
         self.cfgmap = {}
@@ -274,11 +285,15 @@ class db(QtCore.QObject):
         self.setflds = [setflds[i] for i in setset]
         self.con.commit()
         
-    def readDB(self, is_hutch):
-        if is_hutch:
-            ext = " where owner = '%s' or id = 0" % param.params.hutch
-        else:
+    def readDB(self, kind):
+        if kind == dbPoll.CONFIG:
             ext = "_cfg"
+        elif kind == dbPoll.OBJECT:
+            ext = " where owner = '%s' or id = 0" % param.params.hutch
+        elif kind == dbPoll.GROUP:
+            ext = "_grp where owner = '%s'" % param.params.hutch
+        else: # dbPoll.CFGGRP
+            ext = "_cfg_grp"
         try:
             self.cur.execute("select * from %s%s" % (param.params.table, ext))
             return list(self.cur.fetchall())
@@ -289,11 +304,11 @@ class db(QtCore.QObject):
         for o in self.objs.values():
             o['cfgname'] = self.getCfgName(o['config'])
 
-    def readTables(self, mask=dbPoll.CONFIG|dbPoll.OBJECT, nosig=False):
-        if self.in_trans:                       # This shouldn't happen.  But let's be paranoid.
+    def readTables(self, mask=dbPoll.ALL, nosig=False):
+        if self.in_trans:                    # This shouldn't happen.  But let's be paranoid.
             return
         if (mask & dbPoll.CONFIG) != 0:
-            cfgs = self.readDB(False)
+            cfgs = self.readDB(dbPoll.CONFIG)
             if cfgs == []:
                 mask &= ~dbPoll.CONFIG
             else:
@@ -308,7 +323,7 @@ class db(QtCore.QObject):
                     else:
                         d['cfgname'] = self.getCfgName(r)
         if (mask & dbPoll.OBJECT) != 0:
-            objs = self.readDB(True)
+            objs = self.readDB(dbPoll.OBJECT)
             if objs == []:
                 mask &= ~dbPoll.OBJECT
             else:
@@ -321,6 +336,28 @@ class db(QtCore.QObject):
                 self.objs = objmap
                 if self.initsig == None:
                     self.setObjNames()
+        if (mask & dbPoll.GROUP) != 0:
+            grps = self.readDB(dbPoll.GROUP)
+            cfggrp = self.readDB(dbPoll.CFGGRP)
+            if grps == []:
+                mask &= ~dbPoll.GROUP
+            else:
+                self.groupids   = []
+                self.groupnames = []
+                self.groups     = []
+                self.groupmap   = {}
+                for g in grps:
+                    self.groupmap[g['id']] = len(self.groupids)
+                    self.groupids.append(g['id'])
+                    self.groupnames.append(g['name'])
+                    self.groups.append([])
+                for g in cfggrp:
+                    i = self.groupmap[g['group_id']]
+                    c = g['config_id']
+                    self.groups[i].append((g['config_id'], g['port_id'], g['seq']))
+                for v in self.groups:
+                    v.sort(key=lambda d: d[2])
+                self.groups = [[(v[0], v[1]) for v in l] for l in self.groups]
         if mask == 0:
             return
         if not nosig:
@@ -329,6 +366,8 @@ class db(QtCore.QObject):
                 self.cfgchange.emit()
             if (mask & dbPoll.OBJECT) != 0:
                 self.objchange.emit()
+            if (mask & dbPoll.GROUP) != 0:
+                self.grpchange.emit()
         if self.initsig != None and self.cfgs != None and self.objs != None:
             self.setObjNames()
             self.initsig.emit()
@@ -356,7 +395,7 @@ class db(QtCore.QObject):
         self.cfgmap = {}
         try:
             self.cur.execute("lock tables %s write, %s_cfg write" % (param.params.table, param.params.table))
-            self.readTables(dbPoll.CONFIG|dbPoll.OBJECT, True)
+            self.readTables(dbPoll.ALL, True)
             return True
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)

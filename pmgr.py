@@ -5,6 +5,7 @@ from psp.options import Options
 from pmgr_ui import Ui_MainWindow
 from ObjModel import ObjModel
 from CfgModel import CfgModel
+from GrpModel import GrpModel
 import dialogs
 import param
 from db import db
@@ -32,9 +33,15 @@ class GraphicUserInterface(QtGui.QMainWindow):
         ui.configTable.setCornerButtonEnabled(False)
         ui.configTable.horizontalHeader().setMovable(True)
 
+        ui.groupTable.verticalHeader().hide()
+        ui.groupTable.setCornerButtonEnabled(False)
+        ui.groupTable.horizontalHeader().setMovable(False)
+
+        ui.groupWidget.close()
+
         param.params.db = db()
         self.initdone.connect(self.finishinit)
-        param.params.db.start(self.initdone)
+        param.params.db.start(self.initdone)    # Finish initialization after we've read the DB!
 
     def finishinit(self):
         ui = param.params.ui
@@ -57,8 +64,18 @@ class GraphicUserInterface(QtGui.QMainWindow):
         ui.objectTable.sortByColumn(param.params.objmodel.namecol, QtCore.Qt.AscendingOrder)
         ui.objectTable.setItemDelegate(MyDelegate(self))
 
+        ui.menuView.addAction(ui.groupWidget.toggleViewAction())
+        ui.groupWidget.setWindowTitle(param.params.table + " configuration groups")
+        param.params.grpmodel = GrpModel()
+        ui.groupTable.init(param.params.grpmodel, 0, 1)
+        ui.groupTable.setShowGrid(True)
+        ui.groupTable.resizeColumnsToContents()
+        ui.groupTable.setSortingEnabled(False)
+        ui.groupTable.setItemDelegate(MyDelegate(self))
+
         param.params.objmodel.setupContextMenus(ui.objectTable)
         param.params.cfgmodel.setupContextMenus(ui.configTable)
+        param.params.grpmodel.setupContextMenus(ui.groupTable)
 
         param.params.cfgdialog       = dialogs.cfgdialog(param.params.cfgmodel, self)
         param.params.colsavedialog   = dialogs.colsavedialog(self)
@@ -69,6 +86,8 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.db.objchange.connect(param.params.objmodel.objchange)
         param.params.db.cfgchange.connect(param.params.objmodel.cfgchange)
         param.params.db.cfgchange.connect(param.params.cfgmodel.cfgchange)
+        param.params.db.cfgchange.connect(param.params.grpmodel.cfgchange)
+        param.params.db.grpchange.connect(param.params.grpmodel.grpchange)
 
         param.params.cfgmodel.newname.connect(param.params.cfgmodel.haveNewName)
         param.params.cfgmodel.newname.connect(param.params.objmodel.haveNewName)
@@ -90,6 +109,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
 
         ui.configTable.colmgr = "%s/cfgcol" % param.params.table
         ui.objectTable.colmgr = "%s/objcol" % param.params.table
+        ui.groupTable.colmgr = "%s/grpcol" % param.params.table
 
         self.connect(ui.saveButton,      QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
         self.connect(ui.revertButton,    QtCore.SIGNAL("clicked()"), param.params.objmodel.revertall)
