@@ -23,7 +23,13 @@ import param
 #     objs                 - The objects, indexed by ID.
 #     getCfgName(id)       - Fetch the (possibly edited) configuration name.
 #     setCfgName(id, name) - Set the configuration name, but do not commit it.
-#
+#     groupids             - A list of group IDs.
+#     groups               - A dictionary of group information.  groups[id] is another dictionary.
+#                            groups[id]['global']['name']  - The name.
+#                            groups[id]['global']['len']   - The number of elements.
+#                            groups[id][N]['config'] - The config ID of element N.
+#                            groups[id][N]['port']   - The object (port) ID of element N.
+#     maxgrp               - The maximum size of any group.
 
 # Map MySQL types to python types in a quick and dirty manner.
 def m2pType(name):
@@ -141,8 +147,8 @@ class db(QtCore.QObject):
         super(db, self).__init__()
         self.cfgs = None
         self.objs = None
+        self.groupids = []
         self.groups = {}
-        self.groupnames = {}
         self.initsig = None
         self.errorlist = []
         self.cfgmap = {}
@@ -343,21 +349,21 @@ class db(QtCore.QObject):
                 mask &= ~dbPoll.GROUP
             else:
                 self.groupids   = []
-                self.groupnames = []
-                self.groups     = []
-                self.groupmap   = {}
+                self.groups     = {}
+                self.maxgrp     = 0
                 for g in grps:
-                    self.groupmap[g['id']] = len(self.groupids)
-                    self.groupids.append(g['id'])
-                    self.groupnames.append(g['name'])
-                    self.groups.append([])
+                    id = g['id']
+                    self.groupids.append(id)
+                    self.groups[id] = {}
+                    self.groups[id]['global'] = {'len' : 0, 'name' : g['name']}
                 for g in cfggrp:
-                    i = self.groupmap[g['group_id']]
-                    c = g['config_id']
-                    self.groups[i].append((g['config_id'], g['port_id'], g['seq']))
-                for v in self.groups:
-                    v.sort(key=lambda d: d[2])
-                self.groups = [[(v[0], v[1]) for v in l] for l in self.groups]
+                    id = g['group_id']
+                    self.groups[id][g['seq']] = {'config': g['config_id'],
+                                                 'port': g['port_id']}
+                    sz = self.groups[id]['global']['len'] + 1
+                    self.groups[id]['global']['len'] = sz
+                    if sz > self.maxgrp:
+                        self.maxgrp = sz
         if mask == 0:
             return
         if not nosig:

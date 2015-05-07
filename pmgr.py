@@ -99,6 +99,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.restoreState(settings.value("windowState").toByteArray())
         ui.configTable.restoreHeaderState(settings.value("cfgcol/default").toByteArray())
         ui.objectTable.restoreHeaderState(settings.value("objcol/default").toByteArray())
+        ui.groupTable.restoreHeaderState(settings.value("grpcol/default").toByteArray())
         param.params.objmodel.setObjSel(str(settings.value("objsel").toByteArray()))
 
         # MCB - Sigh.  I don't know why this is needed, but it is.
@@ -133,6 +134,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         settings.setValue("windowState", self.saveState())
         settings.setValue("cfgcol/default", param.params.ui.configTable.saveHeaderState())
         settings.setValue("objcol/default", param.params.ui.objectTable.saveHeaderState())
+        settings.setValue("grpcol/default", param.params.ui.groupTable.saveHeaderState())
         settings.setValue("objsel", param.params.objmodel.getObjSel())
         QtGui.QMainWindow.closeEvent(self, event)
 
