@@ -67,7 +67,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         ui.menuView.addAction(ui.groupWidget.toggleViewAction())
         ui.groupWidget.setWindowTitle(param.params.table + " configuration groups")
         param.params.grpmodel = GrpModel()
-        ui.groupTable.init(param.params.grpmodel, 0, 1)
+        ui.groupTable.init(param.params.grpmodel, 0, 2)
         ui.groupTable.setShowGrid(True)
         ui.groupTable.resizeColumnsToContents()
         ui.groupTable.setSortingEnabled(False)
@@ -102,16 +102,27 @@ class GraphicUserInterface(QtGui.QMainWindow):
         ui.groupTable.restoreHeaderState(settings.value("grpcol/default").toByteArray())
         param.params.objmodel.setObjSel(str(settings.value("objsel").toByteArray()))
 
+        # MCB - This is so if we have too many rows/columns in the save file,
+        # we get rid of them.  Is this just a problem as we develop the group model
+        # though?
+        param.params.grpmodel.grpchange()
+
         # MCB - Sigh.  I don't know why this is needed, but it is.
         h = ui.configTable.horizontalHeader()
         h.resizeSection(1, h.sectionSize(1) + 1)
+        h.resizeSection(1, h.sectionSize(1) - 1)
         h = ui.objectTable.horizontalHeader()
         h.resizeSection(1, h.sectionSize(1) + 1)
+        h.resizeSection(1, h.sectionSize(1) - 1)
+        h = ui.groupTable.horizontalHeader()
+        h.resizeSection(1, h.sectionSize(1) + 1)
+        h.resizeSection(1, h.sectionSize(1) - 1)
 
         ui.configTable.colmgr = "%s/cfgcol" % param.params.table
         ui.objectTable.colmgr = "%s/objcol" % param.params.table
         ui.groupTable.colmgr = "%s/grpcol" % param.params.table
 
+        self.connect(ui.debugButton,     QtCore.SIGNAL("clicked()"), param.params.grpmodel.doDebug)
         self.connect(ui.saveButton,      QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
         self.connect(ui.revertButton,    QtCore.SIGNAL("clicked()"), param.params.objmodel.revertall)
         self.connect(ui.applyButton,     QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)

@@ -8,31 +8,36 @@ import pyca
 from copy import deepcopy
 
 class GrpModel(QtGui.QStandardItemModel):
-    cname   = ["Group Name"]
-    ctips   = ["ADD TOOLTIP!"]
+    cname   = ["Status", "Group Name"]
+    ctips   = ["?", "?"]
     colcnt  = len(cname)
     coff    = len(cname)
-    namecol = 0
-    mutable = 1 # The first non-frozen column
+    statcol = 0
+    namecol = 1
+    mutable = 2 # The first non-frozen column
     roles   = [QtCore.Qt.DisplayRole, QtCore.Qt.EditRole, QtCore.Qt.ForegroundRole,
                QtCore.Qt.BackgroundRole, QtCore.Qt.ToolTipRole, QtCore.Qt.FontRole]
 
     def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
-        for c in range(self.colcnt):
-            i = QtGui.QStandardItem(self.cname[c])
-            i.setToolTip(self.ctips[c])
-            self.setHorizontalHeaderItem(c, i)
+        self.rowmap  = []
+        self.nextid  = -1
         self.newids  = []
         self.newgrps = {}
-        self.maxnew  = 0
+        self.length  = {}
         self.edits   = {}
+        self.status  = {}
+        self.deletes = []
         self.grpchange()
 
+    def getGroupId(self, index):
+        return self.rowmap[index.row() / 2]
+    
     def getGroup(self, index, withEdits=True):
-        id = self.rowmap[index.row() / 2]
+        id = self.getGroupId(index)
         if id < 0:
             g = self.newgrps[id]             # No edits -> no need to copy!
+            g['global']['len'] = self.length[id]
         else:
             g = deepcopy(param.params.db.groups[id])
             if withEdits:
@@ -43,8 +48,13 @@ class GrpModel(QtGui.QStandardItemModel):
                             g[k].update(v)
                         except:
                             g[k] = v
+                    g['global']['len'] = self.length[id]
                 except:
                     pass
+        try:
+            g['global']['status'] = self.status[id]
+        except:
+            pass
         return g
 
     def index2isf(self, index):
@@ -52,17 +62,25 @@ class GrpModel(QtGui.QStandardItemModel):
         c = index.column()
         id = self.rowmap[r/2]
         if r % 2 == 0:                 # Name and configurations
-            if c == 0:
+            if c == self.statcol:
+                seq = 'global'
+                f = 'status'
+            elif c == self.namecol:
                 seq = 'global'
                 f = 'name'
             else:
-                seq = c - 1
+                seq = c - self.coff
                 f = 'config'
         else:                          # Ports.
-            seq = c - 1
+            seq = c - self.coff
             f = 'port'
         return (id, seq, f)
-        
+
+    def setLength(self, id, v):
+        self.length[id] = v
+        if id < 0:
+            self.newgrps[id]['global']['len'] = v
+            
     def data(self, index, role = QtCore.Qt.DisplayRole):
         if (not role in self.roles):
             return QtGui.QStandardItemModel.data(self, index, role)
@@ -140,36 +158,46 @@ class GrpModel(QtGui.QStandardItemModel):
                 v2 = g[seq][f]
             except:
                 v2 = None
-            print v, v2
+            try:
+                ov = e[seq][f]
+            except:
+                ov = v2
             if v2 == v or (v2 == None and v == 0): # Rewrite of the original value!
                 try:
-                    del e[seq][f]    # Delete any edit.
+                    del e[seq][f]
                     if e[seq] == {}:
                         del e[seq]
                 except:
                     pass
-                print "D ", seq, self.getGroup(index)['global']['len'], self.maxnew, param.params.db.maxgrp
-                if seq + 1 == self.getGroup(index)['global']['len'] and f == 'config':
-                    print "Delete last?"
-                    print self.edits
-            else:                    # A real change!
+            else:                                  # A real change!
                 try:
                     e[seq][f] = v
                 except:
                     e[seq] = {f: v}
-                print "A ", seq, self.getGroup(index)['global']['len'], self.maxnew, param.params.db.maxgrp
-                if seq == self.getGroup(index)['global']['len']:
-                    try:
-                        e['global']['len'] = seq + 1
-                    except:
-                        e['global'] = {'len': seq + 1}
-                    if seq == max(self.maxnew, param.params.db.maxgrp):
-                        print "Add column!"
-                        self.maxnew = seq + 1
-                        self.setColumnCount(self.maxnew + 2)
-                        self.addColumnHeader(self.maxnew + 1)
-                        self.dataChanged.emit(self.index(0, self.maxnew + 1),
-                                              self.index(self.rowCount()-1, self.maxnew + 1))
+            if f == 'config':
+                if v == 0 and ov != 0:
+                    # We're deleting an item!  Delete the port as well!
+                    self.setData(self.index(index.row()+1, index.column()),
+                                 QtCore.QVariant("DEFAULT"))
+                    if seq + 1 == self.length[id]:
+                        # We're deleting the last column of this group!
+                        self.setLength(id, seq)
+                        nm = max(self.length.values())
+                        if nm + 2 != self.columnCount():
+                            self.setColumnCount(nm + self.coff)
+                            self.dataChanged.emit(self.index(0, nm + self.coff - 1),
+                                                  self.index(self.rowCount() - 1, nm + self.coff - 1))
+                elif v != 0 and (ov == 0 or ov == None):
+                    # We're adding an item!
+                    if seq == self.length[id]:
+                        # We're adding a new item to the end!
+                        self.setLength(id, seq + 1)
+                        nm = max(self.length.values())
+                        if nm + 2 != self.columnCount():
+                            self.setColumnCount(nm + self.coff + 1)
+                            self.addColumnHeader(nm + self.coff)
+                            self.dataChanged.emit(self.index(0, nm + self.coff),
+                                                  self.index(self.rowCount()-1, nm + self.coff))
             if e == {}:
                 try:
                     del self.edits[id]
@@ -186,69 +214,132 @@ class GrpModel(QtGui.QStandardItemModel):
             return flags
         r = index.row()
         c = index.column()
-        if r % 2 == 0:          # Name and Configurations.
-            if c == 0:
+        if r % 2 == 0:          # Name, Status, and Configurations.
+            if c == self.namecol:
                 flags = flags | QtCore.Qt.ItemIsEditable
             # Selecting a configuration requires calling up a dialog!
         else:                   # Ports.
-            g = self.getGroup(index)
-            if c >= 1 and c <= g['global']['len']:
-                flags = flags | QtCore.Qt.ItemIsEditable
+            try:
+                if self.getGroup(index)[c - self.coff]['config'] != 0:
+                    flags = flags | QtCore.Qt.ItemIsEditable
+            except:
+                pass
         return flags
 
     def addColumnHeader(self, c):
-        item = QtGui.QStandardItem("")
-        # item.setToolTip("?")
+        if c < self.coff:
+            item = QtGui.QStandardItem(self.cname[c])
+            item.setToolTip(self.ctips[c])
+        else:
+            item = QtGui.QStandardItem(str(c - self.coff + 1))
+            # item.setToolTip("?")
         self.setHorizontalHeaderItem(c, item)
 
     def grpchange(self):
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
         self.rowmap = param.params.db.groupids[:]   # Copy!
         self.rowmap.extend(self.newids)
+        self.length = {}
+        for id in self.rowmap:
+            if id < 0:
+                self.length[id] = self.newgrps[id]['global']['len']
+            else:
+                self.length[id] = param.params.db.groups[id]['global']['len']
         self.setRowCount(len(self.rowmap) * 2)
-        self.setColumnCount(2 + max(self.maxnew, param.params.db.maxgrp))
-        for c in range(1, self.columnCount()):         # Make sure we have a header!
+        self.setColumnCount(self.coff + max(self.length.values()));
+        for c in range(self.columnCount()):         # Make sure we have a header!
             self.addColumnHeader(c)
         self.emit(QtCore.SIGNAL("layoutChanged()"))
 
     def cfgchange(self):
         pass
 
-    def create(self, table, index):
-        pass
+    def createGrp(self, table, index):
+        id = self.nextid
+        self.nextid -= 1
+        name = "New-Group%d" % id
+        g = {"global": {"len": 0, "name": name}}
+        self.newgrps[id] = g
+        self.setLength(id, 0)
+        self.status[id] = "N"
+        r = 2 * len(self.rowmap)
+        self.rowmap.append(id)
+        self.setRowCount(r + 2)
+        self.dataChanged.emit(self.index(r, 0), self.index(r + 1, self.coff + max(self.length.values())))
 
-    def delete(self, table, index):
-        pass
+    def deleteGrp(self, table, index):
+        r = index.row();
+        if r % 2 == 1:
+            r -= 1
+        id = self.getGroupId(index)
+        if id < 0:
+            self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+            del self.newgrps[id]
+            del self.status[id]
+            del self.length[id]
+            self.rowmap.remove(id)
+            self.setRowCount(2 * len(self.rowmap))
+            self.emit(QtCore.SIGNAL("layoutChanged()"))
+        else:
+            self.status[id] = 'D'
+            self.dataChanged.emit(self.index(r, self.statcol), self.index(r, self.statcol))
+
+    def undeleteGrp(self, table, index):
+        id = self.getGroupId(index)
+        del self.status[id]
+        
+    def deleteCfg(self, table, index):
+        self.setData(index, QtCore.QVariant(0))
 
     def selectCfgOK(self, table, index):
         r = index.row()
         if r % 2 != 0:
             return False
         c = index.column()
-        if c == 0:
+        if c < self.coff:
             return False
-        if c > self.getGroup(index)['global']['len']:
+        if c >= self.length[self.getGroupId(index)] + self.coff:
             return False
         return True
 
-    def AddCfgOK(self, table, index):
+    def addCfgOK(self, table, index):
         r = index.row()
         if r % 2 != 0:
             return False
-        return index.column() == self.getGroup(index)['global']['len'] + 1           
-    
+        return index.column() == self.length[self.getGroupId(index)] + self.coff           
+
+    def deleteCfgOK(self, table, index):
+        id = self.getGroupId(index)
+        try:
+            if self.status[id] == "D":
+                return False
+        except:
+            pass
+        return True
+
+    def undeleteCfgOK(self, table, index):
+        id = self.getGroupId(index)
+        try:
+            if self.status[id] == "D":
+                return True
+        except:
+            pass
+        return False
+        
     def selectCfg(self, table, index):
         title = ("Select configuration #%d for group %s" %
-                 (index.column(), self.getGroup(index)['global']['name']))
+                 (index.column() - self.coff + 1, self.getGroup(index)['global']['name']))
         if (param.params.cfgdialog.exec_(title) == QtGui.QDialog.Accepted):
             self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
     
     def setupContextMenus(self, table):
         menu = utils.MyContextMenu()
-        menu.addAction("Create new group", self.create)
-        menu.addAction("Delete this group", self.delete)
+        menu.addAction("Create new group", self.createGrp)
+        menu.addAction("Delete this group", self.deleteGrp, self.deleteCfgOK)
+        menu.addAction("Undelete this group", self.undeleteGrp, self.undeleteCfgOK)
+        menu.addAction("Delete this configuration", self.deleteCfg, self.selectCfgOK)
         menu.addAction("Select new configuration", self.selectCfg, self.selectCfgOK)
-        menu.addAction("Add new configuration", self.selectCfg, self.AddCfgOK)
+        menu.addAction("Add new configuration", self.selectCfg, self.addCfgOK)
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table, [], False)
 
@@ -262,3 +353,10 @@ class GrpModel(QtGui.QStandardItemModel):
             if l[0] == "DEFAULT":
                 l[0] = ""
             return l
+
+    def doDebug(self):
+        print self.edits
+        print
+        print self.getGroup(self.index(0, 3))
+        print
+    

@@ -41,14 +41,14 @@
       </property>
      </widget>
     </item>
-    <item row="0" column="2">
+    <item row="0" column="3">
      <widget class="QPushButton" name="revertButton">
       <property name="text">
        <string>Revert</string>
       </property>
      </widget>
     </item>
-    <item row="1" column="0" colspan="3">
+    <item row="1" column="0" colspan="4">
      <widget class="QTreeWidget" name="treeWidget">
       <property name="sizePolicy">
        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
@@ -72,11 +72,24 @@ All ancestors and all children of the selected configuration will be displayed.<
       <attribute name="headerStretchLastSection">
        <bool>true</bool>
       </attribute>
+      <attribute name="headerVisible">
+       <bool>false</bool>
+      </attribute>
+      <attribute name="headerStretchLastSection">
+       <bool>true</bool>
+      </attribute>
       <column>
        <property name="text">
         <string notr="true">1</string>
        </property>
       </column>
+     </widget>
+    </item>
+    <item row="0" column="2">
+     <widget class="QPushButton" name="debugButton">
+      <property name="text">
+       <string>Debug</string>
+      </property>
      </widget>
     </item>
    </layout>
@@ -87,7 +100,7 @@ All ancestors and all children of the selected configuration will be displayed.<
      <x>0</x>
      <y>0</y>
      <width>990</width>
-     <height>20</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
