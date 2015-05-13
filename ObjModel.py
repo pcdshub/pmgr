@@ -704,6 +704,7 @@ class ObjModel(QtGui.QStandardItemModel):
             if 'D' in s:
                 self.commit(idx)
         param.params.cfgmodel.commitall(False)
+        param.params.grpmodel.commitall(False)
         for (idx, s) in self.status.items():
             if ('N' in s or 'M' in s) and not 'D' in s:  # Paranoia.  We should never have DM or DN.
                 self.commit(idx)

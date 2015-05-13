@@ -34,7 +34,10 @@ class GrpModel(QtGui.QStandardItemModel):
         return self.rowmap[index.row() / 2]
     
     def getGroup(self, index, withEdits=True):
-        id = self.getGroupId(index)
+        if isinstance(index, QtCore.QModelIndex):
+            id = self.getGroupId(index)
+        else:
+            id = index
         if id < 0:
             g = self.newgrps[id]             # No edits -> no need to copy!
             g['global']['len'] = self.length[id]
@@ -51,10 +54,7 @@ class GrpModel(QtGui.QStandardItemModel):
                     g['global']['len'] = self.length[id]
                 except:
                     pass
-        try:
-            g['global']['status'] = self.status[id]
-        except:
-            pass
+        g['global']['status'] = self.status[id]
         return g
 
     def index2isf(self, index):
@@ -145,6 +145,10 @@ class GrpModel(QtGui.QStandardItemModel):
             v = ""
         if id < 0:                   # A new, unsaved group can be freely edited.
             try:
+                ov = self.newgrps[id][seq][f]
+            except:
+                ov = None
+            try:
                 self.newgrps[id][seq][f] = v
             except:
                 self.newgrps[id][seq] = {f: v}
@@ -153,6 +157,7 @@ class GrpModel(QtGui.QStandardItemModel):
                 e = self.edits[id]
             except:
                 e = {}
+            hadedit = (e != {})
             g = param.params.db.groups[id]
             try:
                 v2 = g[seq][f]
@@ -174,37 +179,41 @@ class GrpModel(QtGui.QStandardItemModel):
                     e[seq][f] = v
                 except:
                     e[seq] = {f: v}
-            if f == 'config':
-                if v == 0 and ov != 0:
-                    # We're deleting an item!  Delete the port as well!
-                    self.setData(self.index(index.row()+1, index.column()),
-                                 QtCore.QVariant("DEFAULT"))
-                    if seq + 1 == self.length[id]:
-                        # We're deleting the last column of this group!
-                        self.setLength(id, seq)
-                        nm = max(self.length.values())
-                        if nm + 2 != self.columnCount():
-                            self.setColumnCount(nm + self.coff)
-                            self.dataChanged.emit(self.index(0, nm + self.coff - 1),
-                                                  self.index(self.rowCount() - 1, nm + self.coff - 1))
-                elif v != 0 and (ov == 0 or ov == None):
-                    # We're adding an item!
-                    if seq == self.length[id]:
-                        # We're adding a new item to the end!
-                        self.setLength(id, seq + 1)
-                        nm = max(self.length.values())
-                        if nm + 2 != self.columnCount():
-                            self.setColumnCount(nm + self.coff + 1)
-                            self.addColumnHeader(nm + self.coff)
-                            self.dataChanged.emit(self.index(0, nm + self.coff),
-                                                  self.index(self.rowCount()-1, nm + self.coff))
             if e == {}:
+                if hadedit:
+                    self.status[id] = self.status[id].replace("M", "")
                 try:
                     del self.edits[id]
                 except:
                     pass
             else:
+                if not hadedit:
+                    self.status[id] = "".join(sorted("M" + self.status[id]))
                 self.edits[id] = e
+        if f == 'config':
+            if v == 0 and ov != 0:
+                # We're deleting an item!  Delete the port as well!
+                self.setData(self.index(index.row()+1, index.column()),
+                             QtCore.QVariant("DEFAULT"))
+                if seq + 1 == self.length[id]:
+                    # We're deleting the last column of this group!
+                    self.setLength(id, seq)
+                    nm = max(self.length.values())
+                    if self.coff + nm + 1 != self.columnCount():
+                        self.setColumnCount(nm + self.coff + 1)
+                        self.dataChanged.emit(self.index(0, nm + self.coff - 1),
+                                              self.index(self.rowCount() - 1, nm + self.coff - 1))
+            elif v != 0 and (ov == 0 or ov == None):
+                # We're adding an item!
+                if seq == self.length[id]:
+                    # We're adding a new item to the end!
+                    self.setLength(id, seq + 1)
+                    nm = max(self.length.values())
+                    if self.coff + nm + 1 != self.columnCount():
+                        self.setColumnCount(nm + self.coff + 1)
+                        self.addColumnHeader(nm + self.coff)
+                        self.dataChanged.emit(self.index(0, nm + self.coff),
+                                              self.index(self.rowCount()-1, nm + self.coff))
         self.dataChanged.emit(index, index)
         return True
 
@@ -238,21 +247,37 @@ class GrpModel(QtGui.QStandardItemModel):
     def grpchange(self):
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
         self.rowmap = param.params.db.groupids[:]   # Copy!
-        self.rowmap.extend(self.newids)
+        self.rowmap.extend(self.newids[:])
         self.length = {}
+        self.status = {}
         for id in self.rowmap:
             if id < 0:
                 self.length[id] = self.newgrps[id]['global']['len']
+                self.status[id] = "N"
             else:
                 self.length[id] = param.params.db.groups[id]['global']['len']
+                self.status[id] = ""
+                if id in self.deletes:
+                    self.status[id] += "D"
+                try:
+                    if self.edits[id] != {}:
+                        self.status[id] += "M"
+                except:
+                    pass
         self.setRowCount(len(self.rowmap) * 2)
-        self.setColumnCount(self.coff + max(self.length.values()));
+        self.setColumnCount(self.coff + max(self.length.values()) + 1);
         for c in range(self.columnCount()):         # Make sure we have a header!
             self.addColumnHeader(c)
         self.emit(QtCore.SIGNAL("layoutChanged()"))
 
     def cfgchange(self):
         pass
+
+#############################
+#
+# Context Menus
+#
+#############################
 
     def createGrp(self, table, index):
         id = self.nextid
@@ -263,9 +288,17 @@ class GrpModel(QtGui.QStandardItemModel):
         self.setLength(id, 0)
         self.status[id] = "N"
         r = 2 * len(self.rowmap)
+        self.newids.append(id)
         self.rowmap.append(id)
         self.setRowCount(r + 2)
         self.dataChanged.emit(self.index(r, 0), self.index(r + 1, self.coff + max(self.length.values())))
+
+    def deleteGrpOK(self, table, index):
+        id = self.getGroupId(index)
+        if "D" in self.status[id]:
+            return False
+        else:
+            return True
 
     def deleteGrp(self, table, index):
         r = index.row();
@@ -274,6 +307,7 @@ class GrpModel(QtGui.QStandardItemModel):
         id = self.getGroupId(index)
         if id < 0:
             self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+            self.newids.remove(id)
             del self.newgrps[id]
             del self.status[id]
             del self.length[id]
@@ -281,15 +315,21 @@ class GrpModel(QtGui.QStandardItemModel):
             self.setRowCount(2 * len(self.rowmap))
             self.emit(QtCore.SIGNAL("layoutChanged()"))
         else:
-            self.status[id] = 'D'
+            self.deletes.append(id)
+            self.status[id] = "".join(sorted("D" + self.status[id]))
             self.dataChanged.emit(self.index(r, self.statcol), self.index(r, self.statcol))
+
+    def undeleteGrpOK(self, table, index):
+        id = self.getGroupId(index)
+        if "D" in self.status[id]:
+            return True
+        else:
+            return False
 
     def undeleteGrp(self, table, index):
         id = self.getGroupId(index)
-        del self.status[id]
-        
-    def deleteCfg(self, table, index):
-        self.setData(index, QtCore.QVariant(0))
+        self.deletes.remove(id)
+        self.status[id] = self.status[id].replace("D", "")
 
     def selectCfgOK(self, table, index):
         r = index.row()
@@ -307,39 +347,124 @@ class GrpModel(QtGui.QStandardItemModel):
         if r % 2 != 0:
             return False
         return index.column() == self.length[self.getGroupId(index)] + self.coff           
-
-    def deleteCfgOK(self, table, index):
-        id = self.getGroupId(index)
-        try:
-            if self.status[id] == "D":
-                return False
-        except:
-            pass
-        return True
-
-    def undeleteCfgOK(self, table, index):
-        id = self.getGroupId(index)
-        try:
-            if self.status[id] == "D":
-                return True
-        except:
-            pass
-        return False
+        
+    def deleteCfg(self, table, index):
+        self.setData(index, QtCore.QVariant(0))
         
     def selectCfg(self, table, index):
         title = ("Select configuration #%d for group %s" %
                  (index.column() - self.coff + 1, self.getGroup(index)['global']['name']))
         if (param.params.cfgdialog.exec_(title) == QtGui.QDialog.Accepted):
             self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
+
+    def commitOK(self, table, index):
+        id = self.getGroupId(index)
+        return id < 0 or "M" in self.status[id] or "D" in self.status[id]
+
+    #
+    # Try to commit a change.  Assume we are in a transaction already.
+    #
+    def commit(self, id):
+        g = self.getGroup(id)
+        try:
+            name = self.edits[id]['global']['name']
+        except:
+            name = g['global']['name']
+        if name[0:10] == "New-Group-":
+            param.params.db.transaction_error("Group cannot be named %s!" % name)
+            return
+        # Check if otherwise OK!  A group should have all configurations unique.
+        # They don't have to all be defined though, if we only want to save it!
+        cfgs = []
+        for k in g.keys():
+            if k != 'global':
+                c = g[k]['config']
+                if c != 0 and c in cfgs:
+                    param.params.db.transaction_error("Group has multiple configurations named %s!" %
+                                                      param.params.db.getCfgName(c))
+                    return
+                cfgs.append(c)
+        if 'D' in self.status[id]:
+            result = param.params.db.groupDelete(id)
+        elif 'N' in self.status[id]:
+            result = param.params.db.groupInsert(0, g)
+        elif 'M' in self.status[id]:
+            result = param.params.db.groupInsert(id, g)
+        if result:
+            self.grpChangeDone(id)
+
+    def commitall(self, verify=True):
+        # Do we want to verify?
+        for (id, s) in self.status.items():
+            if 'D' in s:
+                self.commit(id)
+        for (id, s) in self.status.items():
+            if ('N' in s or 'M' in s) and not 'D' in s:  # Paranoia.  We should never have DM or DN.
+                self.commit(id)
+
+    def commitone(self, table, index):
+        param.params.db.start_transaction()
+        id = self.getGroupId(index)
+        self.commit(id)
+        if param.params.db.end_transaction():
+            return True
+        else:
+            return False
+
+    def grpChangeDone(self, id):
+        if id < 0:
+            self.newids.remove(id)
+            del self.newgrps[id]
+            del self.status[id]
+            del self.length[id]
+            self.rowmap = param.params.db.groupids[:]  # This is a temporary measure until we re-read the config.
+            self.rowmap.extend(self.newids[:])
+            self.setRowCount(len(self.rowmap) * 2)
+        else:
+            try:
+                del self.edits[id]
+            except:
+                pass
+            if id in self.deletes:
+                self.deletes.remove(id)
+            else:
+                self.status[id] = ""
+
+    def applyone(self, table, index):
+        pass
+
+    def revertOK(self, table, index):
+        id = self.getGroupId(index)
+        return "M" in self.status[id]
+
+    def revertone(self, table, index):
+        id = self.getGroupId(index)
+        try:
+            del self.edits[id]
+        except:
+            pass
+        self.length[id] = param.params.db.groups[id]['global']['len']
+        self.status[id] = ""
+        nm = max(self.length.values())
+        if self.coff + nm + 1 != self.columnCount():
+            self.setColumnCount(nm + self.coff + 1)
+            self.dataChanged.emit(self.index(0, nm + self.coff),
+                                  self.index(self.rowCount()-1, nm + self.coff))
+        else:
+            r = index.row() - index.row() % 2
+            self.dataChanged.emit(self.index(r, 0), self.index(r + 1, self.columnCount()))
     
     def setupContextMenus(self, table):
         menu = utils.MyContextMenu()
         menu.addAction("Create new group", self.createGrp)
-        menu.addAction("Delete this group", self.deleteGrp, self.deleteCfgOK)
-        menu.addAction("Undelete this group", self.undeleteGrp, self.undeleteCfgOK)
+        menu.addAction("Delete this group", self.deleteGrp, self.deleteGrpOK)
+        menu.addAction("Undelete this group", self.undeleteGrp, self.undeleteGrpOK)
         menu.addAction("Delete this configuration", self.deleteCfg, self.selectCfgOK)
         menu.addAction("Select new configuration", self.selectCfg, self.selectCfgOK)
         menu.addAction("Add new configuration", self.selectCfg, self.addCfgOK)
+        menu.addAction("Commit this group", self.commitone, self.commitOK)
+        menu.addAction("Apply this group", self.applyone)
+        menu.addAction("Revert this group", self.revertone, self.revertOK)
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table, [], False)
 
@@ -356,7 +481,4 @@ class GrpModel(QtGui.QStandardItemModel):
 
     def doDebug(self):
         print self.edits
-        print
-        print self.getGroup(self.index(0, 3))
-        print
     

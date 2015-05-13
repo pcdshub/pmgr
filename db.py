@@ -166,6 +166,7 @@ class db(QtCore.QObject):
         self.readsig.connect(self.readTables)
         self.poll = dbPoll(self.readsig, 30)
         self.con.commit()
+        self.dbgid = 42
 
     def start(self, initsig):
         self.initsig = initsig
@@ -690,4 +691,82 @@ class db(QtCore.QObject):
         except _mysql_exceptions.Error as err:
             print err
             return {}
-    
+
+    def groupClear(self, id):
+        if param.params.debug:
+            print "delete from %s_cfg_grp where group_id = %d" % (param.params.table, id)
+            return True
+        try:
+            self.cur.execute("delete from %s_cfg_grp where group_id = %%s" % param.params.table, (id, ))
+            return True
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+            return False
+
+    def groupDelete(self, id):
+        if not self.groupClear(id):
+            return False
+        if param.params.debug:
+            print "delete from %s_grp where id = %d" % (param.params.table, id)
+            return True
+        try:
+            self.cur.execute("delete from %s_grp where id = %%s" % param.params.table, (id, ))
+            return True
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+            return False
+
+    def groupInsert(self, id, g):
+        origid = id
+        if id == 0:
+            if param.params.debug:
+                print "insert %s_grp (name, owner, dt_created, dt_updated) values (%s, %s, now(), now())" % \
+                      (param.params.table, g['global']['name'], param.params.hutch)
+                print "select last_insert_id()"
+                id = self.dbgid
+                self.dbgid += 1
+            else:
+                try:
+                    self.cur.execute("insert %s_grp (name, owner, dt_created, dt_updated) values (%%s, %%s, now(), now())" \
+                                     % param.params.table, (g['global']['name'], param.params.hutch))
+                    self.cur.execute("select last_insert_id()")
+                    id = self.cur.fetchone().values()[0]
+                except _mysql_exceptions.Error as e:
+                    self.errorlist.append(e)
+                    return False
+        else:
+            if not self.groupClear(id):
+                return False
+        keys = g.keys()
+        keys.remove('global')
+        keys.sort()
+        seq = 0
+        for k in keys:
+            if g[k]['config'] != 0:
+                try:
+                    cmd = "insert %s_cfg_grp (group_id, config_id, port_id, seq)" % param.params.table
+                    cmd += "values (%s, %s, %s, %s)"
+                    try:
+                        port = str(g[k]['port'])
+                    except:
+                        port = "0"
+                    if param.params.debug:
+                        print cmd % (str(id), str(g[k]['config']), port, str(seq))
+                    else:
+                        self.cur.execute(cmd, (id, g[k]['config'], port, seq))
+                    seq += 1
+                except _mysql_exceptions.Error as e:
+                    self.errorlist.append(e)
+                    return False
+        if origid != 0:
+            try:
+                cmd = "update %s_grp set dt_updated = now() where group_id = %%s" % param.params.table
+                if param.params.debug:
+                    print cmd % id
+                else:
+                    self.cur.execute(cmd, id)
+            except _mysql_exceptions.Error as e:
+                self.errorlist.append(e)
+                return False
+            
+        return True

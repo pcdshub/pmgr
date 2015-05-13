@@ -99,6 +99,8 @@ create table ims_motor_grp (
 	id int auto_increment,
 	name varchar(30) not null,
 	owner varchar(10),
+	dt_created datetime not null,
+	dt_updated datetime not null,
 
 	-- constraints --
 	primary key (id)
