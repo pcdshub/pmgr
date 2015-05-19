@@ -99,7 +99,7 @@ class dbPoll(threading.Thread):
                 continue
             try:
                 cur.execute("select * from ims_motor_update where tbl_name = 'config' or tbl_name = %s or tbl_name = %s",
-                            (param.params.hutch, "grp_" + param.params.hutch))
+                            (param.params.hutch, param.params.hutch + "_grp"))
                 v = 0
                 for d in cur.fetchall():
                     if d['tbl_name'] == 'config':
@@ -401,7 +401,9 @@ class db(QtCore.QObject):
         self.errorlist = []
         self.cfgmap = {}
         try:
-            self.cur.execute("lock tables %s write, %s_cfg write" % (param.params.table, param.params.table))
+            self.cur.execute("lock tables %s write, %s_cfg write, %s_grp write, %s_cfg_grp write" % \
+                             (param.params.table, param.params.table,
+                              param.params.table, param.params.table))
             self.readTables(dbPoll.ALL, True)
             return True
         except _mysql_exceptions.Error as e:
@@ -760,7 +762,7 @@ class db(QtCore.QObject):
                     return False
         if origid != 0:
             try:
-                cmd = "update %s_grp set dt_updated = now() where group_id = %%s" % param.params.table
+                cmd = "update %s_grp set dt_updated = now() where id = %%s" % param.params.table
                 if param.params.debug:
                     print cmd % id
                 else:

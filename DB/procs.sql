@@ -8,6 +8,9 @@ drop trigger if exists ims_motor_cfg_upd;
 drop trigger if exists ims_motor_ins;
 drop trigger if exists ims_motor_del;
 drop trigger if exists ims_motor_upd;
+drop trigger if exists ims_motor_grp_ins;
+drop trigger if exists ims_motor_grp_del;
+drop trigger if exists ims_motor_grp_upd;
 
 delimiter //
 
@@ -92,6 +95,37 @@ begin
    insert into ims_motor_update values (NEW.owner, now())
    on duplicate key update dt_updated = values(dt_updated);
    insert into ims_motor_log select now(), 0, 'update', ims_motor.* from ims_motor where id = NEW.id;
+end;
+//
+
+create trigger ims_motor_grp_ins after insert on ims_motor_grp
+for each row
+begin
+   insert into ims_motor_update values (concat(NEW.owner, "_grp"), now())
+   on duplicate key update dt_updated = values(dt_updated);
+   insert into ims_motor_grp_log select now(), 0, 'insert', ims_motor_grp.* from ims_motor_grp where id = NEW.id;
+   insert into ims_motor_cfg_grp_log select now(), 0, 'insert', ims_motor_cfg_grp.* from ims_motor_cfg_grp where group_id = NEW.id;
+end;
+//
+
+create trigger ims_motor_grp_del after delete on ims_motor_grp
+for each row
+begin
+   insert into ims_motor_update values (concat(OLD.owner, "_grp"), now())
+   on duplicate key update dt_updated = values(dt_updated);
+   insert into ims_motor_grp_log (date, action, id) values (now(), "delete", OLD.id);
+end;
+//
+
+create trigger ims_motor_grp_upd after update on ims_motor_grp
+for each row
+begin
+   insert into ims_motor_update values (concat(OLD.owner, "_grp"), now())
+   on duplicate key update dt_updated = values(dt_updated);
+   insert into ims_motor_update values (concat(NEW.owner, "_grp"), now())
+   on duplicate key update dt_updated = values(dt_updated);
+   insert into ims_motor_grp_log select now(), 0, 'update', ims_motor_grp.* from ims_motor_grp where id = NEW.id;
+   insert into ims_motor_cfg_grp_log select now(), 0, 'update', ims_motor_cfg_grp.* from ims_motor_cfg_grp where group_id = NEW.id;
 end;
 //
 

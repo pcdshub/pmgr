@@ -481,4 +481,4 @@ class GrpModel(QtGui.QStandardItemModel):
 
     def doDebug(self):
         print self.edits
-    
+        param.params.debug = not param.params.debug
