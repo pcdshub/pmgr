@@ -87,6 +87,14 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             return self.objs[idx]
 
+    def setCfg(self, idx, cfg):
+        self.setValue(idx, 'cfgname', cfg)
+        try:
+            index = self.index(self.rowmap.index(idx), self.cfgcol)
+            self.dataChanged.emit(index, index)
+        except:
+            pass
+
     def getCfg(self, idx, f, GetEdit=True):
         if GetEdit:
             try:
@@ -676,6 +684,12 @@ class ObjModel(QtGui.QStandardItemModel):
                 e = self.edits[idx]
             except:
                 e = {}
+            try:
+                if e['config'] < 0:
+                    param.params.db.transaction_error("New configuration must be committed before committing %s!" % name)
+                    return
+            except:
+                pass
             s = self.checkSetMutex(d, e)
             if s != []:
                 param.params.db.transaction_error("Object %s does not have unique values for %s!" %
@@ -725,6 +739,7 @@ class ObjModel(QtGui.QStandardItemModel):
             self.status[idx] = self.status[idx].replace("M", "")
         self.emit(QtCore.SIGNAL("layoutChanged()"))
         param.params.cfgmodel.revertall()
+        param.params.grpmodel.revertall()
 
     def apply(self, idx):
         d = self.getObj(idx)
@@ -996,3 +1011,14 @@ class ObjModel(QtGui.QStandardItemModel):
             if self.getObjName(i) == name:
                 return i
         return 0
+
+    def cfgrenumber(self, old, new):
+        for d in self.edits.values():
+            try:
+                if d['config'] == old:
+                    d['config'] = new
+            except:
+                pass
+        for d in self.objs.values():
+            if d['config'] == old:
+                d['config'] = new

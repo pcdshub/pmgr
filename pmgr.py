@@ -89,6 +89,9 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.db.cfgchange.connect(param.params.grpmodel.cfgchange)
         param.params.db.grpchange.connect(param.params.grpmodel.grpchange)
 
+        param.params.db.cfgrenumber.connect(param.params.objmodel.cfgrenumber)
+        param.params.db.cfgrenumber.connect(param.params.grpmodel.cfgrenumber)
+
         param.params.cfgmodel.newname.connect(param.params.cfgmodel.haveNewName)
         param.params.cfgmodel.newname.connect(param.params.objmodel.haveNewName)
         param.params.cfgmodel.cfgChanged.connect(param.params.objmodel.cfgEdit)
@@ -107,7 +110,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         # though?
         param.params.grpmodel.grpchange()
 
-        # MCB - Sigh.  I don't know why this is needed, but it is.
+        # MCB - Sigh.  I don't know why this is needed, but it is, otherwise the FreezeTable breaks.
         h = ui.configTable.horizontalHeader()
         h.resizeSection(1, h.sectionSize(1) + 1)
         h.resizeSection(1, h.sectionSize(1) - 1)

@@ -859,6 +859,8 @@ class CfgModel(QtGui.QStandardItemModel):
             #    - All the parents already exist.
             #    - We don't make a circular loop.
             #    - Any setmutex sets are OK. (All inherited or all different.)
+            #    - Every nullok field, is non-null.
+            #    - Every unique field has a value (we'll let mysql actually deal with uniqueness!)
             try:
                 e = self.edits[idx]
             except:
@@ -868,6 +870,13 @@ class CfgModel(QtGui.QStandardItemModel):
                 param.params.db.transaction_error("Config %s does not have unique values for %s!" %
                                                   (name, str(s)))
                 return True
+            for f in param.params.db.cfgflds:
+                if not f['nullok'] and d[f['fld']] == "":
+                    param.params.db.transaction_error("Field %s cannot be NULL!" % f['fld'])
+                    return True
+                if f['unique'] and not d['_val'][f['fld']]:
+                    param.params.db.transaction_error("Field %s must be unique and cannot be inherited!" % f['fld'])
+                    return True
             try:
                 p = self.edits[idx]['config']
             except:
@@ -1119,9 +1128,12 @@ class CfgModel(QtGui.QStandardItemModel):
             row = index.row()
             col = index.column()
             idx = self.path[row]
-            if (col != self.cfgcol and col != self.statcol and col != self.owncol and
-                (idx < 0 or param.params.db.cfgs[idx]['owner'] == param.params.hutch)):
-                flags = flags | QtCore.Qt.ItemIsEditable
+            try:
+                if (col != self.cfgcol and col != self.statcol and col != self.owncol and
+                    (idx < 0 or param.params.db.cfgs[idx]['owner'] == param.params.hutch)):
+                    flags = flags | QtCore.Qt.ItemIsEditable
+            except:
+                pass # We seem to get here too fast sometimes after a delete, so just forget it.
         return flags
 
     #

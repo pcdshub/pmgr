@@ -256,6 +256,15 @@ class GrpModel(QtGui.QStandardItemModel):
                 self.status[id] = "N"
             else:
                 self.length[id] = param.params.db.groups[id]['global']['len']
+                try:
+                    k = self.edits[id].keys()
+                    if 'global' in k:
+                        k.remove('global')
+                    k = max(k)
+                    if k + 1 > self.length[id]:
+                        self.length[id] = k + 1
+                except:
+                    pass
                 self.status[id] = ""
                 if id in self.deletes:
                     self.status[id] += "D"
@@ -373,17 +382,27 @@ class GrpModel(QtGui.QStandardItemModel):
         if name[0:10] == "New-Group-":
             param.params.db.transaction_error("Group cannot be named %s!" % name)
             return
+        for d in g.values():
+            try:
+                if d['config'] < 0:
+                    param.params.db.transaction_error("New configuration %s must be committed before %s!" %
+                                                      (param.params.db.getCfgName(d['config']), name))
+                    return
+            except:
+                pass
         # Check if otherwise OK!  A group should have all configurations unique.
         # They don't have to all be defined though, if we only want to save it!
         cfgs = []
-        for k in g.keys():
-            if k != 'global':
-                c = g[k]['config']
+        for d in g.values():
+            try:
+                c = d['config']
                 if c != 0 and c in cfgs:
                     param.params.db.transaction_error("Group has multiple configurations named %s!" %
                                                       param.params.db.getCfgName(c))
                     return
                 cfgs.append(c)
+            except:
+                pass   # Must be 'global' dictionary!
         if 'D' in self.status[id]:
             result = param.params.db.groupDelete(id)
         elif 'N' in self.status[id]:
@@ -430,8 +449,32 @@ class GrpModel(QtGui.QStandardItemModel):
             else:
                 self.status[id] = ""
 
+    def applyOK(self, table, index):
+        id = self.getGroupId(index)
+        return not "D" in self.status[id]
+
     def applyone(self, table, index):
-        pass
+        id = self.getGroupId(index)
+        g = self.getGroup(index) # If we commit, the index might not be valid, so better get the values now.
+        if id < 0 or "M" in self.status[id]:
+            if not self.commitone(table, index):
+                return
+        ports = []
+        for d in g.values():
+            try:
+                p = d['port']
+                if p != 0 and p in ports:
+                    param.params.db.transaction_error("Group has multiple ports named %s!" %
+                                                      param.params.db.objmodel.getObjName(p))
+                    return
+                ports.append(p)
+            except:
+                pass   # Must be 'global' dictionary!
+        for d in g.values():
+            try:
+                param.params.objmodel.setCfg(d['port'], d['config'])
+            except:
+                pass # Must be 'global'!
 
     def revertOK(self, table, index):
         id = self.getGroupId(index)
@@ -453,7 +496,15 @@ class GrpModel(QtGui.QStandardItemModel):
         else:
             r = index.row() - index.row() % 2
             self.dataChanged.emit(self.index(r, 0), self.index(r + 1, self.columnCount()))
-    
+
+    def revertall(self):
+        self.nextid  = -1
+        self.newids  = []
+        self.newgrps = {}
+        self.edits   = {}
+        self.deletes = []
+        self.grpchange()
+        
     def setupContextMenus(self, table):
         menu = utils.MyContextMenu()
         menu.addAction("Create new group", self.createGrp)
@@ -463,7 +514,7 @@ class GrpModel(QtGui.QStandardItemModel):
         menu.addAction("Select new configuration", self.selectCfg, self.selectCfgOK)
         menu.addAction("Add new configuration", self.selectCfg, self.addCfgOK)
         menu.addAction("Commit this group", self.commitone, self.commitOK)
-        menu.addAction("Apply this group", self.applyone)
+        menu.addAction("Apply this group", self.applyone, self.applyOK)
         menu.addAction("Revert this group", self.revertone, self.revertOK)
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table, [], False)
@@ -482,3 +533,19 @@ class GrpModel(QtGui.QStandardItemModel):
     def doDebug(self):
         print self.edits
         param.params.debug = not param.params.debug
+
+    def cfgrenumber(self, old, new):
+        for d in self.edits.values():
+            for dd in d.values():
+                try:
+                    if dd['config'] == old:
+                        dd['config'] = new
+                except:
+                    pass
+        for d in self.newgrps.values():
+            for dd in d.values():
+                try:
+                    if dd['config'] == old:
+                        dd['config'] = new
+                except:
+                    pass

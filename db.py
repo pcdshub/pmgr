@@ -134,6 +134,7 @@ class db(QtCore.QObject):
     objchange     = QtCore.pyqtSignal()
     grpchange     = QtCore.pyqtSignal()
     readsig       = QtCore.pyqtSignal(int)
+    cfgrenumber   = QtCore.pyqtSignal(int, int)
 
     ORDER_MASK    = 0x0003ff
     SETMUTEX_MASK = 0x000200
@@ -151,7 +152,6 @@ class db(QtCore.QObject):
         self.groups = {}
         self.initsig = None
         self.errorlist = []
-        self.cfgmap = {}
         self.in_trans = False
         self.nameedits = {}
         self.cur = None
@@ -174,11 +174,11 @@ class db(QtCore.QObject):
 
     def readFormat(self):
         self.cur.execute("describe %s" % param.params.table)
-        locfld = [(d['Field'], m2pType(d['Type'])) for d in self.cur.fetchall()]
+        locfld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
         locfld = locfld[9:]   # Skip the standard fields!
 
         self.cur.execute("describe %s_cfg" % param.params.table)
-        fld = [(d['Field'], m2pType(d['Type'])) for d in self.cur.fetchall()]
+        fld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
         fld = fld[7:]         # Skip the standard fields!
         self.cfgfldcnt = len(fld)
         self.objfldcnt = len(locfld) + self.cfgfldcnt
@@ -192,21 +192,27 @@ class db(QtCore.QObject):
         tooltip = {}
         enum = {}
         mutex = {}
+        nullok = {}
+        unique = {}
         mutex_sets = []
         for i in range(16):
             mutex_sets.append([])
-        for (f, t) in locfld:
+        for (f, t, nl, k) in locfld:
             alias[f] = createAlias(f)
             colorder[f] = 1000
             setorder[f] = 0
             mutex[f] = 0
             tooltip[f] = ''
-        for (f, t) in fld:
+            nullok[f] = ((nl == 'YES') or (t != str))
+            unique[f] = k == "UNI"
+        for (f, t, nl, k) in fld:
             alias[f] = createAlias(f)
             colorder[f] = 1000
             setorder[f] = 0
             mutex[f] = 0
             tooltip[f] = ''
+            nullok[f] = ((nl == 'YES') or (t != str))
+            unique[f] = k == "UNI"
 
         for d in result:
             f = d['db_field_name']
@@ -238,12 +244,12 @@ class db(QtCore.QObject):
         self.objflds = []
         setflds = {}
         setset = set([])
-        for (f, t) in locfld:
+        for (f, t, nl, k) in locfld:
             n = fixName(f)
             so = setorder[f] & self.ORDER_MASK
             setset.add(so)
-            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
-                 'colorder': colorder[f], 'setorder': so,
+            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
+                 'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
                  'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
                  'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
                  'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
@@ -257,12 +263,12 @@ class db(QtCore.QObject):
             except:
                 pass 
             self.objflds.append(d)
-        for (f, t) in fld:
+        for (f, t, nl, k) in fld:
             n = fixName(f)
             so = setorder[f] & self.ORDER_MASK
             setset.add(so)
-            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t,
-                 'colorder': colorder[f], 'setorder': so,
+            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
+                 'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
                  'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
                  'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
                  'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
@@ -488,9 +494,10 @@ class db(QtCore.QObject):
             self.errorlist.append(e)
             return
         try:
-            self.cur.execute("select id from %s_cfg where name = %%s" % param.params.table, (d['name'],))
-            result = self.cur.fetchone()
-            self.cfgmap[d['id']] = result['id']
+            self.cur.execute("select last_insert_id()")
+            id = self.cur.fetchone().values()[0]
+            self.cfgmap[d['id']] = id
+            self.cfgrenumber.emit(d['id'], id)
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
             self.cfgmap[d['id']] = d['id']   # This is still mapping to a negative,
@@ -648,7 +655,6 @@ class db(QtCore.QObject):
         for v in chg:
             cmd += "%sconfig = %d" % (p, v)
             p = " or "
-        print cmd
         try:
             self.cur.execute(cmd)
             return self.cur.fetchone().values()[0]
@@ -760,15 +766,14 @@ class db(QtCore.QObject):
                 except _mysql_exceptions.Error as e:
                     self.errorlist.append(e)
                     return False
-        if origid != 0:
-            try:
-                cmd = "update %s_grp set dt_updated = now() where id = %%s" % param.params.table
-                if param.params.debug:
-                    print cmd % id
-                else:
-                    self.cur.execute(cmd, id)
-            except _mysql_exceptions.Error as e:
-                self.errorlist.append(e)
-                return False
+        try:
+            cmd = "update %s_grp set dt_updated = now() where id = %%s" % param.params.table
+            if param.params.debug:
+                print cmd % id
+            else:
+                self.cur.execute(cmd, id)
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+            return False
             
         return True
