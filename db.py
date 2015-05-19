@@ -359,8 +359,8 @@ class db(QtCore.QObject):
                     self.groups[id]['global'] = {'len' : 0, 'name' : g['name']}
                 for g in cfggrp:
                     id = g['group_id']
-                    self.groups[id][g['seq']] = {'config': g['config_id'],
-                                                 'port': g['port_id']}
+                    self.groups[id][g['dispseq']] = {'config': g['config_id'],
+                                                     'port': g['port_id']}
                     sz = self.groups[id]['global']['len'] + 1
                     self.groups[id]['global']['len'] = sz
                     if sz > self.maxgrp:
@@ -746,7 +746,7 @@ class db(QtCore.QObject):
         for k in keys:
             if g[k]['config'] != 0:
                 try:
-                    cmd = "insert %s_cfg_grp (group_id, config_id, port_id, seq)" % param.params.table
+                    cmd = "insert %s_cfg_grp (group_id, config_id, port_id, dispseq)" % param.params.table
                     cmd += "values (%s, %s, %s, %s)"
                     try:
                         port = str(g[k]['port'])
