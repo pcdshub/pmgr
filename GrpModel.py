@@ -42,7 +42,7 @@ class GrpModel(QtGui.QStandardItemModel):
             g = self.newgrps[id]             # No edits -> no need to copy!
             g['global']['len'] = self.length[id]
         else:
-            g = deepcopy(param.params.db.groups[id])
+            g = deepcopy(param.params.pobj.groups[id])
             if withEdits:
                 try:
                     e = self.edits[id]
@@ -158,7 +158,7 @@ class GrpModel(QtGui.QStandardItemModel):
             except:
                 e = {}
             hadedit = (e != {})
-            g = param.params.db.groups[id]
+            g = param.params.pobj.groups[id]
             try:
                 v2 = g[seq][f]
             except:
@@ -246,7 +246,7 @@ class GrpModel(QtGui.QStandardItemModel):
 
     def grpchange(self):
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
-        self.rowmap = param.params.db.groupids[:]   # Copy!
+        self.rowmap = param.params.pobj.groupids[:]   # Copy!
         self.rowmap.extend(self.newids[:])
         self.length = {}
         self.status = {}
@@ -255,7 +255,7 @@ class GrpModel(QtGui.QStandardItemModel):
                 self.length[id] = self.newgrps[id]['global']['len']
                 self.status[id] = "N"
             else:
-                self.length[id] = param.params.db.groups[id]['global']['len']
+                self.length[id] = param.params.pobj.groups[id]['global']['len']
                 try:
                     k = self.edits[id].keys()
                     if 'global' in k:
@@ -380,12 +380,12 @@ class GrpModel(QtGui.QStandardItemModel):
         except:
             name = g['global']['name']
         if name[0:10] == "New-Group-":
-            param.params.db.transaction_error("Group cannot be named %s!" % name)
+            param.params.pobj.transaction_error("Group cannot be named %s!" % name)
             return
         for d in g.values():
             try:
                 if d['config'] < 0:
-                    param.params.db.transaction_error("New configuration %s must be committed before %s!" %
+                    param.params.pobj.transaction_error("New configuration %s must be committed before %s!" %
                                                       (param.params.db.getCfgName(d['config']), name))
                     return
             except:
@@ -397,18 +397,18 @@ class GrpModel(QtGui.QStandardItemModel):
             try:
                 c = d['config']
                 if c != 0 and c in cfgs:
-                    param.params.db.transaction_error("Group has multiple configurations named %s!" %
+                    param.params.pobj.transaction_error("Group has multiple configurations named %s!" %
                                                       param.params.db.getCfgName(c))
                     return
                 cfgs.append(c)
             except:
                 pass   # Must be 'global' dictionary!
         if 'D' in self.status[id]:
-            result = param.params.db.groupDelete(id)
+            result = param.params.pobj.groupDelete(id)
         elif 'N' in self.status[id]:
-            result = param.params.db.groupInsert(0, g)
+            result = param.params.pobj.groupInsert(g)
         elif 'M' in self.status[id]:
-            result = param.params.db.groupInsert(id, g)
+            result = param.params.pobj.groupUpdate(id, g)
         if result:
             self.grpChangeDone(id)
 
@@ -436,7 +436,7 @@ class GrpModel(QtGui.QStandardItemModel):
             del self.newgrps[id]
             del self.status[id]
             del self.length[id]
-            self.rowmap = param.params.db.groupids[:]  # This is a temporary measure until we re-read the config.
+            self.rowmap = param.params.pobj.groupids[:]  # This is a temporary measure until we re-read the config.
             self.rowmap.extend(self.newids[:])
             self.setRowCount(len(self.rowmap) * 2)
         else:
@@ -464,8 +464,8 @@ class GrpModel(QtGui.QStandardItemModel):
             try:
                 p = d['port']
                 if p != 0 and p in ports:
-                    param.params.db.transaction_error("Group has multiple ports named %s!" %
-                                                      param.params.db.objmodel.getObjName(p))
+                    param.params.pobj.transaction_error("Group has multiple ports named %s!" %
+                                                      param.params.pobj.objmodel.getObjName(p))
                     return
                 ports.append(p)
             except:
@@ -486,7 +486,7 @@ class GrpModel(QtGui.QStandardItemModel):
             del self.edits[id]
         except:
             pass
-        self.length[id] = param.params.db.groups[id]['global']['len']
+        self.length[id] = param.params.pobj.groups[id]['global']['len']
         self.status[id] = ""
         nm = max(self.length.values())
         if self.coff + nm + 1 != self.columnCount():

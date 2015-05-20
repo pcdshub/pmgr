@@ -15,7 +15,6 @@ from MyDelegate import MyDelegate
 ######################################################################
 
 class GraphicUserInterface(QtGui.QMainWindow):
-    initdone = QtCore.pyqtSignal()
 
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
@@ -40,11 +39,6 @@ class GraphicUserInterface(QtGui.QMainWindow):
         ui.groupWidget.close()
 
         param.params.db = db()
-        self.initdone.connect(self.finishinit)
-        param.params.db.start(self.initdone)    # Finish initialization after we've read the DB!
-
-    def finishinit(self):
-        ui = param.params.ui
 
         ui.menuView.addAction(ui.configWidget.toggleViewAction())
         ui.configWidget.setWindowTitle(param.params.table + " configurations")
@@ -88,9 +82,6 @@ class GraphicUserInterface(QtGui.QMainWindow):
         param.params.db.cfgchange.connect(param.params.cfgmodel.cfgchange)
         param.params.db.cfgchange.connect(param.params.grpmodel.cfgchange)
         param.params.db.grpchange.connect(param.params.grpmodel.grpchange)
-
-        param.params.db.cfgrenumber.connect(param.params.objmodel.cfgrenumber)
-        param.params.db.cfgrenumber.connect(param.params.grpmodel.cfgrenumber)
 
         param.params.cfgmodel.newname.connect(param.params.cfgmodel.haveNewName)
         param.params.cfgmodel.newname.connect(param.params.objmodel.haveNewName)

@@ -1,92 +1,20 @@
-import MySQLdb as mdb
-import _mysql_exceptions
 from PyQt4 import QtCore, QtGui
 import threading
-import datetime
 import time
-import re
-import utils
 import dialogs
 import param
-
-#
-# db is our main db class.  It uses a dbPoll to check for updates, and will
-# read and notify the model classes when they are received.
-#
-# The Exported fields/methods are:
-#     cfgfldcnt, cfgflds   - The count and a dictionary of configuration field information.
-#     objfldcnt, objflds   - The count and a dictionary of object field information (a superset of
-#                            configuration field information).
-#     setflds              - A list of lists of field names, partitioned by set_order value.
-#     fldmap               - A field name to information dictionary mapping.
-#     cfgs                 - The configurations, indexed by ID.
-#     objs                 - The objects, indexed by ID.
-#     getCfgName(id)       - Fetch the (possibly edited) configuration name.
-#     setCfgName(id, name) - Set the configuration name, but do not commit it.
-#     groupids             - A list of group IDs.
-#     groups               - A dictionary of group information.  groups[id] is another dictionary.
-#                            groups[id]['global']['name']  - The name.
-#                            groups[id]['global']['len']   - The number of elements.
-#                            groups[id][N]['config'] - The config ID of element N.
-#                            groups[id][N]['port']   - The object (port) ID of element N.
-#     maxgrp               - The maximum size of any group.
-
-# Map MySQL types to python types in a quick and dirty manner.
-def m2pType(name):
-    if name[:7] == 'varchar' or name[:8] == 'datetime':
-        return str
-    if name[:3] == 'int' or name[:8] == 'smallint' or name[:7] == 'tinyint':
-        return int
-    if name[:6] == 'double':
-        return float
-    print "Unknown type %s" % name
-    return str #?
-
-# Map MySQL field names to PV extensions.
-def fixName(name):
-    name = re.sub("::", "_", re.sub("_", ":", name))
-    if name[:3] == "PV:":
-        return name[2:]
-    else:
-        c = name.rindex(':')
-        return name[3:c] + '.' + name[c+1:]
-
-def createAlias(name):
-    name = re.sub("__", "_", name)
-    if name[:3] == "PV_":
-        return name[3:]
-    if name[:4] == "FLD_":
-        return name[4:]
-    else:
-        return name
+from pmgrobj import pmgrobj
 
 class dbPoll(threading.Thread):
-    CONFIG = 1
-    OBJECT = 2
-    GROUP  = 4
-    CFGGRP = 8
-    ALL    = 7
     
     def __init__(self, sig, interval):
         super(dbPoll, self).__init__()
-        try:
-            self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols')
-            cur = self.con.cursor(mdb.cursors.DictCursor)
-            cur.execute("call init_pcds()")
-        except:
-            pass
         self.sig = sig
         self.interval = interval
         self.daemon = True
-        self.do_db = True
 
     def run(self):
         last = 0
-        lastcfg = datetime.datetime(1900,1,1,0,0,1)
-        lastobj = datetime.datetime(1900,1,1,0,0,1)
-        lastgrp = datetime.datetime(1900,1,1,0,0,1)
-        first = True
-        cur = self.con.cursor(mdb.cursors.DictCursor)
         while True:
             now = time.time()
             looptime = now - last
@@ -95,39 +23,9 @@ class dbPoll(threading.Thread):
                 last = time.time()
             else:
                 last = now
-            if not self.do_db:
-                continue
-            try:
-                cur.execute("select * from ims_motor_update where tbl_name = 'config' or tbl_name = %s or tbl_name = %s",
-                            (param.params.hutch, param.params.hutch + "_grp"))
-                v = 0
-                for d in cur.fetchall():
-                    if d['tbl_name'] == 'config':
-                        if d['dt_updated'] != lastcfg:
-                            lastcfg = d['dt_updated']
-                            v = v | self.CONFIG
-                    elif d['tbl_name'] == param.params.hutch:
-                        if d['dt_updated'] != lastobj:
-                            lastobj = d['dt_updated']
-                            v = v | self.OBJECT
-                    else:
-                        if d['dt_updated'] != lastgrp:
-                            lastgrp = d['dt_updated']
-                            v = v | self.GROUP
-                if first:
-                    first = False
-                    v = self.ALL
-                if v != 0:
-                    self.sig.emit(v)
-                self.con.commit()
-            except:
-                pass
-
-    def start_transaction(self):
-        self.do_db = False
-
-    def end_transaction(self):
-        self.do_db = True
+            v = param.params.pobj.checkForUpdate()
+            if v != 0:
+                self.sig.emit(v)
 
 class db(QtCore.QObject):
     cfgchange     = QtCore.pyqtSignal()
@@ -136,644 +34,82 @@ class db(QtCore.QObject):
     readsig       = QtCore.pyqtSignal(int)
     cfgrenumber   = QtCore.pyqtSignal(int, int)
 
-    ORDER_MASK    = 0x0003ff
-    SETMUTEX_MASK = 0x000200
-    MUST_WRITE    = 0x000400
-    WRITE_ZERO    = 0x000800
-
-    unwanted = ['seq', 'owner', 'id', 'category', 'dt_created',
-                'date', 'dt_updated', 'name', 'action', 'rec_base']
-
     def __init__(self):
         super(db, self).__init__()
-        self.cfgs = None
-        self.objs = None
-        self.groupids = []
-        self.groups = {}
-        self.initsig = None
-        self.errorlist = []
-        self.in_trans = False
         self.nameedits = {}
-        self.cur = None
         self.errordialog = dialogs.errordialog()
-        try:
-            self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols');
-            self.cur = self.con.cursor(mdb.cursors.DictCursor)
-            self.cur.execute("call init_pcds()")
-        except:
-            pass
-        self.readFormat()
+        param.params.pobj = pmgrobj(param.params.table, param.params.hutch, param.params.debug)
+        self.readTables()
         self.readsig.connect(self.readTables)
         self.poll = dbPoll(self.readsig, 30)
-        self.con.commit()
-        self.dbgid = 42
-
-    def start(self, initsig):
-        self.initsig = initsig
         self.poll.start()
-
-    def readFormat(self):
-        self.cur.execute("describe %s" % param.params.table)
-        locfld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
-        locfld = locfld[9:]   # Skip the standard fields!
-
-        self.cur.execute("describe %s_cfg" % param.params.table)
-        fld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
-        fld = fld[7:]         # Skip the standard fields!
-        self.cfgfldcnt = len(fld)
-        self.objfldcnt = len(locfld) + self.cfgfldcnt
-
-        self.cur.execute("select * from %s_name_map" % param.params.table)
-        result = self.cur.fetchall()
-
-        alias = {}
-        colorder = {}
-        setorder = {}
-        tooltip = {}
-        enum = {}
-        mutex = {}
-        nullok = {}
-        unique = {}
-        mutex_sets = []
-        for i in range(16):
-            mutex_sets.append([])
-        for (f, t, nl, k) in locfld:
-            alias[f] = createAlias(f)
-            colorder[f] = 1000
-            setorder[f] = 0
-            mutex[f] = 0
-            tooltip[f] = ''
-            nullok[f] = ((nl == 'YES') or (t != str))
-            unique[f] = k == "UNI"
-        for (f, t, nl, k) in fld:
-            alias[f] = createAlias(f)
-            colorder[f] = 1000
-            setorder[f] = 0
-            mutex[f] = 0
-            tooltip[f] = ''
-            nullok[f] = ((nl == 'YES') or (t != str))
-            unique[f] = k == "UNI"
-
-        for d in result:
-            f = d['db_field_name']
-            if d['alias'] != "":
-                alias[f] = d['alias']
-            colorder[f] = d['col_order']
-            setorder[f] = d['set_order']
-            tooltip[f] = d['tooltip']
-            v = d['enum']
-            if v != "":
-                enum[f] = v.split('|')
-            v = d['mutex_mask']
-            if v != 0:
-                for i in range(16):
-                    if v & (1 << i) != 0:
-                        mutex_sets[i].append(f)
-        # We're assuming the bits are used from LSB to MSB, no gaps!
-        self.mutex_sets = [l for l in mutex_sets if l != []]
-        self.mutex_cnt = len(self.mutex_sets)
-        for d in result:
-            f = d['db_field_name']
-            mutex[f] = []
-            v = d['mutex_mask']
-            if v != 0:
-                for i in range(16):
-                    if v & (1 << i) != 0:
-                        mutex[f].append(i)
-
-        self.objflds = []
-        setflds = {}
-        setset = set([])
-        for (f, t, nl, k) in locfld:
-            n = fixName(f)
-            so = setorder[f] & self.ORDER_MASK
-            setset.add(so)
-            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
-                 'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
-                 'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
-                 'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
-                 'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
-                 'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': True}
-            try:
-                setflds[so].append(f)
-            except:
-                setflds[so] = [f]
-            try:
-                d['enum'] = enum[f]
-            except:
-                pass 
-            self.objflds.append(d)
-        for (f, t, nl, k) in fld:
-            n = fixName(f)
-            so = setorder[f] & self.ORDER_MASK
-            setset.add(so)
-            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
-                 'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
-                 'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
-                 'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
-                 'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
-                 'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': False}
-            try:
-                setflds[so].append(f)
-            except:
-                setflds[so] = [f]
-            try:
-                d['enum'] = enum[f]
-            except:
-                pass
-            self.objflds.append(d)
-        self.objflds.sort(key=lambda d: d['colorder'])   # New regime: col_order is manditory and unique!
-        self.fldmap = {}
-        self.colmap = {}
-        for i in range(len(self.objflds)):
-            d = self.objflds[i]
-            d['objidx'] = i
-            self.fldmap[d['fld']] = d
-            self.colmap[d['colorder']] = d
-        self.cfgflds = [d for d in self.objflds if d['obj'] == False]
-        for i in range(len(self.cfgflds)):
-            self.cfgflds[i]['cfgidx'] = i
-        setset = list(setset)
-        setset.sort()
-        self.setflds = [setflds[i] for i in setset]
-        self.con.commit()
-        
-    def readDB(self, kind):
-        if kind == dbPoll.CONFIG:
-            ext = "_cfg"
-        elif kind == dbPoll.OBJECT:
-            ext = " where owner = '%s' or id = 0" % param.params.hutch
-        elif kind == dbPoll.GROUP:
-            ext = "_grp where owner = '%s'" % param.params.hutch
-        else: # dbPoll.CFGGRP
-            ext = "_cfg_grp"
-        try:
-            self.cur.execute("select * from %s%s" % (param.params.table, ext))
-            return list(self.cur.fetchall())
-        except:
-            return []
-
-    def setObjNames(self):
-        for o in self.objs.values():
-            o['cfgname'] = self.getCfgName(o['config'])
-
-    def readTables(self, mask=dbPoll.ALL, nosig=False):
-        if self.in_trans:                    # This shouldn't happen.  But let's be paranoid.
-            return
-        if (mask & dbPoll.CONFIG) != 0:
-            cfgs = self.readDB(dbPoll.CONFIG)
-            if cfgs == []:
-                mask &= ~dbPoll.CONFIG
-            else:
-                map = {}
-                for d in cfgs:
-                    map[d['id']] = d
-                self.cfgs = map
-                for d in cfgs:
-                    r = d['config']
-                    if r == None:
-                        d['cfgname'] = ""
-                    else:
-                        d['cfgname'] = self.getCfgName(r)
-        if (mask & dbPoll.OBJECT) != 0:
-            objs = self.readDB(dbPoll.OBJECT)
-            if objs == []:
-                mask &= ~dbPoll.OBJECT
-            else:
-                objmap = {}
-                for o in objs:
-                    objmap[o['id']] = o
-                    save = {}
-                    save.update(o)
-                    o['_val'] = save
-                self.objs = objmap
-                if self.initsig == None:
-                    self.setObjNames()
-        if (mask & dbPoll.GROUP) != 0:
-            grps = self.readDB(dbPoll.GROUP)
-            cfggrp = self.readDB(dbPoll.CFGGRP)
-            if grps == []:
-                mask &= ~dbPoll.GROUP
-            else:
-                self.groupids   = []
-                self.groups     = {}
-                self.maxgrp     = 0
-                for g in grps:
-                    id = g['id']
-                    self.groupids.append(id)
-                    self.groups[id] = {}
-                    self.groups[id]['global'] = {'len' : 0, 'name' : g['name']}
-                for g in cfggrp:
-                    id = g['group_id']
-                    self.groups[id][g['dispseq']] = {'config': g['config_id'],
-                                                     'port': g['port_id']}
-                    sz = self.groups[id]['global']['len'] + 1
-                    self.groups[id]['global']['len'] = sz
-                    if sz > self.maxgrp:
-                        self.maxgrp = sz
-        if mask == 0:
-            return
-        if not nosig:
-            self.con.commit()
-            if (mask & dbPoll.CONFIG) != 0:
-                self.cfgchange.emit()
-            if (mask & dbPoll.OBJECT) != 0:
-                self.objchange.emit()
-            if (mask & dbPoll.GROUP) != 0:
-                self.grpchange.emit()
-        if self.initsig != None and self.cfgs != None and self.objs != None:
-            self.setObjNames()
-            self.initsig.emit()
-            self.initsig = None;
-
-    def getCfgName(self, id):
-        try:
-            return self.nameedits[id]
-        except:
-            return self.cfgs[id]['name']
 
     def setCfgName(self, id, name):
         try:
-            if self.cfgs[id]['name'] == name:
+            if param.params.pobj.cfgs[id]['name'] == name:
                 del self.nameedits[id]['name']
             else:
                 self.nameedits[id] = name
         except:
             self.nameedits[id] = name
 
-    def start_transaction(self):
-        self.in_trans = True
-        self.poll.start_transaction()
-        self.errorlist = []
-        self.cfgmap = {}
+    def getCfgName(self, id):
         try:
-            self.cur.execute("lock tables %s write, %s_cfg write, %s_grp write, %s_cfg_grp write" % \
-                             (param.params.table, param.params.table,
-                              param.params.table, param.params.table))
-            self.readTables(dbPoll.ALL, True)
-            return True
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
+            return self.nameedits[id]
+        except:
+            return param.params.pobj.cfgs[id]['name']
+
+    def setCfgNames(self, l):
+        for o in l:
+            c = o['config']
+            if c == None:
+                o['cfgname'] = ""
+            else:
+                o['cfgname'] = self.getCfgName(c)
+
+    def readTables(self, mask=None, nosig=False):
+        if mask == None:
+            mask=param.params.pobj.DB_ALL
+        mask = param.params.pobj.updateTables(mask)
+        if mask == 0:
+            return
+        if (mask & param.params.pobj.DB_CONFIG) != 0:
+            self.setCfgNames(param.params.pobj.cfgs.values())
+        if (mask & param.params.pobj.DB_OBJECT) != 0:
+            for o in param.params.pobj.objs.values():             # ObjModel will update this, so save the originals!
+                save = {}
+                save.update(o)
+                o['_val'] = save
+            self.setCfgNames(param.params.pobj.objs.values())
+        if not nosig:
+            if (mask & param.params.pobj.DB_CONFIG) != 0:
+                self.cfgchange.emit()
+            if (mask & param.params.pobj.DB_OBJECT) != 0:
+                self.objchange.emit()
+            if (mask & param.params.pobj.DB_GROUP) != 0:
+                self.grpchange.emit()
+
+    def start_transaction(self):
+        if not param.params.pobj.start_transaction():
             self.end_transaction()
             return False
-
-    def transaction_error(self, msg):
-        self.errorlist.append(_mysql_exceptions.Error(0, msg))
+        else:
+            return True
 
     def end_transaction(self):
-        if self.errorlist != []:
-            self.con.rollback()
-            if param.params.debug:
-                print "ROLLBACK!"
-        else:
-            self.con.commit()
-            if param.params.debug:
-                print "COMMIT!"
-        try:
-            self.cur.execute("unlock tables")
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-        self.in_trans = False
-        self.poll.end_transaction()
-        self.readTables()
-        if self.errorlist:
+        errorlist = param.params.pobj.end_transaction()
+        if errorlist != []:
             w = self.errordialog.ui.errorText
             w.setPlainText("")
-            for e in self.errorlist:
-                (n, m) = e.args
-                if n != 0:
-                    w.appendPlainText("Error %d: %s\n" % (n, m))
-                else:
-                    w.appendPlainText("Error: %s\n" % (m))
+            for e in errorlist:
+                w.appendPlainText(e)
             self.errordialog.exec_()
             return False
         else:
+            self.readTables()
             return True
 
-    def configDelete(self, idx):
-        try:
-            if self.cur.execute("select id from %s where config = %%s" % param.params.table, (idx,)) != 0:
-                self.errorlist.append(
-                    _mysql_exceptions.Error(0,
-                                            "Can't delete configuration %s, still in use." % self.getCfgName(idx)))
-                return
-            self.cur.execute("delete from %s_cfg where id = %%s" % param.params.table, (idx,))
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
- 
-    #
-    # Security?
-    #
-    def configInsert(self, d):
-        cmd = "insert %s_cfg (name, config, owner, mutex, dt_updated" % param.params.table
-        vals = d['_val']
-        for f in self.cfgflds:
-            fld = f['fld']
-            if vals[fld]:
-                cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, %s, now()"
-        vlist = [d['name']]
-        try:
-            vlist.append(self.cfgmap[d['config']])
-        except:
-            vlist.append(d['config'])
-        vlist.append(param.params.hutch)
-        vlist.append(d['mutex'])
-        for f in self.cfgflds:
-            fld = f['fld']
-            if vals[fld]:
-                cmd += ", %s"
-                vlist.append(d[fld])
-        cmd += ')'
-        if param.params.debug:
-            print cmd % tuple(vlist)
-            return
-        try:
-            self.cur.execute(cmd, tuple(vlist))
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-            return
-        try:
-            self.cur.execute("select last_insert_id()")
-            id = self.cur.fetchone().values()[0]
-            self.cfgmap[d['id']] = id
-            self.cfgrenumber.emit(d['id'], id)
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-            self.cfgmap[d['id']] = d['id']   # This is still mapping to a negative,
-                                             # just so we can go a little further.
-            
-    def configChange(self, d, e, ev):
-        idx = d['id']
-        cmd = "update %s_cfg set dt_updated = now()" % param.params.table
-        vlist = []
-        try:
-            v = e['name']
-            cmd += ", name = %s"
-            vlist.append(v)
-        except:
-            pass
-        try:
-            v = e['config']
-            cmd += ", config = %s"
-            try:
-                vlist.append(self.cfgmap[v])
-            except:
-                vlist.append(v)
-        except:
-            pass
-        try:
-            v = e['mutex']
-            cmd += ", mutex = %s"
-            vlist.append(v)
-        except:
-            pass
-        for f in self.cfgflds:
-            fld = f['fld']
-            try:
-                v = e[fld]           # We have a new value!
-            except:
-                try:
-                    if not ev[fld]:  # We want to inherit now!
-                        v = None
-                    else:          # We want to set the value to what we are inheriting!
-                        v = d[fld]
-                except:
-                    continue       # No change to this field!
-            cmd += ", %s = %%s" % fld
-            vlist.append(v)
-        cmd += ' where id = %s'
-        vlist.append(idx)
-        if param.params.debug:
-            print cmd % tuple(vlist)
-            return
-        try:
-            self.cur.execute(cmd, tuple(vlist))
-        except _mysql_exceptions.Error as err:
-            self.errorlist.append(err)
-
-    def objectDelete(self, idx):
-        try:
-            self.cur.execute("delete from %s where id = %%s" % param.params.table, (idx,))
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-
-    def objectInsert(self, d):
-        cmd = "insert %s (name, config, owner, rec_base, category, mutex, dt_created, dt_updated" % param.params.table
-        for f in self.objflds:
-            if f['obj'] == False:
-                continue
-            fld = f['fld']
-            cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, %s, %s, %s, now(), now()"
-        vlist = [d['name']]
-        try:
-            vlist.append(self.cfgmap[d['config']])
-        except:
-            vlist.append(d['config'])
-        vlist.append(param.params.hutch)
-        vlist.append(d['rec_base'])
-        vlist.append(d['category'])
-        vlist.append(d['mutex'])
-        for f in self.objflds:
-            if f['obj'] == False:
-                continue
-            fld = f['fld']
-            cmd += ", %s"
-            vlist.append(d[fld])
-        cmd += ')'
-        if param.params.debug:
-            print cmd % tuple(vlist)
-            return
-        try:
-            self.cur.execute(cmd, tuple(vlist))
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-
-    def objectChange(self, d, e):
-        idx = d['id']
-        cmd = "update %s set dt_updated = now()" % param.params.table
-        vlist = []
-        try:
-            v = e['name']
-            cmd += ", name = %s"
-            vlist.append(v)
-        except:
-            pass
-        try:
-            v = e['config']
-            cmd += ", config = %s"
-            try:
-                vlist.append(self.cfgmap[v])
-            except:
-                vlist.append(v)
-        except:
-            pass
-        try:
-            v = e['rec_base']
-            cmd += ", rec_base = %s"
-            vlist.append(v)
-        except:
-            pass
-        try:
-            v = e['category']
-            cmd += ", category = %s"
-            vlist.append(v)
-        except:
-            pass
-        try:
-            v = e['mutex']
-            cmd += ", mutex = %s"
-            vlist.append(v)
-        except:
-            pass
-        for f in self.objflds:
-            if f['obj'] == False:
-                continue
-            fld = f['fld']
-            try:
-                v = e[fld]           # We have a new value!
-            except:
-                continue
-            cmd += ", %s = %%s" % fld
-            vlist.append(v)
-        cmd += ' where id = %s'
-        vlist.append(idx)
-        if param.params.debug:
-            print cmd % tuple(vlist)
-            return
-        try:
-            self.cur.execute(cmd, tuple(vlist))
-        except _mysql_exceptions.Error as err:
-            self.errorlist.append(err)
-
-    def countInstance(self, chg):
-        if len(chg) == 0:
-            return 0
-        cmd = "select count(*) from %s where " % param.params.table
-        p = ""
-        for v in chg:
-            cmd += "%sconfig = %d" % (p, v)
-            p = " or "
-        try:
-            self.cur.execute(cmd)
-            return self.cur.fetchone().values()[0]
-        except _mysql_exceptions.Error as err:
-            self.errorlist.append(err)
-
-    def getLatest(self, f, v):
-        cmd = "select max(seq) from %s_log where %s = %%s and owner = %%s and action != 'delete' group by id" % \
-              (param.params.table, f)
-        if param.params.debug:
-            print cmd % (v, param.params.hutch)
-        try:
-            if self.cur.execute(cmd, (v, param.params.hutch)) != 1:
-                # Couldn't find it in our hutch, look in any!
-                cmd = "select max(seq) from %s_log where %s = %%s and action != 'delete' group by id" % \
-                      (param.params.table, f)
-                if param.params.debug:
-                    print cmd % (v)
-                self.cur.execute(cmd, (v))
-            seq = self.cur.fetchone().values()[0]
-            cmd = "select * from %s_log where seq = %%s" % (param.params.table)
-            if param.params.debug:
-                print cmd % seq
-            self.cur.execute(cmd, seq)
-            r = self.cur.fetchone()
-            try:
-                del r[f]
-            except:
-                pass
-            for f in self.unwanted:
-                try:
-                    del r[f]
-                except:
-                    pass
-            try:
-                # See the comment in ObjModel.setValue.  This is just bizarreness.
-                r['cfgname'] = r['config']
-                del r['config']
-            except:
-                pass
-            return r
-        except _mysql_exceptions.Error as err:
-            print err
-            return {}
-
-    def groupClear(self, id):
-        if param.params.debug:
-            print "delete from %s_cfg_grp where group_id = %d" % (param.params.table, id)
-            return True
-        try:
-            self.cur.execute("delete from %s_cfg_grp where group_id = %%s" % param.params.table, (id, ))
-            return True
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-            return False
-
-    def groupDelete(self, id):
-        if not self.groupClear(id):
-            return False
-        if param.params.debug:
-            print "delete from %s_grp where id = %d" % (param.params.table, id)
-            return True
-        try:
-            self.cur.execute("delete from %s_grp where id = %%s" % param.params.table, (id, ))
-            return True
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-            return False
-
-    def groupInsert(self, id, g):
-        origid = id
-        if id == 0:
-            if param.params.debug:
-                print "insert %s_grp (name, owner, dt_created, dt_updated) values (%s, %s, now(), now())" % \
-                      (param.params.table, g['global']['name'], param.params.hutch)
-                print "select last_insert_id()"
-                id = self.dbgid
-                self.dbgid += 1
-            else:
-                try:
-                    self.cur.execute("insert %s_grp (name, owner, dt_created, dt_updated) values (%%s, %%s, now(), now())" \
-                                     % param.params.table, (g['global']['name'], param.params.hutch))
-                    self.cur.execute("select last_insert_id()")
-                    id = self.cur.fetchone().values()[0]
-                except _mysql_exceptions.Error as e:
-                    self.errorlist.append(e)
-                    return False
-        else:
-            if not self.groupClear(id):
-                return False
-        keys = g.keys()
-        keys.remove('global')
-        keys.sort()
-        seq = 0
-        for k in keys:
-            if g[k]['config'] != 0:
-                try:
-                    cmd = "insert %s_cfg_grp (group_id, config_id, port_id, dispseq)" % param.params.table
-                    cmd += "values (%s, %s, %s, %s)"
-                    try:
-                        port = str(g[k]['port'])
-                    except:
-                        port = "0"
-                    if param.params.debug:
-                        print cmd % (str(id), str(g[k]['config']), port, str(seq))
-                    else:
-                        self.cur.execute(cmd, (id, g[k]['config'], port, seq))
-                    seq += 1
-                except _mysql_exceptions.Error as e:
-                    self.errorlist.append(e)
-                    return False
-        try:
-            cmd = "update %s_grp set dt_updated = now() where id = %%s" % param.params.table
-            if param.params.debug:
-                print cmd % id
-            else:
-                self.cur.execute(cmd, id)
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-            return False
-            
-        return True
+    def cfgrenumber(self, old, new):
+        param.params.cfgmodel.cfgrenumber(old, new)
+        param.params.objmodel.cfgrenumber(old, new)
+        param.params.grpmodel.cfgrenumber(old, new)

@@ -37,7 +37,7 @@ class CfgModel(QtGui.QStandardItemModel):
         self.connect(param.params.ui.treeWidget, QtCore.SIGNAL("itemExpanded(QTreeWidgetItem *)"),
                      self.treeExpand)
         # Setup headers
-        self.colcnt = param.params.db.cfgfldcnt + self.coff
+        self.colcnt = len(param.params.pobj.cfgflds) + self.coff
         self.setColumnCount(self.colcnt)
         font = QtGui.QFont()
         font.setBold(True)
@@ -46,8 +46,8 @@ class CfgModel(QtGui.QStandardItemModel):
                 i = QtGui.QStandardItem(self.cname[c])
                 i.setToolTip(self.ctips[c])
             else:
-                i = QtGui.QStandardItem(param.params.db.cfgflds[c-self.coff]['alias'])
-                desc = param.params.db.cfgflds[c-self.coff]['tooltip']
+                i = QtGui.QStandardItem(param.params.pobj.cfgflds[c-self.coff]['alias'])
+                desc = param.params.pobj.cfgflds[c-self.coff]['tooltip']
                 if desc != "":
                     i.setToolTip(desc)
             self.setHorizontalHeaderItem(c, i)
@@ -61,7 +61,7 @@ class CfgModel(QtGui.QStandardItemModel):
         param.params.ui.treeWidget.expandItem(self.tree[self.curidx]['item'])
 
     def createStatus(self):
-        for d in param.params.db.cfgs.values():
+        for d in param.params.pobj.cfgs.values():
             try:
                 v = self.status[d['id']]
             except:
@@ -101,7 +101,7 @@ class CfgModel(QtGui.QStandardItemModel):
     
     def haveNewName(self, idx, name):
         name = str(name)
-        utils.fixName(param.params.db.cfgs.values(), idx, name)
+        utils.fixName(param.params.pobj.cfgs.values(), idx, name)
         utils.fixName(self.cfgs.values(), idx, name)
         utils.fixName(self.edits.values(), idx, name)
         for r in range(len(self.path)):
@@ -112,7 +112,7 @@ class CfgModel(QtGui.QStandardItemModel):
                     self.dataChanged.emit(index, index)
             except:
                 if i >= 0:
-                    d = param.params.db.cfgs[i]
+                    d = param.params.pobj.cfgs[i]
                 else:
                     d = self.cfgs[i]
                 if d['config'] == idx:
@@ -125,7 +125,7 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def buildtree(self):
         t = {}
-        for d in param.params.db.cfgs.values():
+        for d in param.params.pobj.cfgs.values():
             idx = d['id']
             t[idx] = {'name': d['name'], 'link': d['config'], 'children' : []}
             try:
@@ -203,12 +203,12 @@ class CfgModel(QtGui.QStandardItemModel):
         if c < self.coff:
             f = self.cfld[c]
         else:
-            f = param.params.db.cfgflds[c-self.coff]['fld']
+            f = param.params.pobj.cfgflds[c-self.coff]['fld']
         return (idx, f)
 
     def db2index(self, idx, f):
         try:
-            c = param.params.db.fldmap[f]['cfgidx'] + self.coff
+            c = param.params.pobj.fldmap[f]['cfgidx'] + self.coff
             r = self.path.index(idx)
             return self.index(r, c)
         except:
@@ -218,7 +218,7 @@ class CfgModel(QtGui.QStandardItemModel):
         if idx == None or idx in loop:
             return {}
         if idx >= 0:
-            d = param.params.db.cfgs[idx]
+            d = param.params.pobj.cfgs[idx]
         else:
             d = self.cfgs[idx]
         try:
@@ -240,7 +240,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 pcolor = vals['_color']
                 pmutex = vals['curmutex']
                 mutex = ""
-                for i in range(param.params.db.mutex_cnt):
+                for i in range(len(param.params.pobj.mutex_sets)):
                     if v[i] != ' ':
                         mutex += v[i]
                     else:
@@ -252,7 +252,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 if k[:3] != 'PV_' and k[:4] != 'FLD_' and not k in self.cfld:
                     continue
                 if v == None and k != "owner":
-                    haveval[k] = chr(param.params.db.fldmap[k]['colorder']+0x40) in d['curmutex']
+                    haveval[k] = chr(param.params.pobj.fldmap[k]['colorder']+0x40) in d['curmutex']
                     color[k] = param.params.almond
                 else:
                     haveval[k] = True
@@ -329,7 +329,7 @@ class CfgModel(QtGui.QStandardItemModel):
         elif role == QtCore.Qt.BackgroundRole:
             if f in self.cfld:
                 return QtCore.QVariant(param.params.white)
-            if chr(param.params.db.fldmap[f]['colorder']+0x40) in d['curmutex']:
+            if chr(param.params.pobj.fldmap[f]['colorder']+0x40) in d['curmutex']:
                 return QtCore.QVariant(param.params.almond)
             else:
                 return QtCore.QVariant(param.params.white)
@@ -423,7 +423,7 @@ class CfgModel(QtGui.QStandardItemModel):
                     chcolor = param.params.purple
         c = index.column()
         try:
-            cm = chr(param.params.db.fldmap[f]['colorder']+0x40)
+            cm = chr(param.params.pobj.fldmap[f]['colorder']+0x40)
             if (d['_color'][f] != param.params.blue and
                 d['_color'][f] != param.params.purple and
                 cm in d['curmutex']):
@@ -448,7 +448,7 @@ class CfgModel(QtGui.QStandardItemModel):
     #
     def promote(self, idx, f, setidx, curmutex):
         cfg = self.getCfg(idx)
-        mlist = param.params.db.mutex_sets[setidx]
+        mlist = param.params.pobj.mutex_sets[setidx]
         if len(mlist) == 2:
             # No need to prompt, the other has to be the derived value!
             if mlist[0] == f:
@@ -460,7 +460,7 @@ class CfgModel(QtGui.QStandardItemModel):
             d.reset()
             for fld in mlist:
                 if fld != f:
-                    d.addValue(param.params.db.fldmap[fld]['alias'], fld)
+                    d.addValue(param.params.pobj.fldmap[fld]['alias'], fld)
             d.exec_()
             # The user *must* give a value.  I'll take whatever is checked even if the
             # window was just closed!!
@@ -482,7 +482,7 @@ class CfgModel(QtGui.QStandardItemModel):
                         self.edits[idx][fld] = None
                     except:
                         self.edits[idx] = {fld: None}
-        cm = chr(param.params.db.fldmap[derived]['colorder']+0x40)
+        cm = chr(param.params.pobj.fldmap[derived]['colorder']+0x40)
         if cm in curmutex:
             curmutex = curmutex[:setidx] + ' ' + curmutex[setidx+1:]
             curmutex = self.promote(idx, derived, curmutex.index(cm), curmutex)
@@ -498,7 +498,7 @@ class CfgModel(QtGui.QStandardItemModel):
             self.edits[idx] = {'mutex': e}
         for fld in mlist:
             if fld != f:
-                cnew = param.params.db.fldmap[fld]['cfgidx'] + self.coff
+                cnew = param.params.pobj.fldmap[fld]['cfgidx'] + self.coff
                 self.fixChildren(idx, fld, cnew, self.getval(idx, fld), param.params.blue, setidx, cm)
         return curmutex
 
@@ -583,7 +583,7 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def ownTest(self, index):
         idx = self.path[index.row()]
-        return idx < 0 or param.params.db.cfgs[idx]['owner'] == param.params.hutch
+        return idx < 0 or param.params.pobj.cfgs[idx]['owner'] == param.params.hutch
         
     def setupContextMenus(self, table):
         menu = utils.MyContextMenu()
@@ -622,7 +622,7 @@ class CfgModel(QtGui.QStandardItemModel):
             vals = sibling
         color = {}
         haveval = {}
-        for f in param.params.db.cfgflds:
+        for f in param.params.pobj.cfgflds:
             fld = f['fld']
             d[fld] = vals[fld]
             if sibling == None:
@@ -645,7 +645,7 @@ class CfgModel(QtGui.QStandardItemModel):
         d['_val'] = haveval
         d['curmutex'] = vals['curmutex']
         if sibling == None:
-            d['mutex'] = param.params.db.mutex_cnt*' '
+            d['mutex'] = len(param.params.pobj.mutex_sets)*' '
         elif useval:
             d['mutex'] = vals['curmutex']
         else:
@@ -676,14 +676,14 @@ class CfgModel(QtGui.QStandardItemModel):
     def deleteallval(self, table, index):
         (idx, f) = self.index2db(index)
         self.deleteval(table, index)
-        m = param.params.db.fldmap[f]['mutex']
+        m = param.params.pobj.fldmap[f]['mutex']
         for mi in m:
-            for fld in param.params.db.mutex_sets[mi]:
+            for fld in param.params.pobj.mutex_sets[mi]:
                 if self.hasValue(True, idx, fld):
                     self.deleteval(None, idx, fld)    # Everyone needs to have a value!
-        if not param.params.db.fldmap[f]['setmutex']:
+        if not param.params.pobj.fldmap[f]['setmutex']:
             return
-        for s in param.params.db.setflds:
+        for s in param.params.pobj.setflds:
             if f in s:
                 for fld in s:
                     if self.hasValue(True, idx, fld):
@@ -742,17 +742,17 @@ class CfgModel(QtGui.QStandardItemModel):
         (idx, f) = self.index2db(index)
         self.createval(table, index)
         try:
-            m = param.params.db.fldmap[f]['mutex']
+            m = param.params.pobj.fldmap[f]['mutex']
         except:
             return   # Some fields (like name) don't actually have a fldmap entry.
                      # But these don't have mutex/setmutex fields either.
         for mi in m:
-            for fld in param.params.db.mutex_sets[mi]:
+            for fld in param.params.pobj.mutex_sets[mi]:
                 if not self.hasValue(True, idx, fld):
                     self.createval(None, idx, fld)
-        if not param.params.db.fldmap[f]['setmutex']:
+        if not param.params.pobj.fldmap[f]['setmutex']:
             return
-        for s in param.params.db.setflds:
+        for s in param.params.pobj.setflds:
             if f in s:
                 for fld in s:
                     if not self.hasValue(True, idx, fld):
@@ -798,8 +798,8 @@ class CfgModel(QtGui.QStandardItemModel):
         return False
 
     def checkSetMutex(self, d, e):
-        for s in param.params.db.setflds:
-            f = param.params.db.fldmap[s[0]]
+        for s in param.params.pobj.setflds:
+            f = param.params.pobj.fldmap[s[0]]
             if not f['setmutex'] or f['obj']:
                 continue
             try:
@@ -814,7 +814,7 @@ class CfgModel(QtGui.QStandardItemModel):
                     v = d[f]
                 if v != None and not param.equal(v, z):
                     if v in vlist:
-                        return [param.params.db.fldmap[f]['alias'] for f in s]
+                        return [param.params.pobj.fldmap[f]['alias'] for f in s]
                     else:
                         vlist.append(v)
         return []
@@ -830,14 +830,14 @@ class CfgModel(QtGui.QStandardItemModel):
     def commit(self, idx, mustdo):
         d = self.getCfg(idx)
         if not utils.permission(d['owner'], d['security']):
-            param.params.db.transaction_error("Not Authorized!")
+            param.params.pobj.transaction_error("Not Authorized!")
             return True
         try:
             name = self.edits[idx]['name']
         except:
             name = d['name']
         if name[0:10] == "NewConfig-":
-            param.params.db.transaction_error("Object cannot be named %s!" % name)
+            param.params.pobj.transaction_error("Object cannot be named %s!" % name)
             return
         if 'D' in self.status[idx]:
             # We can process the delete only if *no one* is using this!
@@ -845,14 +845,14 @@ class CfgModel(QtGui.QStandardItemModel):
             # will check the objects.
             if mustdo:
                 if self.tree[idx]['children'] != []:
-                    param.params.db.transaction_error("Configuration to be deleted has children!")
+                    param.params.pobj.transaction_error("Configuration to be deleted has children!")
                 else:
-                    param.params.db.configDelete(idx)
+                    param.params.pobj.configDelete(idx)
             else:
                 if self.hasChildren(idx):
-                    param.params.db.transaction_error("Configuration to be deleted has children!")
+                    param.params.pobj.transaction_error("Configuration to be deleted has children!")
                 else:
-                    param.params.db.configDelete(idx)
+                    param.params.pobj.configDelete(idx)
             return True
         else:
             # When is it OK to commit this?  If:
@@ -867,24 +867,24 @@ class CfgModel(QtGui.QStandardItemModel):
                 e = {}
             s = self.checkSetMutex(d, e)
             if s != []:
-                param.params.db.transaction_error("Config %s does not have unique values for %s!" %
+                param.params.pobj.transaction_error("Config %s does not have unique values for %s!" %
                                                   (name, str(s)))
                 return True
-            for f in param.params.db.cfgflds:
+            for f in param.params.pobj.cfgflds:
                 if not f['nullok'] and d[f['fld']] == "":
-                    param.params.db.transaction_error("Field %s cannot be NULL!" % f['fld'])
+                    param.params.pobj.transaction_error("Field %s cannot be NULL!" % f['fld'])
                     return True
                 if f['unique'] and not d['_val'][f['fld']]:
-                    param.params.db.transaction_error("Field %s must be unique and cannot be inherited!" % f['fld'])
+                    param.params.pobj.transaction_error("Field %s must be unique and cannot be inherited!" % f['fld'])
                     return True
             try:
                 p = self.edits[idx]['config']
             except:
                 p = d['config']
             while p != None:
-                if 'N' in self.status[p] and not p in param.params.db.cfgmap.keys():
+                if 'N' in self.status[p] and not p in param.params.pobj.cfgmap.keys():
                     if mustdo:
-                        param.params.db.transaction_error("Config %s has new uncommitted ancestors!" %
+                        param.params.pobj.transaction_error("Config %s has new uncommitted ancestors!" %
                                                           param.params.db.getCfgName(idx))
                         return True
                     else:
@@ -899,13 +899,33 @@ class CfgModel(QtGui.QStandardItemModel):
                     except:
                         p = self.getCfg(p)['config']
                 if p == idx:
-                    return param.params.db.transaction_error("Config change for %s creates a dependency loop!" %
+                    return param.params.pobj.transaction_error("Config change for %s creates a dependency loop!" %
                                                              param.params.db.getCfgName(idx))
                     return True
             if 'N' in self.status[idx]:
-                param.params.db.configInsert(d)
+                newid = param.params.pobj.configInsert(d)
+                if newid != None:
+                    param.params.pobj.cfgrenumber(idx, newid)
             else:
-                param.params.db.configChange(d, e, self.editval[idx])
+                ee = {}
+                for fld in ['name', 'config', 'mutex']:
+                    try:
+                        ee[fld] = e[fld]
+                    except:
+                        pass
+                for f in param.params.pobj.cfgflds:
+                    fld = f['fld']
+                    try:
+                        ee[fld] = e[fld]           # We have a new value!
+                    except:
+                        try:
+                            if not self.editval[idx][fld]:  # We want to inherit now!
+                                ee[fld] = None
+                            else:                  # The new value is what we are already inheriting!
+                                ee[fld] = d[fld]
+                        except:
+                            pass                   # No change!
+                param.params.pobj.configChange(idx, ee)
             return True
 
     # Commit all of the changes.  Again, we assume we're in a transaction
@@ -929,7 +949,7 @@ class CfgModel(QtGui.QStandardItemModel):
                     done = done.union(set([idx]))
             todo = todo.difference(done)
             if done == set([]):
-                param.params.db.transaction_error("Configuration commit is not making progress!")
+                param.params.pobj.transaction_error("Configuration commit is not making progress!")
                 return
 
     def commitone(self, table, index):
@@ -980,7 +1000,7 @@ class CfgModel(QtGui.QStandardItemModel):
             c = self.getCfg(cidx)
             v = self.getval(cidx, "mutex")
             mutex = ""
-            for i in range(param.params.db.mutex_cnt):
+            for i in range(len(param.params.pobj.mutex_sets)):
                 if v[i] != ' ':
                     mutex += v[i]
                 else:
@@ -988,7 +1008,7 @@ class CfgModel(QtGui.QStandardItemModel):
             for (k, v) in c['_val'].items():
                 if k in self.cfld:
                     continue
-                if v == False or chr(param.params.db.fldmap[k]['colorder']+0x40) in mutex:
+                if v == False or chr(param.params.pobj.fldmap[k]['colorder']+0x40) in mutex:
                     c[k] = None
             del c['_color']
             c = self.getCfg(cidx)
@@ -1009,9 +1029,9 @@ class CfgModel(QtGui.QStandardItemModel):
             self.status[idx] = ""
             if idx < 0:
                 del self.cfgs[idx]
-                self.renumberCfg(idx, param.params.db.cfgmap[idx])
+                self.renumberCfg(idx, param.params.pobj.cfgmap[idx])
                 if idx == self.curidx:
-                    self.setCurIdx(param.params.db.cfgmap[idx])
+                    self.setCurIdx(param.params.pobj.cfgmap[idx])
         else:
             self.edits = {}
             self.editval = {}
@@ -1022,7 +1042,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 else:
                     self.status[k] = ""
             if self.curidx < 0:
-                self.curidx = param.params.db.cfgmap[self.curidx]
+                self.curidx = param.params.pobj.cfgmap[self.curidx]
         self.buildtree()
         try:
             param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
@@ -1057,7 +1077,7 @@ class CfgModel(QtGui.QStandardItemModel):
             if d['config'] == old:
                 d['config'] = new
                 d['cfgname'] = name
-        for d in param.params.db.cfgs.values():
+        for d in param.params.pobj.cfgs.values():
             if d['config'] == old:
                 d['config'] = new
                 d['cfgname'] = name
@@ -1065,7 +1085,7 @@ class CfgModel(QtGui.QStandardItemModel):
             if d['config'] == old:
                 d['config'] = new
                 d['cfgname'] = name
-        for d in param.params.db.objs.values():
+        for d in param.params.pobj.objs.values():
             if d['config'] == old:
                 d['config'] = new
                 d['cfgname'] = name
@@ -1130,7 +1150,7 @@ class CfgModel(QtGui.QStandardItemModel):
             idx = self.path[row]
             try:
                 if (col != self.cfgcol and col != self.statcol and col != self.owncol and
-                    (idx < 0 or param.params.db.cfgs[idx]['owner'] == param.params.hutch)):
+                    (idx < 0 or param.params.pobj.cfgs[idx]['owner'] == param.params.hutch)):
                     flags = flags | QtCore.Qt.ItemIsEditable
             except:
                 pass # We seem to get here too fast sometimes after a delete, so just forget it.
@@ -1185,7 +1205,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 chg[idx] = set([idx])
             chgall = chgall.union(chg[idx])
         nc = len(chgall)
-        no = param.params.db.countInstance(chgall)
+        no = param.params.pobj.countInstance(chgall)
         d = param.params.confirmdialog
         if nc == 0 and no == 0:
             return True
@@ -1198,6 +1218,18 @@ class CfgModel(QtGui.QStandardItemModel):
         if c < self.coff:
             return str
         try:
-            return param.params.db.cfgflds[c - self.coff]['enum']
+            return param.params.pobj.cfgflds[c - self.coff]['enum']
         except:
-            return param.params.db.cfgflds[c - self.coff]['type']
+            return param.params.pobj.cfgflds[c - self.coff]['type']
+
+    def cfgrenumber(self, old, new):
+        for d in self.edits.values():
+            try:
+                if d['config'] == old:
+                    d['config'] = new
+            except:
+                pass
+        for d in self.objs.values():
+            if d['config'] == old:
+                d['config'] = new
+
