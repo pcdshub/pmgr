@@ -8,15 +8,18 @@ import pyca
 from copy import deepcopy
 
 class GrpModel(QtGui.QStandardItemModel):
-    cname   = ["Status", "Group Name"]
-    ctips   = ["?", "?"]
+    cname   = ["Status", "Active", "Group Name"]
+    cfld    = ["status", "active", "name"]
+    ctips   = ["?", "?", "?"]
     colcnt  = len(cname)
     coff    = len(cname)
     statcol = 0
-    namecol = 1
-    mutable = 2 # The first non-frozen column
+    actvcol = 1
+    namecol = 2
+    mutable = 3 # The first non-frozen column
     roles   = [QtCore.Qt.DisplayRole, QtCore.Qt.EditRole, QtCore.Qt.ForegroundRole,
-               QtCore.Qt.BackgroundRole, QtCore.Qt.ToolTipRole, QtCore.Qt.FontRole]
+               QtCore.Qt.BackgroundRole, QtCore.Qt.ToolTipRole, QtCore.Qt.FontRole,
+               QtCore.Qt.CheckStateRole]
 
     def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
@@ -62,12 +65,9 @@ class GrpModel(QtGui.QStandardItemModel):
         c = index.column()
         id = self.rowmap[r/2]
         if r % 2 == 0:                 # Name and configurations
-            if c == self.statcol:
+            if c < self.coff:
                 seq = 'global'
-                f = 'status'
-            elif c == self.namecol:
-                seq = 'global'
-                f = 'name'
+                f = self.cfld[c]
             else:
                 seq = c - self.coff
                 f = 'config'
@@ -113,6 +113,16 @@ class GrpModel(QtGui.QStandardItemModel):
             v = self.getGroup(index)[seq][f]
         except:
             return QtCore.QVariant()
+        if role == QtCore.Qt.CheckStateRole:
+            if f == 'active':
+                if v == 0:
+                    return QtCore.Qt.Unchecked
+                else:
+                    return QtCore.Qt.Checked
+            else:
+                return QtCore.QVariant()
+        if f == 'active':
+            return QtCore.QVariant()
         if f == 'config':
             v = param.params.db.getCfgName(v)
             if v == "DEFAULT":
@@ -124,7 +134,7 @@ class GrpModel(QtGui.QStandardItemModel):
         return QtCore.QVariant(v)
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
-        if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
+        if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and role != QtCore.Qt.CheckStateRole:
             return QtGui.QStandardItemModel.setData(self, index, value, role)
         t = value.type()
         if t == QtCore.QMetaType.QString:
@@ -143,6 +153,11 @@ class GrpModel(QtGui.QStandardItemModel):
             v = param.params.objmodel.getObjId(v)
         if v == "DEFAULT":
             v = ""
+        if f == 'active':
+            if v == QtCore.Qt.Checked:
+                v = 1
+            else:
+                v = 0
         if id < 0:                   # A new, unsaved group can be freely edited.
             try:
                 ov = self.newgrps[id][seq][f]
@@ -215,6 +230,8 @@ class GrpModel(QtGui.QStandardItemModel):
                         self.dataChanged.emit(self.index(0, nm + self.coff),
                                               self.index(self.rowCount()-1, nm + self.coff))
         self.dataChanged.emit(index, index)
+        idx = self.index(index.row() & ~1, self.statcol)
+        self.dataChanged.emit(idx, idx)
         return True
 
     def flags(self, index):
@@ -226,9 +243,11 @@ class GrpModel(QtGui.QStandardItemModel):
         if r % 2 == 0:          # Name, Status, and Configurations.
             if c == self.namecol:
                 flags = flags | QtCore.Qt.ItemIsEditable
-            # Selecting a configuration requires calling up a dialog!
+            elif c == self.actvcol:
+                flags = flags | QtCore.Qt.ItemIsUserCheckable
         else:                   # Ports.
             try:
+                # Selecting a configuration requires calling up a dialog!
                 if self.getGroup(index)[c - self.coff]['config'] != 0:
                     flags = flags | QtCore.Qt.ItemIsEditable
             except:
@@ -292,7 +311,7 @@ class GrpModel(QtGui.QStandardItemModel):
         id = self.nextid
         self.nextid -= 1
         name = "New-Group%d" % id
-        g = {"global": {"len": 0, "name": name}}
+        g = {"global": {"len": 0, "name": name, "active": 0}}
         self.newgrps[id] = g
         self.setLength(id, 0)
         self.status[id] = "N"
@@ -451,30 +470,57 @@ class GrpModel(QtGui.QStandardItemModel):
 
     def applyOK(self, table, index):
         id = self.getGroupId(index)
-        return not "D" in self.status[id]
+        g = self.getGroup(index)
+        return not "D" in self.status[id] and g['global']['active'] == 1
 
-    def applyone(self, table, index):
-        id = self.getGroupId(index)
-        g = self.getGroup(index) # If we commit, the index might not be valid, so better get the values now.
-        if id < 0 or "M" in self.status[id]:
-            if not self.commitone(table, index):
-                return
-        ports = []
+    def checkPorts(self, g, ports=[]):
         for d in g.values():
             try:
                 p = d['port']
                 if p != 0 and p in ports:
-                    param.params.pobj.transaction_error("Group has multiple ports named %s!" %
-                                                      param.params.pobj.objmodel.getObjName(p))
-                    return
-                ports.append(p)
+                    param.params.pobj.transaction_error("Multiple ports named %s in use!" %
+                                                        param.params.objmodel.getObjName(p))
+                else:
+                    ports.append(p)
             except:
                 pass   # Must be 'global' dictionary!
+
+    def apply(self, g):
         for d in g.values():
             try:
-                param.params.objmodel.setCfg(d['port'], d['config'])
+                if d['port'] != 0:
+                    param.params.objmodel.setCfg(d['port'], d['config'])
             except:
                 pass # Must be 'global'!
+
+    def applyone(self, table, index):
+        param.params.db.start_transaction()
+        id = self.getGroupId(index)
+        g = self.getGroup(index) # If we commit, the index might not be valid, so better get the values now.
+        if id < 0 or "M" in self.status[id]:
+            self.commit(id)
+        self.checkPorts(g)
+        if not param.params.db.end_transaction():
+            return
+        self.apply(g)
+
+    def applyall(self, table, index):
+        param.params.db.start_transaction()
+        self.commitall()
+        if not param.params.db.end_transaction():
+            return
+        param.params.db.start_transaction()
+        ports = []
+        for id in self.rowmap:
+            g = self.getGroup(id)
+            if g['global']['active'] == 1:
+                self.checkPorts(g, ports)
+        if not param.params.db.end_transaction():
+            return
+        for id in self.rowmap:
+            g = self.getGroup(id)
+            if g['global']['active'] == 1:
+                self.apply(g)
 
     def revertOK(self, table, index):
         id = self.getGroupId(index)
@@ -514,8 +560,9 @@ class GrpModel(QtGui.QStandardItemModel):
         menu.addAction("Select new configuration", self.selectCfg, self.selectCfgOK)
         menu.addAction("Add new configuration", self.selectCfg, self.addCfgOK)
         menu.addAction("Commit this group", self.commitone, self.commitOK)
-        menu.addAction("Apply this group", self.applyone, self.applyOK)
         menu.addAction("Revert this group", self.revertone, self.revertOK)
+        menu.addAction("Apply this group", self.applyone, self.applyOK)
+        menu.addAction("Apply all", self.applyall)
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table, [], False)
 
@@ -523,16 +570,15 @@ class GrpModel(QtGui.QStandardItemModel):
         r = index.row()
         c = index.column()
         if r % 2 == 0:          # Name and Configurations.
-            return str          # The name is a string, the rest aren't editable!
+            if c == self.namecol:
+                return str          # The name is a string.
+            if c == self.actvcol:
+                return int          # This needs to become a checkbox!
         else:                   # Ports.
             l = param.params.objmodel.getObjList(['Manual'])
             if l[0] == "DEFAULT":
                 l[0] = ""
             return l
-
-    def doDebug(self):
-        print self.edits
-        param.params.debug = not param.params.debug
 
     def cfgrenumber(self, old, new):
         for d in self.edits.values():
@@ -549,3 +595,7 @@ class GrpModel(QtGui.QStandardItemModel):
                         dd['config'] = new
                 except:
                     pass
+
+    def doDebug(self):
+        print self.edits
+        param.params.debug = not param.params.debug

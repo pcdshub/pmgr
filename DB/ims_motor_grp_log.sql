@@ -10,6 +10,7 @@ CREATE TABLE `ims_motor_grp_log` (
   `id` int(11),
   `name` varchar(30),
   `owner` varchar(10),
+  `active` tinyint(3),
   `dt_created` datetime,
   `dt_updated` datetime,
   PRIMARY KEY (`seq`),

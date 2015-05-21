@@ -7,6 +7,7 @@ CREATE TABLE `ims_motor_grp` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(30) NOT NULL,
   `owner` varchar(10) DEFAULT NULL,
+  `active` tinyint(3),
   `dt_created` datetime NOT NULL,
   `dt_updated` datetime NOT NULL,
   PRIMARY KEY (`id`)

@@ -10,8 +10,7 @@ class ObjModel(QtGui.QStandardItemModel):
     cname   = ["Status", "Name", "Config", "PV Base", "Owner", "Config Mode"]
     cfld    = ["status", "name", "cfgname", "rec_base", "owner", "category"]
     ctips   = ["C = All PVs Connected\nD = Deleted\nM = Modified\nN = New\nX = Inconsistent",
-               "Object Name", "Configuration Name", "PV Base Name", "Owner",
-               "Protected = Fixed, no modification without auth.\nManual = Fixed, all can change.\nAuto = Can be dynamically reconfigured."]
+               "Object Name", "Configuration Name", "PV Base Name", "Owner", None]
     coff    = len(cname)
     statcol = 0
     namecol = 1
@@ -43,7 +42,8 @@ class ObjModel(QtGui.QStandardItemModel):
         for c in range(self.colcnt):
             if c < self.coff:
                 i = QtGui.QStandardItem(self.cname[c])
-                i.setToolTip(self.ctips[c])
+                if self.ctips[c] != None:
+                    i.setToolTip(self.ctips[c])
             else:
                 i = QtGui.QStandardItem(param.params.pobj.objflds[c-self.coff]['alias'])
                 desc = param.params.pobj.objflds[c-self.coff]['tooltip']
@@ -561,14 +561,14 @@ class ObjModel(QtGui.QStandardItemModel):
         menu.addAction("Revert this object", self.revertone,
                        lambda table, index: self.checkStatus(index, 'M'))
         menu.addAction("Auto config this object", self.autoone, self.testAuto)
+        menu.addAction("Auto config all", self.autoall)
         table.addContextMenu(menu)
-        colmgr.addColumnManagerMenu(table, [("Auto config all by column", self.autoconfig)])
+        colmgr.addColumnManagerMenu(table, [], False)
 
     def testAuto(self, table, index):
         try:
-            return (index.column() >= self.coff and self.checkStatus(index, 'C') and
-                    self.getCfg(self.rowmap[index.row()], 'category', True) == 'Auto' and
-                    param.params.pobj.objflds[index.column() - self.coff]['obj'])
+            idx = self.rowmap[index.row()]
+            return self.getCfg(idx, 'category', True) == 'Auto' and 'C' in self.getStatus(idx)
         except:
             return False
     
@@ -965,33 +965,22 @@ class ObjModel(QtGui.QStandardItemModel):
             self.doShow()
             self.doTrack()
 
-    def doAuto(self, idx, f):
-        d = param.params.pobj.getLatest(f, self.getObj(idx)[f])
+    def doAuto(self, idx):
+        d = param.params.pobj.getAutoCfg(self.getObj(idx))
         for (k, v) in d.iteritems():
             if v != None:
                 self.setValue(idx, k, v)
 
     def autoone(self, table, index):
         (idx, f) = self.index2db(index)
-        self.doAuto(idx, f)
+        self.doAuto(idx)
         self.dataChanged.emit(self.index(index.row(), 0), self.index(index.row(), self.colcnt - 1))
 
-    #
-    # Sigh.  Our column manager doesn't support conditional menu items.
-    # So we need to make sure that the header position is valid before
-    # we start doing anything.
-    #
-    def autoconfig(self, table, index):
-        if index < self.coff:
-            return
-        d = param.params.pobj.objflds[index - self.coff]
-        if not d['obj']:
-            return
-        f = d['fld']
+    def autoall(self, table, index):
         for r in range(len(self.rowmap)):
             idx = self.rowmap[r]
             if self.getCfg(idx, 'category', True) == "Auto" and 'C' in self.getStatus(idx):
-                self.doAuto(idx, f)
+                self.doAuto(idx)
                 self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt - 1))
 
     def getObjName(self, idx):

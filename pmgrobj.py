@@ -155,6 +155,13 @@ def createAlias(name):
 #     groupUpdate(idx, d)
 #         - Change an existing configuration group. d is the same as the groupInsert
 #           dictionary.
+#     countInstance(cfglist)
+#         - Return a count of objects that depend on one of the listed configurations.
+#     getAutoCfg(d)
+#         - Given an object dictionary, find and return the most recently used
+#           configuration that has the autoconfig field set to a matching value.
+#           First look in this hutch, then in any hutch.  If none is found, return
+#           an empty dictionary.
 
 class pmgrobj(object):
     DB_CONFIG = 1
@@ -167,6 +174,7 @@ class pmgrobj(object):
     SETMUTEX_MASK = 0x000200
     MUST_WRITE    = 0x000400
     WRITE_ZERO    = 0x000800
+    AUTO_CONFIG   = 0x001000
 
     unwanted = ['seq', 'owner', 'id', 'category', 'dt_created',
                 'date', 'dt_updated', 'name', 'action', 'rec_base']
@@ -180,6 +188,7 @@ class pmgrobj(object):
         self.groupids = []
         self.groups = {}
         self.errorlist = []
+        self.autoconfig = None
         self.in_trans = False
         self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols')
         self.cur = self.con.cursor(mdb.cursors.DictCursor)
@@ -247,6 +256,8 @@ class pmgrobj(object):
                 for i in range(16):
                     if v & (1 << i) != 0:
                         mutex_sets[i].append(f)
+            if setorder[f] & self.AUTO_CONFIG != 0:
+                self.autoconfig = f
         # We're assuming the bits are used from LSB to MSB, no gaps!
         self.mutex_sets = [l for l in mutex_sets if l != []]
         for d in result:
@@ -386,7 +397,7 @@ class pmgrobj(object):
                     id = g['id']
                     self.groupids.append(id)
                     self.groups[id] = {}
-                    self.groups[id]['global'] = {'len' : 0, 'name' : g['name']}
+                    self.groups[id]['global'] = {'len' : 0, 'name' : g['name'], 'active': g['active']}
                 for g in cfggrp:
                     id = g['group_id']
                     self.groups[id][g['dispseq']] = {'config': g['config_id'],
@@ -654,14 +665,14 @@ class pmgrobj(object):
 
     def groupInsert(self, g):
         if self.debug:
-            print "insert %s_grp (name, owner, dt_created, dt_updated) values (%s, %s, now(), now())" % \
+            print "insert %s_grp (name, owner, active, dt_created, dt_updated) values (%s, %s, 0, now(), now())" % \
                   (self.table, g['global']['name'], self.hutch)
             print "select last_insert_id()"
             id = self.dbgid
             self.dbgid += 1
         else:
             try:
-                self.cur.execute("insert %s_grp (name, owner, dt_created, dt_updated) values (%%s, %%s, now(), now())" \
+                self.cur.execute("insert %s_grp (name, owner, active, dt_created, dt_updated) values (%%s, %%s, 0, now(), now())" \
                                  % self.table, (g['global']['name'], self.hutch))
                 self.cur.execute("select last_insert_id()")
                 id = self.cur.fetchone().values()[0]
@@ -695,11 +706,11 @@ class pmgrobj(object):
                     self.errorlist.append(e)
                     return False
         try:
-            cmd = "update %s_grp set dt_updated = now() where id = %%s" % self.table
+            cmd = "update %s_grp set active = %%s, dt_updated = now() where id = %%s" % self.table
             if self.debug:
-                print cmd % id
+                print cmd % (g['global']['active'], id)
             else:
-                self.cur.execute(cmd, id)
+                self.cur.execute(cmd, (g['global']['active'], id))
             return True
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
@@ -719,7 +730,9 @@ class pmgrobj(object):
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
 
-    def getLatest(self, f, v):
+    def getAutoCfg(self, d):
+        f = self.autoconfig
+        v = d[f]
         cmd = "select max(seq) from %s_log where %s = %%s and owner = %%s and action != 'delete' group by id" % \
               (self.table, f)
         if self.debug:

@@ -61,7 +61,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         ui.menuView.addAction(ui.groupWidget.toggleViewAction())
         ui.groupWidget.setWindowTitle(param.params.table + " configuration groups")
         param.params.grpmodel = GrpModel()
-        ui.groupTable.init(param.params.grpmodel, 0, 2)
+        ui.groupTable.init(param.params.grpmodel, 0, 3)
         ui.groupTable.setShowGrid(True)
         ui.groupTable.resizeColumnsToContents()
         ui.groupTable.setSortingEnabled(False)

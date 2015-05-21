@@ -2,8 +2,9 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import re
 import numpy as np
+import param
 
-# Code shamlessly stolen from http://jdreaver.com/posts/2014-07-28-scientific-notation-spin-box-pyside.html.
+# Code shamelessly stolen from http://jdreaver.com/posts/2014-07-28-scientific-notation-spin-box-pyside.html.
 _float_re = re.compile(r'(([+-]?\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)')
 
 def valid_float_string(string):
@@ -85,16 +86,30 @@ class MyDelegate(QStyledItemDelegate):
     def setEditorData(self, editor, index):
         if editor.mydelegate:
             value = index.model().data(index, Qt.EditRole).toString()
-            idx = editor.enum.index(value)
-            editor.setCurrentIndex(idx)
+            try:
+                idx = editor.enum.index(value)
+                editor.setCurrentIndex(idx)
+            except:
+                # What was dumb is now smart?!?
+                editor.setCurrentIndex(0)
         else:
             QStyledItemDelegate.setEditorData(self, editor, index)
 
     def setModelData(self, editor, model, index):
         if editor.mydelegate:
-            model.setData(index, QVariant(editor.currentText()))
+            if editor.enum == None:
+                v = editor.checkState()
+                if v == Qt.Checked:
+                    model.setData(index, QVariant(1))
+                else:
+                    model.setData(index, QVariant(0))
+            else:
+                model.setData(index, QVariant(editor.currentText()))
         else:
             QStyledItemDelegate.setModelData(self, editor, model, index)
+
+    def do_commit(self, n, editor):
+        self.emit(SIGNAL("commitData(QWidget*)"), editor)
 
     def sizeHint(self, option, index):
         return QStyledItemDelegate.sizeHint(self, option, index)

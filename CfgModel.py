@@ -643,13 +643,27 @@ class CfgModel(QtGui.QStandardItemModel):
             haveval[fld] = True
         d['_color'] = color
         d['_val'] = haveval
-        d['curmutex'] = vals['curmutex']
+        try:
+            d['curmutex'] = vals['curmutex']
+        except:
+            # Sigh.  No curmutex means this comes from the ObjModel, which means
+            # even the mutex field has the 'wrong' values set.  So we need to look
+            # up the values from our parent.
+            d['curmutex'] = self.getCfg(vals['config'])['curmutex']
         if sibling == None:
             d['mutex'] = len(param.params.pobj.mutex_sets)*' '
         elif useval:
-            d['mutex'] = vals['curmutex']
+            try:
+                d['mutex'] = vals['curmutex']
+            except:
+                d['mutex'] = d['curmutex']
         else:
             d['mutex'] = vals['mutex']
+        # Make sure this respects the mutex!
+        for c in d['curmutex']:
+            v = ord(c) - 0x40
+            if v > 0:
+                d[param.params.pobj.objflds[v-1]['fld']] = None
         self.editval[id] = {}
         self.cfgs[id] = d
         self.buildtree()
