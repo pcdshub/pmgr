@@ -473,7 +473,7 @@ class GrpModel(QtGui.QStandardItemModel):
         g = self.getGroup(index)
         return not "D" in self.status[id] and g['global']['active'] == 1
 
-    def checkPorts(self, g, ports=[]):
+    def checkPorts(self, g, ports):
         for d in g.values():
             try:
                 p = d['port']
@@ -499,7 +499,7 @@ class GrpModel(QtGui.QStandardItemModel):
         g = self.getGroup(index) # If we commit, the index might not be valid, so better get the values now.
         if id < 0 or "M" in self.status[id]:
             self.commit(id)
-        self.checkPorts(g)
+        self.checkPorts(g, [])
         if not param.params.db.end_transaction():
             return
         self.apply(g)

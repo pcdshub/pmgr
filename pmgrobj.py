@@ -2,6 +2,8 @@ import MySQLdb as mdb
 import _mysql_exceptions
 import datetime
 import re
+import utils
+import pyca
 
 ####################
 #
@@ -54,7 +56,9 @@ def createAlias(name):
 # Exported fields:
 #     objflds
 #         - A list of dictionaries containing information about *all*
-#           of the fields in this table, sorted by col_order.
+#           of the fields in this table, sorted by col_order.  Note that
+#           col_order starts at one, so col_order - 1 should be used as
+#           an index to this list.
 #     cfgflds
 #         - A list of dictionaries containing information about the
 #           *configuration* fields in this table.  (This is a subset
@@ -70,7 +74,8 @@ def createAlias(name):
 #     cfgs
 #         - A configuration ID to configuration dictionary mapping.
 #           The keys are a few boilerplate keys (id, config, owner, etc.)
-#           and the configuration fields.
+#           and the configuration fields.  Note that due to inheritance
+#           and mutual exclusion, many of these fields could be "None".
 #     objs
 #         - An object ID to object dictionary mapping.  The keys are a 
 #           few boilerplate keys (id, config, owner, etc.) and the
@@ -118,6 +123,8 @@ def createAlias(name):
 #         - Must this field have a unique value?
 #     tooltip
 #         - The tooltip/hint text for this field.
+#     readonly
+#         - Is this field is readonly?
 #
 # Exported methods:
 #     checkForUpdate()
@@ -162,6 +169,16 @@ def createAlias(name):
 #           configuration that has the autoconfig field set to a matching value.
 #           First look in this hutch, then in any hutch.  If none is found, return
 #           an empty dictionary.
+#     getConfig(idx)
+#         - Expand the configuration to deal with parentage.  cfgs[idx] could have
+#           many "None" values which are inherited, and this routine will fill them
+#           out and set the "_haveval" key to a dictionary indicating which fields
+#           have values set by the configuration itself (True) and which are inherited
+#           (False).
+#     applyConfig(idx)
+#         - Given an object ID, apply its current configuration to it.
+#     applyAllConfigs()
+#         - Apply the current configuration to all objects.
 
 class pmgrobj(object):
     DB_CONFIG = 1
@@ -175,6 +192,7 @@ class pmgrobj(object):
     MUST_WRITE    = 0x000400
     WRITE_ZERO    = 0x000800
     AUTO_CONFIG   = 0x001000
+    READ_ONLY     = 0x002000
 
     unwanted = ['seq', 'owner', 'id', 'category', 'dt_created',
                 'date', 'dt_updated', 'name', 'action', 'rec_base']
@@ -281,6 +299,7 @@ class pmgrobj(object):
                  'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
                  'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
                  'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
+                 'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
                  'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': True}
             try:
                 setflds[so].append(f)
@@ -300,6 +319,7 @@ class pmgrobj(object):
                  'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
                  'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
                  'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
+                 'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
                  'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': False}
             try:
                 setflds[so].append(f)
@@ -770,3 +790,78 @@ class pmgrobj(object):
         except _mysql_exceptions.Error as err:
             print err
             return {}
+
+    def getConfig(self, idx, loop=[]):
+        if idx == None or idx in loop:
+            return {}
+        d = {}
+        d.update(self.cfgs[idx])
+        haveval = {}
+        v = d['mutex']
+        if d['config'] != None:
+            lp = list(loop)
+            lp.append(idx)
+            vals = self.getConfig(d['config'], lp)   # Get the parent configuration
+            pmutex = vals['curmutex']
+            mutex = ""                               # Build the mutex from the set and inherited values.
+            for i in range(len(self.mutex_sets)):
+                if v[i] != ' ':
+                    mutex += v[i]
+                else:
+                    mutex += pmutex[i]
+            d['curmutex'] = mutex
+        else:
+            d['curmutex'] = v
+        for (k, v) in d.items():
+            if k[:3] != 'PV_' and k[:4] != 'FLD_':
+                continue
+            if v == None:
+                # This key might have a value because it is the unset element of a mutex set!
+                haveval[k] = chr(self.fldmap[k]['colorder']+0x40) in d['curmutex']
+            else:
+                haveval[k] = True
+            if not haveval[k]:
+                try:
+                    d[k] = vals[k]     # Try to get the parent value.
+                except:
+                    d[k] = None
+        d['_haveval'] = haveval
+        return d
+
+    def applyConfig(self, idx):
+        vals = {}
+        vals.update(self.objs[idx])
+        vals.update(self.cfgs[vals['config']])
+        base = vals['rec_base']
+        if base == "":
+            return
+        for s in self.setflds:
+            #
+            # Write zeros.
+            # 
+            for f in s:
+                if vals[f] == None or self.fldmap[f]['readonly']:
+                    continue
+                if self.fldmap[f]['writezero']:
+                    try:
+                        z = self.fldmap[f]['enum'][0]
+                    except:
+                        z = 0
+                    try:
+                        utils.caput(base + self.fldmap[f]['pv'], z)
+                    except:
+                        pass
+            #
+            # Write values.
+            #
+            for f in s:
+                if vals[f] == None or self.fldmap[f]['readonly']:
+                    continue
+                try:
+                    utils.caput(base + self.fldmap[f]['pv'], vals[f])
+                except:
+                    pass
+
+    def applyAllConfigs(self):
+        for i in self.objs.keys():
+            self.applyConfig(i)

@@ -4,7 +4,11 @@ import re
 import numpy as np
 import param
 
+#########################################################################
+#
 # Code shamelessly stolen from http://jdreaver.com/posts/2014-07-28-scientific-notation-spin-box-pyside.html.
+#
+
 _float_re = re.compile(r'(([+-]?\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)')
 
 def valid_float_string(string):
@@ -57,6 +61,8 @@ def format_float(value):
     string = "{:g}".format(value).replace("e+", "e")
     string = re.sub("e(-?)0*(\d+)", r"e\1\2", string)
     return string
+
+#########################################################################
 
 class MyDelegate(QStyledItemDelegate):
     def __init__(self, parent):

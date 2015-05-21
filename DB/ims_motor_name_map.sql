@@ -18,8 +18,8 @@ CREATE TABLE `ims_motor_name_map` (
 --
 
 INSERT INTO `ims_motor_name_map` VALUES 
-('FLD_PN', 'PN', 'Part number', '',1,0,0),
-('FLD_SN', 'SN', 'Serial number', '',2,4096,0),
+('FLD_PN', 'PN', 'Part number', '',1,8192,0),
+('FLD_SN', 'SN', 'Serial number', '',2,12288,0),
 ('FLD_DESC','DESC',   'Description', '',3,0,0),
 ('FLD_PORT','PORT',   'digi port address', '',4,0,0),
 ('FLD_TYPE','TYPE', 'User-defined type', '',5,0,0),
