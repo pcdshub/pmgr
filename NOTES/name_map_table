@@ -21,6 +21,9 @@ The *_name_map table has the following fields:
 			    - 0x400 flags a PV that must be written, even if the
 			      value doesn't seem to change.
 			    - 0x800 flags a PV that must be set to zero first.
+			    - 0x1000 flags the "autoconfiguration" PV (the serial
+			      number).
+			    - 0x2000 flags "readonly" PVs.
 	mutex_mask    - If several values are interrelated, this value will be
 			non-zero.  It is a bitmask of values in the interrelated
 			set.  Several bits can be 1 if this field is in several
