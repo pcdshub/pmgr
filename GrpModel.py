@@ -10,7 +10,7 @@ from copy import deepcopy
 class GrpModel(QtGui.QStandardItemModel):
     cname   = ["Status", "Active", "Group Name"]
     cfld    = ["status", "active", "name"]
-    ctips   = ["?", "?", "?"]
+    ctips   = ["D = Deleted\nM = Modified\nN = New", "Group is in use?", "Group name"]
     colcnt  = len(cname)
     coff    = len(cname)
     statcol = 0
@@ -101,7 +101,8 @@ class GrpModel(QtGui.QStandardItemModel):
             else:
                 return QtCore.QVariant(param.params.almond)
         if role == QtCore.Qt.ToolTipRole:
-            return QtCore.QVariant()
+            # We'll make this smarter later!
+            return QtGui.QStandardItemModel.data(self, index, role)
         if role == QtCore.Qt.FontRole:
             if f == 'name':
                 f = QtGui.QFont()
@@ -564,7 +565,7 @@ class GrpModel(QtGui.QStandardItemModel):
         menu.addAction("Apply this group", self.applyone, self.applyOK)
         menu.addAction("Apply all", self.applyall)
         table.addContextMenu(menu)
-        colmgr.addColumnManagerMenu(table, [], False)
+        colmgr.addColumnManagerMenu(table, [], False, False)
 
     def editorInfo(self, index):
         r = index.row()
