@@ -563,7 +563,7 @@ class ObjModel(QtGui.QStandardItemModel):
         menu.addAction("Auto config this object", self.autoone, self.testAuto)
         menu.addAction("Auto config all", self.autoall)
         table.addContextMenu(menu)
-        colmgr.addColumnManagerMenu(table, [], False)
+        colmgr.addColumnManagerMenu(table)
 
     def testAuto(self, table, index):
         try:

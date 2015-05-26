@@ -116,7 +116,10 @@ class GraphicUserInterface(QtGui.QMainWindow):
         ui.objectTable.colmgr = "%s/objcol" % param.params.table
         ui.groupTable.colmgr = "%s/grpcol" % param.params.table
 
-        self.connect(ui.debugButton,     QtCore.SIGNAL("clicked()"), param.params.grpmodel.doDebug)
+        if param.params.debug:
+            self.connect(ui.debugButton,     QtCore.SIGNAL("clicked()"), param.params.grpmodel.doDebug)
+        else:
+            ui.debugButton.hide()
         self.connect(ui.saveButton,      QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
         self.connect(ui.revertButton,    QtCore.SIGNAL("clicked()"), param.params.objmodel.revertall)
         self.connect(ui.applyButton,     QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)

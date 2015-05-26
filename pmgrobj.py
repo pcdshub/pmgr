@@ -726,11 +726,11 @@ class pmgrobj(object):
                     self.errorlist.append(e)
                     return False
         try:
-            cmd = "update %s_grp set active = %%s, dt_updated = now() where id = %%s" % self.table
+            cmd = "update %s_grp set active = %%s, name = %%s, dt_updated = now() where id = %%s" % self.table
             if self.debug:
                 print cmd % (g['global']['active'], id)
             else:
-                self.cur.execute(cmd, (g['global']['active'], id))
+                self.cur.execute(cmd, (g['global']['active'], g['global']['name'], id))
             return True
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
