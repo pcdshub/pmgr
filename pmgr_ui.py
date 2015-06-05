@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pmgr.ui'
 #
-# Created: Fri Jun  5 12:41:44 2015
+# Created: Fri Jun  5 15:57:15 2015
 #      by: PyQt4 UI code generator 4.7.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -123,8 +123,8 @@ class Ui_MainWindow(object):
         self.actionExit.setObjectName("actionExit")
         self.actionAuth = QtGui.QAction(MainWindow)
         self.actionAuth.setObjectName("actionAuth")
-        self.menuFile.addAction(self.actionExit)
         self.menuFile.addAction(self.actionAuth)
+        self.menuFile.addAction(self.actionExit)
         self.menuFilter.addAction(self.actionAuto)
         self.menuFilter.addAction(self.actionManual)
         self.menuFilter.addAction(self.actionProtected)

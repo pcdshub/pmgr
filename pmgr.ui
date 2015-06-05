@@ -101,8 +101,8 @@ All ancestors and all children of the selected configuration will be displayed.<
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionExit"/>
     <addaction name="actionAuth"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
