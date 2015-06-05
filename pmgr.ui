@@ -65,12 +65,6 @@ All ancestors and all children of the selected configuration will be displayed.<
       <attribute name="headerStretchLastSection">
        <bool>true</bool>
       </attribute>
-      <attribute name="headerVisible">
-       <bool>false</bool>
-      </attribute>
-      <attribute name="headerStretchLastSection">
-       <bool>true</bool>
-      </attribute>
       <column>
        <property name="text">
         <string notr="true">1</string>
@@ -100,13 +94,15 @@ All ancestors and all children of the selected configuration will be displayed.<
      <x>0</x>
      <y>0</y>
      <width>990</width>
-     <height>23</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionExit"/>
+    <addaction name="actionAuth"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -241,7 +237,21 @@ p, li { white-space: pre-wrap; }
    <attribute name="dockWidgetArea">
     <number>2</number>
    </attribute>
-   <widget class="FreezeTableView" name="groupTable"/>
+   <widget class="FreezeTableView" name="groupTable">
+    <widget class="QLabel" name="userLabel">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>50</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>User: Guest</string>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <action name="actionObjects">
    <property name="text">
@@ -292,6 +302,16 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="text">
     <string>Track Object Config</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionAuth">
+   <property name="text">
+    <string>Authenticate</string>
    </property>
   </action>
  </widget>

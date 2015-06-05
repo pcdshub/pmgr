@@ -843,16 +843,16 @@ class CfgModel(QtGui.QStandardItemModel):
     #
     def commit(self, idx, mustdo):
         d = self.getCfg(idx)
-        if not utils.permission(d['owner'], d['security']):
-            param.params.pobj.transaction_error("Not Authorized!")
-            return True
         try:
             name = self.edits[idx]['name']
         except:
             name = d['name']
+        if not utils.permission(d['owner'], d['security']):
+            param.params.pobj.transaction_error("Not Authorized to Change %s!" % name)
+            return True
         if name[0:10] == "NewConfig-":
             param.params.pobj.transaction_error("Object cannot be named %s!" % name)
-            return
+            return True
         if 'D' in self.status[idx]:
             # We can process the delete only if *no one* is using this!
             # We only have to check the configuration, the configDelete

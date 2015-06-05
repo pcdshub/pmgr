@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pmgr.ui'
 #
-# Created: Tue May 26 13:13:44 2015
+# Created: Fri Jun  5 12:41:44 2015
 #      by: PyQt4 UI code generator 4.7.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -45,7 +45,7 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.revertButton, 0, 2, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 990, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 990, 20))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -95,6 +95,9 @@ class Ui_MainWindow(object):
         self.groupWidget.setObjectName("groupWidget")
         self.groupTable = FreezeTableView()
         self.groupTable.setObjectName("groupTable")
+        self.userLabel = QtGui.QLabel(self.groupTable)
+        self.userLabel.setGeometry(QtCore.QRect(70, 50, 121, 16))
+        self.userLabel.setObjectName("userLabel")
         self.groupWidget.setWidget(self.groupTable)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(2), self.groupWidget)
         self.actionObjects = QtGui.QAction(MainWindow)
@@ -116,6 +119,12 @@ class Ui_MainWindow(object):
         self.actionTrack = QtGui.QAction(MainWindow)
         self.actionTrack.setCheckable(True)
         self.actionTrack.setObjectName("actionTrack")
+        self.actionExit = QtGui.QAction(MainWindow)
+        self.actionExit.setObjectName("actionExit")
+        self.actionAuth = QtGui.QAction(MainWindow)
+        self.actionAuth.setObjectName("actionAuth")
+        self.menuFile.addAction(self.actionExit)
+        self.menuFile.addAction(self.actionAuth)
         self.menuFilter.addAction(self.actionAuto)
         self.menuFilter.addAction(self.actionManual)
         self.menuFilter.addAction(self.actionProtected)
@@ -176,11 +185,14 @@ class Ui_MainWindow(object):
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" color:#0000ff;\">Blue  </span>= Value is in a new group.</p>\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" color:#ff0000;\">Red   </span>= Value is unsaved change.</p></td></tr></table></body></html>", None, QtGui.QApplication.UnicodeUTF8))
         self.groupWidget.setWindowTitle(QtGui.QApplication.translate("MainWindow", "Cfg Groups", None, QtGui.QApplication.UnicodeUTF8))
+        self.userLabel.setText(QtGui.QApplication.translate("MainWindow", "User: Guest", None, QtGui.QApplication.UnicodeUTF8))
         self.actionObjects.setText(QtGui.QApplication.translate("MainWindow", "Objects", None, QtGui.QApplication.UnicodeUTF8))
         self.actionConfigurations.setText(QtGui.QApplication.translate("MainWindow", "Configurations", None, QtGui.QApplication.UnicodeUTF8))
         self.actionAuto.setText(QtGui.QApplication.translate("MainWindow", "Show Auto", None, QtGui.QApplication.UnicodeUTF8))
         self.actionManual.setText(QtGui.QApplication.translate("MainWindow", "Show Manual", None, QtGui.QApplication.UnicodeUTF8))
         self.actionProtected.setText(QtGui.QApplication.translate("MainWindow", "Show Protected", None, QtGui.QApplication.UnicodeUTF8))
         self.actionTrack.setText(QtGui.QApplication.translate("MainWindow", "Track Object Config", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionExit.setText(QtGui.QApplication.translate("MainWindow", "Exit", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionAuth.setText(QtGui.QApplication.translate("MainWindow", "Authenticate", None, QtGui.QApplication.UnicodeUTF8))
 
 from FreezeTableView import FreezeTableView

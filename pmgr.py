@@ -11,6 +11,16 @@ import param
 from db import db
 import threading
 from MyDelegate import MyDelegate
+import auth_ui
+import utils
+
+######################################################################
+
+class authdialog(QtGui.QDialog):
+    def __init__(self, parent=None):
+      QtGui.QWidget.__init__(self, parent)
+      self.ui = auth_ui.Ui_Dialog()
+      self.ui.setupUi(self)
 
 ######################################################################
 
@@ -18,10 +28,19 @@ class GraphicUserInterface(QtGui.QMainWindow):
 
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
+
+        self.authdialog = authdialog(self)
+        self.utimer = QtCore.QTimer()
+        
         param.params.ui = Ui_MainWindow()
         ui = param.params.ui
 
         ui.setupUi(self)
+
+        # Not sure how to do this in designer, so we put it randomly and move it now.
+        ui.statusbar.addWidget(ui.userLabel)
+        self.setUser(param.params.myuid)
+        
         self.setWindowTitle("Parameter Manager for %s (%s)" % (param.params.hutch.upper(), param.params.table))
 
         ui.objectTable.verticalHeader().hide()
@@ -39,7 +58,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         ui.groupWidget.close()
 
         param.params.db = db()
-
+        
         ui.menuView.addAction(ui.configWidget.toggleViewAction())
         ui.configWidget.setWindowTitle(param.params.table + " configurations")
         param.params.cfgmodel = CfgModel()
@@ -127,6 +146,9 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.connect(ui.actionProtected, QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
         self.connect(ui.actionManual,    QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
         self.connect(ui.actionTrack,     QtCore.SIGNAL("triggered()"), param.params.objmodel.doTrack)
+        self.connect(ui.actionAuth, QtCore.SIGNAL("triggered()"), self.doAuthenticate)
+        self.connect(ui.actionExit, QtCore.SIGNAL("triggered()"), self.doExit)
+        self.connect(self.utimer, QtCore.SIGNAL("timeout()"), self.unauthenticate)
         self.connect(ui.objectTable.selectionModel(),
                      QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
                      param.params.objmodel.selectionChanged)
@@ -146,6 +168,39 @@ class GraphicUserInterface(QtGui.QMainWindow):
         settings.setValue("objsel", param.params.objmodel.getObjSel())
         QtGui.QMainWindow.closeEvent(self, event)
 
+    def doExit(self):
+        self.close()
+
+    def setUser(self, user):
+        param.params.user = user
+        param.params.ui.userLabel.setText("User: " + user)
+
+    def authenticate_user(self, user="", password=""):
+        if user == "":
+            self.setUser(param.params.myuid)
+            return True
+        if utils.authenticate_user(user, password):
+            self.setUser(user)
+            self.utimer.start(10 * 60000) # Ten minutes!
+            return True
+        else:
+            QtGui.QMessageBox.critical(None, "Error", "Invalid Password",
+                                       QtGui.QMessageBox.Ok)
+            return False
+
+    def doAuthenticate(self):
+        result = self.authdialog.exec_()
+        user = str(self.authdialog.ui.nameEdit.text())
+        password = str(self.authdialog.ui.passEdit.text())
+        self.authdialog.ui.passEdit.setText("")
+        if result == QtGui.QDialog.Accepted:
+            if not self.authenticate_user(user, password):
+                self.unauthenticate()
+
+    def unauthenticate(self):
+        self.utimer.stop()
+        self.authenticate_user()
+        
 if __name__ == '__main__':
     QtGui.QApplication.setGraphicsSystem("raster")
     param.params = param.param_structure()
@@ -159,7 +214,7 @@ if __name__ == '__main__':
         options.usage(str(msg))
         sys.exit()
 
-    param.params.hutch = options.hutch.lower()
+    param.params.setHutch(options.hutch.lower())
     param.params.setTable(options.type)
     param.params.debug = False if options.debug == None else True
     gui = GraphicUserInterface()

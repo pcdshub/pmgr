@@ -1,5 +1,7 @@
 from PyQt4 import QtGui, QtCore
+import pwd, os
 
+AUTH_FILE = "/reg/g/pcds/pyps/config/%s/pmgr.auth"
 params = None
 
 def equal(v1, v2):
@@ -15,6 +17,8 @@ def equal(v1, v2):
 
 class param_structure(object):
     def __init__(self):
+        self.myuid = pwd.getpwuid(os.getuid())[0]
+        self.user = None
         self.almond = QtGui.QColor(255,235,205)
         self.almond.name = "almond"
         self.white  = QtGui.QColor(255,255,255)
@@ -70,3 +74,7 @@ class param_structure(object):
         if v == "ims_motor":
             self.setCatEnum(["Protected", "User Dumb", "User Smart"])     # Displayed names.
             
+    def setHutch(self, v):
+        self.hutch = v
+        lines = open(AUTH_FILE % v).readlines()
+        self.auth_users = [l.strip() for l in lines]

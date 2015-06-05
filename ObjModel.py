@@ -668,12 +668,13 @@ class ObjModel(QtGui.QStandardItemModel):
     #
     def commit(self, idx):
         d = self.getObj(idx)
-        if not utils.permission(d['owner'], None):
-            param.params.pobj.transaction_error("Not Authorized!")
         try:
             name = self.edits[idx]['name']
         except:
             name = d['name']
+        if not utils.permission(d['owner'], None):
+            param.params.pobj.transaction_error("Not Authorized to Change %s!" % name)
+            return
         if name[0:10] == "NewObject-":
             param.params.pobj.transaction_error("Object cannot be named %s!" % name)
             return
@@ -700,6 +701,9 @@ class ObjModel(QtGui.QStandardItemModel):
             elif 'M' in self.status[idx]:
                 param.params.pobj.objectChange(idx, self.edits[idx])
 
+    #
+    # Note: this calls commit (and checks permissions!) even if no change!
+    #
     def commitone(self, table, index):
         param.params.db.start_transaction()
         (idx, f) = self.index2db(index)
@@ -710,6 +714,9 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             return False
 
+    #
+    # Note: this only calls commit for changes!
+    #
     def commitall(self):
         if not param.params.cfgmodel.confirmCommit():
             return False
@@ -789,15 +796,27 @@ class ObjModel(QtGui.QStandardItemModel):
                         pass
             pyca.flush_io()
 
+    #
+    # Note: commitone always calls commit, and that does the permission check!
+    #
     def applyone(self, table, index):
         if self.commitone(table, index):
             (idx, f) = self.index2db(index)
             self.apply(idx)
 
+    #
+    # If there are no changes, commitall does not do a permission check, so we need
+    # to do one.
+    #
     def applyall(self):
-        if self.commitall():
-            for idx in self.rowmap:
-                self.apply(idx)
+        if not self.commitall():
+            return
+        if not utils.permission(param.params.hutch, None):
+            QtGui.QMessageBox.critical(None, "Error", "Not authorized to apply changes!",
+                                       QtGui.QMessageBox.Ok)
+            return
+        for idx in self.rowmap:
+            self.apply(idx)
 
     def revertone(self, table, index):
         (idx, f) = self.index2db(index)

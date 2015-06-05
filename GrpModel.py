@@ -399,15 +399,20 @@ class GrpModel(QtGui.QStandardItemModel):
             name = self.edits[id]['global']['name']
         except:
             name = g['global']['name']
+        if not utils.permission(param.params.hutch, None):
+            param.params.pobj.transaction_error("Not Authorized to Change %s!" % name)
+            return False
         if name[0:10] == "New-Group-":
             param.params.pobj.transaction_error("Group cannot be named %s!" % name)
-            return
+            return False
+        if id >= 0 and not "M" in self.status[id]:
+            return True
         for d in g.values():
             try:
                 if d['config'] < 0:
                     param.params.pobj.transaction_error("New configuration %s must be committed before %s!" %
                                                       (param.params.db.getCfgName(d['config']), name))
-                    return
+                    return False
             except:
                 pass
         # Check if otherwise OK!  A group should have all configurations unique.
@@ -419,7 +424,7 @@ class GrpModel(QtGui.QStandardItemModel):
                 if c != 0 and c in cfgs:
                     param.params.pobj.transaction_error("Group has multiple configurations named %s!" %
                                                       param.params.db.getCfgName(c))
-                    return
+                    return False
                 cfgs.append(c)
             except:
                 pass   # Must be 'global' dictionary!
@@ -431,15 +436,19 @@ class GrpModel(QtGui.QStandardItemModel):
             result = param.params.pobj.groupUpdate(id, g)
         if result:
             self.grpChangeDone(id)
+        return result
 
     def commitall(self, verify=True):
         # Do we want to verify?
+        # First delete, then do the modify/adds.
         for (id, s) in self.status.items():
             if 'D' in s:
-                self.commit(id)
+                if not self.commit(id):
+                    return
         for (id, s) in self.status.items():
             if ('N' in s or 'M' in s) and not 'D' in s:  # Paranoia.  We should never have DM or DN.
-                self.commit(id)
+                if not self.commit(id):
+                    return
 
     def commitone(self, table, index):
         param.params.db.start_transaction()
@@ -486,6 +495,10 @@ class GrpModel(QtGui.QStandardItemModel):
             except:
                 pass   # Must be 'global' dictionary!
 
+    #
+    # We can always apply this, because it doesn't change the actual objects, only the object
+    # configuration!  A permission check will be done before *that* change is committed!
+    #
     def apply(self, g):
         for d in g.values():
             try:
@@ -498,8 +511,7 @@ class GrpModel(QtGui.QStandardItemModel):
         param.params.db.start_transaction()
         id = self.getGroupId(index)
         g = self.getGroup(index) # If we commit, the index might not be valid, so better get the values now.
-        if id < 0 or "M" in self.status[id]:
-            self.commit(id)
+        self.commit(id)
         self.checkPorts(g, [])
         if not param.params.db.end_transaction():
             return
