@@ -33,6 +33,12 @@ class GrpModel(QtGui.QStandardItemModel):
         self.deletes = []
         self.grpchange()
 
+    def maxLength(self):
+        if self.length == {}:
+            return 0
+        else:
+            return max(self.length.values())
+        
     def getGroupId(self, index):
         return self.rowmap[index.row() / 2]
     
@@ -214,7 +220,7 @@ class GrpModel(QtGui.QStandardItemModel):
                 if seq + 1 == self.length[id]:
                     # We're deleting the last column of this group!
                     self.setLength(id, seq)
-                    nm = max(self.length.values())
+                    nm = self.maxLength()
                     if self.coff + nm + 1 != self.columnCount():
                         self.setColumnCount(nm + self.coff + 1)
                         self.dataChanged.emit(self.index(0, nm + self.coff - 1),
@@ -224,7 +230,7 @@ class GrpModel(QtGui.QStandardItemModel):
                 if seq == self.length[id]:
                     # We're adding a new item to the end!
                     self.setLength(id, seq + 1)
-                    nm = max(self.length.values())
+                    nm = self.maxLength()
                     if self.coff + nm + 1 != self.columnCount():
                         self.setColumnCount(nm + self.coff + 1)
                         self.addColumnHeader(nm + self.coff)
@@ -294,7 +300,7 @@ class GrpModel(QtGui.QStandardItemModel):
                 except:
                     pass
         self.setRowCount(len(self.rowmap) * 2)
-        self.setColumnCount(self.coff + max(self.length.values()) + 1);
+        self.setColumnCount(self.coff + self.maxLength() + 1);
         for c in range(self.columnCount()):         # Make sure we have a header!
             self.addColumnHeader(c)
         self.emit(QtCore.SIGNAL("layoutChanged()"))
@@ -320,7 +326,7 @@ class GrpModel(QtGui.QStandardItemModel):
         self.newids.append(id)
         self.rowmap.append(id)
         self.setRowCount(r + 2)
-        self.dataChanged.emit(self.index(r, 0), self.index(r + 1, self.coff + max(self.length.values())))
+        self.dataChanged.emit(self.index(r, 0), self.index(r + 1, self.coff + self.maxLength()))
 
     def deleteGrpOK(self, table, index):
         id = self.getGroupId(index)
@@ -547,7 +553,7 @@ class GrpModel(QtGui.QStandardItemModel):
             pass
         self.length[id] = param.params.pobj.groups[id]['global']['len']
         self.status[id] = ""
-        nm = max(self.length.values())
+        nm = self.maxLength()
         if self.coff + nm + 1 != self.columnCount():
             self.setColumnCount(nm + self.coff + 1)
             self.dataChanged.emit(self.index(0, nm + self.coff),
