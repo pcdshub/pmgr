@@ -919,7 +919,7 @@ class CfgModel(QtGui.QStandardItemModel):
             if 'N' in self.status[idx]:
                 newid = param.params.pobj.configInsert(d)
                 if newid != None:
-                    param.params.pobj.cfgrenumber(idx, newid)
+                    param.params.db.cfgrenumber(idx, newid)
             else:
                 ee = {}
                 for fld in ['name', 'config', 'mutex']:
