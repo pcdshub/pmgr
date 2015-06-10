@@ -621,7 +621,7 @@ def findMotors(cfglist):
                                             i['NAME'] + " SLIT LEFT"))
                     motors.append(makeMotor(name, i['RIGHT'], i['RIGHT_PORT'],
                                             i['NAME'] + " SLIT RIGHT"))
-                    motors.append(makeMotor(name, i['RIGHT'], i['RIGHT_PORT'],
+                    motors.append(makeMotor(name, i['TOP'], i['TOP_PORT'],
                                             i['NAME'] + " SLIT TOP"))
                     motors.append(makeMotor(name, i['BOTTOM'], i['BOTTOM_PORT'],
                                             i['NAME'] + " SLIT BOTTOM"))
@@ -629,12 +629,22 @@ def findMotors(cfglist):
                 for i in cfg.idict[k]:
                     motors.append(makeMotor(name, i['ZOOM'], i['ZOOM_PORT'],
                                             i['NAME'] + " ZOOM"))
+                    try:
+                        motors.append(makeMotor(name, i['FOCUS'], i['FOCUS_PORT'],
+                                                i['NAME'] + " FOCUS"))
+                    except:
+                        pass
             elif k == 'XFLS':
                 for i in cfg.idict[k]:
                     motors.append(makeMotor(name, i['X'], i['X_PORT'],
                                             i['NAME'] + " XFLS X"))
                     motors.append(makeMotor(name, i['Y'], i['Y_PORT'],
                                             i['NAME'] + " XFLS Y"))
+                    try:
+                        motors.append(makeMotor(name, i['Z'], i['Z_PORT'],
+                                                i['NAME'] + " XFLS Z"))
+                    except:
+                        pass
             elif k == 'INOUT':
                 for i in cfg.idict[k]:
                     motors.append(makeMotor(name, i['MOTOR'], i['PORT'],
