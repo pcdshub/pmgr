@@ -23,7 +23,7 @@ fldlist = { 'FLD_HLM',
             'FLD_PN',
             'FLD_DESC' };
 
-def caget(pvname,timeout=15.0):
+def caget(pvname,timeout=30.0):
     try:
         pv = Pv(pvname)
         pv.connect(timeout)
@@ -578,6 +578,7 @@ def makeMotor(ioc, pvbase, port, extra=""):
         cat = "Protected"
     if extra != "":
         extra = " " + extra
+    ioc = ioc[4:]
     d.update({'name': pvbase + " " + ioc,
             'config' : 0,
             'owner' : hutch,
