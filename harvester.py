@@ -578,7 +578,12 @@ def makeMotor(ioc, pvbase, port, extra=""):
         cat = "Protected"
     if extra != "":
         extra = " " + extra
-    ioc = ioc[4:]
+    if ioc[0:4] == 'ioc-':
+        ioc = ioc[4:]
+    if ioc[-4:] == '-ims':
+        ioc = ioc[:-4]
+    elif ioc[-5:] == '-dumb':
+        ioc = ioc[:-5]
     d.update({'name': pvbase + " " + ioc,
             'config' : 0,
             'owner' : hutch,
