@@ -596,9 +596,11 @@ def makeMotor(ioc, pvbase, port, extra=""):
             'FLD_DLLM': None })
     return d
 
-def findMotors(cfglist):
+def findMotors(cfglist, ioc):
     motors = []
     for (name, dir) in cfglist:
+        if ioc != None and ioc != name:
+            continue
         cfg = config()
         try:
             cfg.read_config(dir +  "/" + name + ".cfg", {})
@@ -663,7 +665,7 @@ def findMotors(cfglist):
 
 if __name__ == '__main__':
     # Options( [mandatory list, optional list, switches list] )
-    options = Options(['hutch'], [], ['debug'])
+    options = Options(['hutch'], ['ioc'], ['debug'])
     try:
         options.parse()
     except Exception, msg:
@@ -671,7 +673,7 @@ if __name__ == '__main__':
         sys.exit()
     hutch   = options.hutch
     cfglist = readConfig()
-    motors  = findMotors(cfglist)
+    motors  = findMotors(cfglist, options.ioc)
     pmgr    = pmgrobj("ims_motor", hutch)
     if options.debug != None:
         for m in motors:
