@@ -23,7 +23,7 @@ fldlist = { 'FLD_HLM',
             'FLD_PN',
             'FLD_DESC' };
 
-def caget(pvname,timeout=2.0):
+def caget(pvname,timeout=15.0):
     try:
         pv = Pv(pvname)
         pv.connect(timeout)
