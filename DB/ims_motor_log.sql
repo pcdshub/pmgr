@@ -18,6 +18,7 @@ CREATE TABLE `ims_motor_log` (
   `mutex` varchar(16),
   `dt_created` datetime,
   `dt_updated` datetime,
+  `comment`  varchar(80),
   `FLD_DESC` varchar(40),
   `FLD_PORT` varchar(40),
   `FLD_DHLM` double,

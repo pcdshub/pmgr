@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+#
+# A bizarre combination of code from IocManager, the parent/child IOC compilation process, and
+# ParameterManager.
+#
+
 from psp.options import Options
 from psp.Pv import Pv
 from pmgrobj import pmgrobj
@@ -15,8 +20,8 @@ fldlist = { 'FLD_HLM',
             'FLD_LLM',
             'FLD_OFF',
             'FLD_SN',
-            'FLD_PN' };
-
+            'FLD_PN',
+            'FLD_DESC' };
 
 def caget(pvname,timeout=2.0):
     try:
@@ -561,11 +566,6 @@ def getMotorVals(pvbase):
     return d
 
 def makeMotor(ioc, pvbase, port, extra=""):
-    ioc = ioc[8:]
-    if ioc[-4:] == "-ims":
-        ioc = ioc[:-4]
-    elif ioc[-5:] == "-dumb":
-        ioc = ioc[:-5]
     d = getMotorVals(pvbase)
     pn = d['FLD_PN']
     if pn[0:3] == "MFI":
@@ -576,13 +576,15 @@ def makeMotor(ioc, pvbase, port, extra=""):
         if pn != "":
             print "Unknown PN %s!" % pn
         cat = "Protected"
+    if extra != "":
+        extra = " " + extra
     d.update({'name': pvbase + " " + ioc,
             'config' : 0,
             'owner' : hutch,
             'rec_base': pvbase,
             'category': cat,
             'mutex': '  ab',
-            'FLD_DESC': extra,
+            'comment': ioc + extra,
             'FLD_PORT': port,
             'FLD_DHLM': None,
             'FLD_DLLM': None })

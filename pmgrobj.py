@@ -195,7 +195,7 @@ class pmgrobj(object):
     READ_ONLY     = 0x002000
 
     unwanted = ['seq', 'owner', 'id', 'category', 'dt_created',
-                'date', 'dt_updated', 'name', 'action', 'rec_base']
+                'date', 'dt_updated', 'name', 'action', 'rec_base', 'comment']
 
     def __init__(self, table, hutch, debug=False):
         self.table = table
@@ -222,7 +222,7 @@ class pmgrobj(object):
     def readFormat(self):
         self.cur.execute("describe %s" % self.table)
         locfld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
-        locfld = locfld[9:]   # Skip the standard fields!
+        locfld = locfld[10:]   # Skip the standard fields!
 
         self.cur.execute("describe %s_cfg" % self.table)
         fld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
@@ -564,22 +564,20 @@ class pmgrobj(object):
             self.errorlist.append(e)
 
     def objectInsert(self, d):
-        cmd = "insert %s (name, config, owner, rec_base, category, mutex, dt_created, dt_updated" % self.table
+        cmd = "insert %s (name, config, owner, rec_base, category, mutex, dt_created, dt_updated, comment" % self.table
         for f in self.objflds:
             if f['obj'] == False:
                 continue
             fld = f['fld']
             cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, %s, %s, %s, now(), now()"
+        cmd += ") values (%s, %s, %s, %s, %s, %s, now(), now(), %s"
         vlist = [d['name']]
-        try:
-            vlist.append(self.cfgmap[d['config']])
-        except:
-            vlist.append(d['config'])
+        vlist.append(d['config'])
         vlist.append(self.hutch)
         vlist.append(d['rec_base'])
         vlist.append(d['category'])
         vlist.append(d['mutex'])
+        vlist.append(d['comment'])
         for f in self.objflds:
             if f['obj'] == False:
                 continue
@@ -615,10 +613,7 @@ class pmgrobj(object):
         try:
             v = e['config']
             cmd += ", config = %s"
-            try:
-                vlist.append(self.cfgmap[v])
-            except:
-                vlist.append(v)
+            vlist.append(v)
         except:
             pass
         try:
@@ -636,6 +631,12 @@ class pmgrobj(object):
         try:
             v = e['mutex']
             cmd += ", mutex = %s"
+            vlist.append(v)
+        except:
+            pass
+        try:
+            v = e['comment']
+            cmd += ", comment = %s"
             vlist.append(v)
         except:
             pass

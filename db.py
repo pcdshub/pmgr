@@ -32,7 +32,6 @@ class db(QtCore.QObject):
     objchange     = QtCore.pyqtSignal()
     grpchange     = QtCore.pyqtSignal()
     readsig       = QtCore.pyqtSignal(int)
-    cfgrenumber   = QtCore.pyqtSignal(int, int)
 
     def __init__(self):
         super(db, self).__init__()
@@ -43,6 +42,8 @@ class db(QtCore.QObject):
         self.readsig.connect(self.readTables)
         self.poll = dbPoll(self.readsig, 30)
         self.poll.start()
+        self.cfgmap = {}
+        self.objmap = {}
 
     def setCfgName(self, id, name):
         try:
@@ -94,6 +95,8 @@ class db(QtCore.QObject):
             self.end_transaction()
             return False
         else:
+            self.cfgmap = {}
+            self.objmap = {}
             return True
 
     def end_transaction(self):
@@ -106,10 +109,54 @@ class db(QtCore.QObject):
             self.errordialog.exec_()
             return False
         else:
+            self.applyMaps()
             self.readTables()
             return True
 
-    def cfgrenumber(self, old, new):
-        param.params.cfgmodel.cfgrenumber(old, new)
-        param.params.objmodel.cfgrenumber(old, new)
-        param.params.grpmodel.cfgrenumber(old, new)
+    def addCfgmap(self, old, new):
+        self.cfgmap[old] = new
+
+    def addObjmap(self, old, new):
+        self.objmap[old] = new
+
+    def doMap(self, d):
+        try:
+            oldcfg = d['config']
+            newcfg = self.cfgmap[oldcfg]
+            dd = {}
+            dd.update(d)
+            dd['config'] = newcfg
+            d = dd
+        except:
+            pass
+        try:
+            oldport = d['port']
+            newport = self.objmap[oldport]
+            dd = {}
+            dd.update(d)
+            dd['port'] = newport
+            d = dd
+        except:
+            pass
+        return d
+
+    def applyCfgMap(self, obj):
+        for (old, new) in self.cfgmap.items():
+            obj.cfgrenumber(old, new)
+
+    def applyObjMap(self, obj):
+        for (old, new) in self.objmap.items():
+            obj.objrenumber(old, new)
+
+    def applyMaps(self):
+        self.applyCfgMap(param.params.cfgmodel)
+        self.applyCfgMap(param.params.objmodel)
+        self.applyCfgMap(param.params.grpmodel)
+        self.applyObjMap(param.params.grpmodel)
+
+    def cfgIsValid(self, id):
+        return id >= 0 or id in self.cfgmap.keys()
+
+    def objIsValid(self, id):
+        return id >= 0 or id in self.objmap.keys()
+    

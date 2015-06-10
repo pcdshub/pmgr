@@ -13,6 +13,7 @@ CREATE TABLE `ims_motor` (
   `mutex` varchar(16),
   `dt_created` datetime NOT NULL,
   `dt_updated` datetime NOT NULL,
+  `comment`  varchar(80),
   `FLD_DESC` varchar(40),
   `FLD_PORT` varchar(40),
   `FLD_DHLM` double,

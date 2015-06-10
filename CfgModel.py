@@ -896,7 +896,7 @@ class CfgModel(QtGui.QStandardItemModel):
             except:
                 p = d['config']
             while p != None:
-                if 'N' in self.status[p] and not p in param.params.pobj.cfgmap.keys():
+                if not param.params.db.cfgIsValid(p):
                     if mustdo:
                         param.params.pobj.transaction_error("Config %s has new uncommitted ancestors!" %
                                                           param.params.db.getCfgName(idx))
@@ -917,9 +917,9 @@ class CfgModel(QtGui.QStandardItemModel):
                                                              param.params.db.getCfgName(idx))
                     return True
             if 'N' in self.status[idx]:
-                newid = param.params.pobj.configInsert(d)
+                newid = param.params.pobj.configInsert(param.params.db.doMap(d))
                 if newid != None:
-                    param.params.db.cfgrenumber(idx, newid)
+                    param.params.db.addCfgmap(idx, newid)
             else:
                 ee = {}
                 for fld in ['name', 'config', 'mutex']:
@@ -939,7 +939,7 @@ class CfgModel(QtGui.QStandardItemModel):
                                 ee[fld] = d[fld]
                         except:
                             pass                   # No change!
-                param.params.pobj.configChange(idx, ee)
+                param.params.pobj.configChange(idx, param.params.db.doMap(ee))
             return True
 
     # Commit all of the changes.  Again, we assume we're in a transaction
@@ -1043,9 +1043,6 @@ class CfgModel(QtGui.QStandardItemModel):
             self.status[idx] = ""
             if idx < 0:
                 del self.cfgs[idx]
-                self.renumberCfg(idx, param.params.pobj.cfgmap[idx])
-                if idx == self.curidx:
-                    self.setCurIdx(param.params.pobj.cfgmap[idx])
         else:
             self.edits = {}
             self.editval = {}
@@ -1055,8 +1052,6 @@ class CfgModel(QtGui.QStandardItemModel):
                     del self.status[k]
                 else:
                     self.status[k] = ""
-            if self.curidx < 0:
-                self.curidx = param.params.pobj.cfgmap[self.curidx]
         self.buildtree()
         try:
             param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
@@ -1078,31 +1073,11 @@ class CfgModel(QtGui.QStandardItemModel):
         else:
             del self.cfgs[idx]
             del self.status[idx]
-            self.renumberCfg(idx, 0)
             self.buildtree()
             try:
                 param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
             except:
                 param.params.ui.treeWidget.setCurrentItem(self.tree[0]['item'])
-
-    def renumberCfg(self, old, new):
-        name = param.params.db.getCfgName(new)
-        for d in self.cfgs.values():
-            if d['config'] == old:
-                d['config'] = new
-                d['cfgname'] = name
-        for d in param.params.pobj.cfgs.values():
-            if d['config'] == old:
-                d['config'] = new
-                d['cfgname'] = name
-        for d in param.params.objmodel.objs.values():
-            if d['config'] == old:
-                d['config'] = new
-                d['cfgname'] = name
-        for d in param.params.pobj.objs.values():
-            if d['config'] == old:
-                d['config'] = new
-                d['cfgname'] = name
 
     def undeletecfg(self, table, index):
         (idx, f) = self.index2db(index)
@@ -1243,7 +1218,22 @@ class CfgModel(QtGui.QStandardItemModel):
                     d['config'] = new
             except:
                 pass
-        for d in self.objs.values():
+        for d in self.cfgs.values():
             if d['config'] == old:
                 d['config'] = new
-
+        if old in self.tree.keys():
+            self.tree[new] = self.tree[old]
+            del self.tree[old]
+        for d in self.tree.values():
+            if d['link'] == old:
+                d['link'] = new
+            try:
+                d['children'][d['children'].index(old)] = new
+            except:
+                pass
+        try:
+            self.root[index(self.root, old)] = new
+        except:
+            pass
+        if old == self.curidx:
+            self.setCurIdx(new)

@@ -7,10 +7,10 @@ import utils
 import pyca
 
 class ObjModel(QtGui.QStandardItemModel):
-    cname   = ["Status", "Name", "Config", "PV Base", "Owner", "Config Mode"]
-    cfld    = ["status", "name", "cfgname", "rec_base", "owner", "category"]
+    cname   = ["Status", "Name", "Config", "PV Base", "Owner", "Config Mode", "Comment"]
+    cfld    = ["status", "name", "cfgname", "rec_base", "owner", "category", "comment"]
     ctips   = ["C = All PVs Connected\nD = Deleted\nM = Modified\nN = New\nX = Inconsistent",
-               "Object Name", "Configuration Name", "PV Base Name", "Owner", None]
+               "Object Name", "Configuration Name", "PV Base Name", "Owner", None, None]
     coff    = len(cname)
     statcol = 0
     namecol = 1
@@ -18,6 +18,7 @@ class ObjModel(QtGui.QStandardItemModel):
     pvcol   = 3
     owncol  = 4
     catcol  = 5
+    comcol  = 6
     mutable = 2  # The first non-frozen column
     fixflds = ["status", "cfgname", "owner"]
     
@@ -697,9 +698,11 @@ class ObjModel(QtGui.QStandardItemModel):
                                                   (name, str(s)))
                 return
             if 'N' in self.status[idx]:
-                param.params.pobj.objectInsert(self.getObj(idx)['_val'])
+                newidx = param.params.pobj.objectInsert(param.params.doMap(self.getObj(idx)['_val']))
+                if newidx != None:
+                    param.params.db.addObjMap(idx, newidx)
             elif 'M' in self.status[idx]:
-                param.params.pobj.objectChange(idx, self.edits[idx])
+                param.params.pobj.objectChange(idx, param.params.doMap(self.edits[idx]))
 
     #
     # Note: this calls commit (and checks permissions!) even if no change!

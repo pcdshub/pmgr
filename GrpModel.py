@@ -26,7 +26,7 @@ class GrpModel(QtGui.QStandardItemModel):
         self.rowmap  = []
         self.nextid  = -1
         self.newids  = []
-        self.newgrps = {}
+        self.grps    = {}
         self.length  = {}
         self.edits   = {}
         self.status  = {}
@@ -48,7 +48,7 @@ class GrpModel(QtGui.QStandardItemModel):
         else:
             id = index
         if id < 0:
-            g = self.newgrps[id]             # No edits -> no need to copy!
+            g = self.grps[id]             # No edits -> no need to copy!
             g['global']['len'] = self.length[id]
         else:
             g = deepcopy(param.params.pobj.groups[id])
@@ -85,7 +85,7 @@ class GrpModel(QtGui.QStandardItemModel):
     def setLength(self, id, v):
         self.length[id] = v
         if id < 0:
-            self.newgrps[id]['global']['len'] = v
+            self.grps[id]['global']['len'] = v
             
     def data(self, index, role = QtCore.Qt.DisplayRole):
         if (not role in self.roles):
@@ -167,13 +167,13 @@ class GrpModel(QtGui.QStandardItemModel):
                 v = 0
         if id < 0:                   # A new, unsaved group can be freely edited.
             try:
-                ov = self.newgrps[id][seq][f]
+                ov = self.grps[id][seq][f]
             except:
                 ov = None
             try:
-                self.newgrps[id][seq][f] = v
+                self.grps[id][seq][f] = v
             except:
-                self.newgrps[id][seq] = {f: v}
+                self.grps[id][seq] = {f: v}
         else:                        # An existing group.
             try:
                 e = self.edits[id]
@@ -278,7 +278,7 @@ class GrpModel(QtGui.QStandardItemModel):
         self.status = {}
         for id in self.rowmap:
             if id < 0:
-                self.length[id] = self.newgrps[id]['global']['len']
+                self.length[id] = self.grps[id]['global']['len']
                 self.status[id] = "N"
             else:
                 self.length[id] = param.params.pobj.groups[id]['global']['len']
@@ -319,7 +319,7 @@ class GrpModel(QtGui.QStandardItemModel):
         self.nextid -= 1
         name = "New-Group%d" % id
         g = {"global": {"len": 0, "name": name, "active": 0}}
-        self.newgrps[id] = g
+        self.grps[id] = g
         self.setLength(id, 0)
         self.status[id] = "N"
         r = 2 * len(self.rowmap)
@@ -343,7 +343,7 @@ class GrpModel(QtGui.QStandardItemModel):
         if id < 0:
             self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
             self.newids.remove(id)
-            del self.newgrps[id]
+            del self.grps[id]
             del self.status[id]
             del self.length[id]
             self.rowmap.remove(id)
@@ -415,9 +415,15 @@ class GrpModel(QtGui.QStandardItemModel):
             return True
         for d in g.values():
             try:
-                if d['config'] < 0:
+                if not param.params.db.cfgIsValid(d['config']):
                     param.params.pobj.transaction_error("New configuration %s must be committed before %s!" %
-                                                      (param.params.db.getCfgName(d['config']), name))
+                                                        (param.params.db.getCfgName(d['config']),
+                                                         name))
+                    return False
+                if not param.params.db.objIsValid(d['port']):
+                    param.params.pobj.transaction_error("New object %s must be committed before %s!" %
+                                                        (param.params.objmodel.getObjName(d['port']),
+                                                         name))
                     return False
             except:
                 pass
@@ -437,9 +443,9 @@ class GrpModel(QtGui.QStandardItemModel):
         if 'D' in self.status[id]:
             result = param.params.pobj.groupDelete(id)
         elif 'N' in self.status[id]:
-            result = param.params.pobj.groupInsert(g)
+            result = param.params.pobj.groupInsert(param.params.db.doMap(g))
         elif 'M' in self.status[id]:
-            result = param.params.pobj.groupUpdate(id, g)
+            result = param.params.pobj.groupUpdate(id, param.params.db.doMap(g))
         if result:
             self.grpChangeDone(id)
         return result
@@ -468,7 +474,7 @@ class GrpModel(QtGui.QStandardItemModel):
     def grpChangeDone(self, id):
         if id < 0:
             self.newids.remove(id)
-            del self.newgrps[id]
+            del self.grps[id]
             del self.status[id]
             del self.length[id]
             self.rowmap = param.params.pobj.groupids[:]  # This is a temporary measure until we re-read the config.
@@ -565,7 +571,7 @@ class GrpModel(QtGui.QStandardItemModel):
     def revertall(self):
         self.nextid  = -1
         self.newids  = []
-        self.newgrps = {}
+        self.grps = {}
         self.edits   = {}
         self.deletes = []
         self.grpchange()
@@ -607,11 +613,27 @@ class GrpModel(QtGui.QStandardItemModel):
                         dd['config'] = new
                 except:
                     pass
-        for d in self.newgrps.values():
+        for d in self.grps.values():
             for dd in d.values():
                 try:
                     if dd['config'] == old:
                         dd['config'] = new
+                except:
+                    pass
+
+    def objrenumber(self, old, new):
+        for d in self.edits.values():
+            for dd in d.values():
+                try:
+                    if dd['port'] == old:
+                        dd['port'] = new
+                except:
+                    pass
+        for d in self.grps.values():
+            for dd in d.values():
+                try:
+                    if dd['port'] == old:
+                        dd['port'] = new
                 except:
                     pass
 
