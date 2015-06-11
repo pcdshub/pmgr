@@ -214,7 +214,7 @@ if __name__ == '__main__':
     app = QtGui.QApplication([''])
   
     # Options( [mandatory list, optional list, switches list] )
-    options = Options(['hutch', 'type'], [], ['debug', 'apply-enabled'])
+    options = Options(['hutch', 'type'], [], ['debug', 'applyenable'])
     try:
         options.parse()
     except Exception, msg:
@@ -224,7 +224,7 @@ if __name__ == '__main__':
     param.params.setHutch(options.hutch.lower())
     param.params.setTable(options.type)
     param.params.debug = False if options.debug == None else True
-    param.params.applyOK = False if options.debug == None else True
+    param.params.applyOK = False if options.applyenable == None else True
     gui = GraphicUserInterface()
     try:
         gui.show()

@@ -157,15 +157,18 @@ class ObjModel(QtGui.QStandardItemModel):
         except:
             v = None
         v2 = self.getCfg(idx, f) # Configured value
-        if v == None or v2 == None or param.equal(v, v2):
-            try:
-                self.istatus[idx].remove(f)     # If we don't have a value (either the PV isn't connected, or
-                                                # it is a derived value in the configuration), or the PV is
-                                                # equal to the configuration, we're not inconsistent.
-            except:
-                pass
-        else:
-            self.istatus[idx].add(f)          # Otherwise, we are!
+        if f[:4] == 'FLD_' or f[:3] == 'PV_':
+            if v == None or v2 == None or param.equal(v, v2):
+                try:
+                    self.istatus[idx].remove(f) # If we don't have a value (either
+                                                # the PV isn't connected, or is is a
+                                                # derived value in the configuration),
+                                                # or the PV is equal to the configuration,
+                                                # we're not inconsistent.
+                except:
+                    pass
+            else:
+                self.istatus[idx].add(f)        # Otherwise, we are!
         if role == QtCore.Qt.BackgroundRole:
             # If the actual value is None, the PV is not connected.
             # If the configuration value is None, the PV is derived.
@@ -698,11 +701,11 @@ class ObjModel(QtGui.QStandardItemModel):
                                                   (name, str(s)))
                 return
             if 'N' in self.status[idx]:
-                newidx = param.params.pobj.objectInsert(param.params.doMap(self.getObj(idx)['_val']))
+                newidx = param.params.pobj.objectInsert(param.params.db.doMap(self.getObj(idx)['_val']))
                 if newidx != None:
-                    param.params.db.addObjMap(idx, newidx)
+                    param.params.db.addObjmap(idx, newidx)
             elif 'M' in self.status[idx]:
-                param.params.pobj.objectChange(idx, param.params.doMap(self.edits[idx]))
+                param.params.pobj.objectChange(idx, param.params.db.doMap(self.edits[idx]))
 
     #
     # Note: this calls commit (and checks permissions!) even if no change!
@@ -807,6 +810,33 @@ class ObjModel(QtGui.QStandardItemModel):
             (idx, f) = self.index2db(index)
             self.apply(idx)
 
+    def applyVerify(self, changes):
+        d = QtGui.QDialog();
+        d.setWindowTitle("Apply Confirmation")
+        d.layout = QtGui.QVBoxLayout(d)
+        d.mlabel = QtGui.QLabel(d)
+        d.mlabel.setText("Apply will modify settings on the following motors:")
+        d.layout.addWidget(d.mlabel)
+        d.checks = []
+        for idx in changes:
+            check = QtGui.QCheckBox(d)
+            check.setChecked(True)
+            check.setText(self.getObjName(idx))
+            d.layout.addWidget(check)
+            d.checks.append(check)
+        d.buttonBox = QtGui.QDialogButtonBox(d)
+        d.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        d.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
+        d.layout.addWidget(d.buttonBox)
+        d.connect(d.buttonBox, QtCore.SIGNAL("accepted()"), d.accept)
+        d.connect(d.buttonBox, QtCore.SIGNAL("rejected()"), d.reject)
+        if d.exec_() == QtGui.QDialog.Accepted:
+            checks =  [c.isChecked() for c in d.checks]
+            return [changes[i] for i in range(len(changes)) if checks[i]]
+        else:
+            return []
+
+
     #
     # If there are no changes, commitall does not do a permission check, so we need
     # to do one.
@@ -818,7 +848,9 @@ class ObjModel(QtGui.QStandardItemModel):
             QtGui.QMessageBox.critical(None, "Error", "Not authorized to apply changes!",
                                        QtGui.QMessageBox.Ok)
             return
-        for idx in self.rowmap:
+        changes = [idx for idx in self.rowmap if "X" in self.getStatus(idx)]
+        changes = self.applyVerify(changes)
+        for idx in changes:
             self.apply(idx)
 
     def revertone(self, table, index):
@@ -871,6 +903,18 @@ class ObjModel(QtGui.QStandardItemModel):
         if (param.params.cfgdialog.exec_("Select new configuration for %s" % d['name'], d['config']) ==
             QtGui.QDialog.Accepted):
             self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
+            acts = self.getObj(idx)
+            flist = [d['fld'] for d in param.params.pobj.objflds]
+            for f in flist:
+                v = acts[f]
+                v2 = self.getCfg(idx, f) # Configured value
+                if v == None or v2 == None or param.equal(v, v2):
+                    try:
+                        self.istatus[idx].remove(f)
+                    except:
+                        pass
+                else:
+                    self.istatus[idx].add(f)
             r = index.row()
             self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt - 1))
 
