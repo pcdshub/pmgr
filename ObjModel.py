@@ -558,7 +558,7 @@ class ObjModel(QtGui.QStandardItemModel):
                        self.checkStatus(index, 'DMN'))
         menu.addAction("Apply to this object", self.applyone,
                        lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0 and
-                       self.checkStatus(index, 'DMN'))
+                       self.checkStatus(index, 'DMNX') and param.params.applyOK)
         menu.addAction("Revert this object", self.revertone,
                        lambda table, index: self.checkStatus(index, 'M'))
         menu.addAction("Auto config this object", self.autoone, self.testAuto)

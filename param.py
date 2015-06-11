@@ -44,6 +44,7 @@ class param_structure(object):
         self.confirmdialog   = None
         self.settings = ("SLAC", "ParamMgr")
         self.debug  = False
+        self.applyOK  = False
 
         self.ui = None
         self.objmodel = None

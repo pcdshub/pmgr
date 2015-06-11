@@ -141,7 +141,14 @@ class GraphicUserInterface(QtGui.QMainWindow):
             ui.debugButton.hide()
         self.connect(ui.saveButton,      QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
         self.connect(ui.revertButton,    QtCore.SIGNAL("clicked()"), param.params.objmodel.revertall)
-        self.connect(ui.applyButton,     QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)
+        if param.params.applyOK:
+            self.connect(ui.applyButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)
+        else:
+            self.connect(ui.applyButton, QtCore.SIGNAL("clicked()"),
+                         lambda : 
+                         QtGui.QMessageBox.critical(None, "Error", 
+                                                    "Apply disabled.  Restart with --apply-enable.",
+                                                    QtGui.QMessageBox.Ok))
         self.connect(ui.actionAuto,      QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
         self.connect(ui.actionProtected, QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
         self.connect(ui.actionManual,    QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
@@ -207,7 +214,7 @@ if __name__ == '__main__':
     app = QtGui.QApplication([''])
   
     # Options( [mandatory list, optional list, switches list] )
-    options = Options(['hutch', 'type'], [], ['debug'])
+    options = Options(['hutch', 'type'], [], ['debug', 'apply-enabled'])
     try:
         options.parse()
     except Exception, msg:
@@ -217,6 +224,7 @@ if __name__ == '__main__':
     param.params.setHutch(options.hutch.lower())
     param.params.setTable(options.type)
     param.params.debug = False if options.debug == None else True
+    param.params.applyOK = False if options.debug == None else True
     gui = GraphicUserInterface()
     try:
         gui.show()
