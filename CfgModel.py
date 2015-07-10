@@ -607,7 +607,14 @@ class CfgModel(QtGui.QStandardItemModel):
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table)
 
-    def create_child(self, parent, sibling=None, useval=False):
+    #
+    # How is this called?
+    #     - Create configuration from object: parent is arbitrary, sibling=object, useval=False, diff=True
+    #     - Create new child: parent is idx, sibling=None, useval=False, diff=False.
+    #     - Clone existing: parent is parent of sibling, sibling=existing, useval=False, diff=False.
+    #     - Clone values: parent is parent of sibling, sibling=existing, useval=True, diff=False
+    #
+    def create_child(self, parent, sibling=None, useval=False, diff=False):
         id = self.nextid;
         self.nextid -= 1
         now = datetime.datetime.now()
@@ -616,49 +623,68 @@ class CfgModel(QtGui.QStandardItemModel):
              'security': None, 'dt_created': now, 'dt_updated': now}
         self.status[id] = "N"
         param.params.db.setCfgName(id, d['name'])
-        if sibling == None:
-            vals = self.getCfg(parent)
-        else:
+        if diff:
             vals = sibling
-        color = {}
-        haveval = {}
-        for f in param.params.pobj.cfgflds:
-            fld = f['fld']
-            d[fld] = vals[fld]
-            if sibling == None:
-                color[fld] = param.params.blue
-                haveval[fld] = False
-            elif useval:
+            pvals = self.getCfg(parent)
+            color = {}
+            haveval = {}
+            for f in param.params.pobj.cfgflds:
+                fld = f['fld']
+                d[fld] = vals[fld]
+                if vals[fld] == pvals[fld]:
+                    color[fld] = param.params.blue
+                    haveval[fld] = False
+                else:
+                    color[fld] = param.params.black
+                    haveval[fld] = True
+            for fld in self.cfld:
                 color[fld] = param.params.black
                 haveval[fld] = True
-            else:
-                v = vals['_val'][fld]
-                haveval[fld] = v
-                if v:
-                    color[fld] = param.params.black
-                else:
-                    color[fld] = vals['_color'][fld]
-        for fld in self.cfld:
-            color[fld] = param.params.black
-            haveval[fld] = True
-        d['_color'] = color
-        d['_val'] = haveval
-        try:
-            d['curmutex'] = vals['curmutex']
-        except:
-            # Sigh.  No curmutex means this comes from the ObjModel, which means
-            # even the mutex field has the 'wrong' values set.  So we need to look
+            d['_color'] = color
+            d['_val'] = haveval
+            # Sigh.  The vals are from the object model, which means that the
+            # the mutex field has the 'wrong' values set.  So we need to look
             # up the values from our parent.
             d['curmutex'] = self.getCfg(vals['config'])['curmutex']
-        if sibling == None:
-            d['mutex'] = len(param.params.pobj.mutex_sets)*' '
-        elif useval:
-            try:
-                d['mutex'] = vals['curmutex']
-            except:
-                d['mutex'] = d['curmutex']
+            d['mutex'] = d['curmutex']
         else:
-            d['mutex'] = vals['mutex']
+            if sibling == None:
+                vals = self.getCfg(parent)
+            else:
+                vals = sibling
+            color = {}
+            haveval = {}
+            for f in param.params.pobj.cfgflds:
+                fld = f['fld']
+                d[fld] = vals[fld]
+                if sibling == None:
+                    color[fld] = param.params.blue
+                    haveval[fld] = False
+                elif useval:
+                    color[fld] = param.params.black
+                    haveval[fld] = True
+                else:
+                    v = vals['_val'][fld]
+                    haveval[fld] = v
+                    if v:
+                        color[fld] = param.params.black
+                    else:
+                        color[fld] = vals['_color'][fld]
+            for fld in self.cfld:
+                color[fld] = param.params.black
+                haveval[fld] = True
+            d['_color'] = color
+            d['_val'] = haveval
+            d['curmutex'] = vals['curmutex']
+            if sibling == None:
+                d['mutex'] = len(param.params.pobj.mutex_sets)*' '
+            elif useval:
+                try:
+                    d['mutex'] = vals['curmutex']
+                except:
+                    d['mutex'] = d['curmutex']
+            else:
+                d['mutex'] = vals['mutex']
         # Make sure this respects the mutex!
         for c in d['curmutex']:
             v = ord(c) - 0x40

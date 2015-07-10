@@ -671,7 +671,7 @@ if __name__ == '__main__':
     pmgr    = pmgrobj("ims_motor", hutch)
     if options.debug != None:
         for m in motors:
-            print m['name']
+            print m['name'], m['FLD_PORT'], caget(m['rec_base']+".PN")
     else:
         pmgr.start_transaction()
         for m in motors:

@@ -479,14 +479,14 @@ class ObjModel(QtGui.QStandardItemModel):
         utils.fixName(self.objs.values(), idx, name)
         utils.fixName(self.edits.values(), idx, name)
         for i in range(len(self.rowmap)):
-            idx = self.rowmap[i]
+            ii = self.rowmap[i]
             try:
-                if self.edits[idx]['config'] == idx:
-                    self.edits[idx]['cfgname'] = str(name)
+                if self.edits[ii]['config'] == idx:
+                    self.edits[ii]['cfgname'] = str(name)
                     index = self.index(i, self.cfgcol)
                     self.dataChanged.emit(index, index)
             except:
-                d = self.getObj(idx)
+                d = self.getObj(ii)
                 if d['config'] == idx:
                     d['cfgname'] = str(name)
                     index = self.index(i, self.cfgcol)
@@ -626,7 +626,10 @@ class ObjModel(QtGui.QStandardItemModel):
 
     def createcfg(self, table, index):
         (idx, f) = self.index2db(index)
-        param.params.cfgmodel.create_child(0, self.getObj(idx), True)
+        if (param.params.cfgdialog.exec_("Select parent configuration for configuration of %s" % self.getObjName(idx), 0)
+            == QtGui.QDialog.Accepted):
+            v = param.params.cfgmodel.create_child(param.params.cfgdialog.result, self.getObj(idx), False, True)
+            self.setCfg(idx, v)
 
     def delete(self, table, index):
         (idx, f) = self.index2db(index)
@@ -691,8 +694,12 @@ class ObjModel(QtGui.QStandardItemModel):
                 e = {}
             try:
                 if e['config'] < 0:
-                    param.params.pobj.transaction_error("New configuration must be committed before committing %s!" % name)
-                    return
+                    try:
+                        if param.params.db.cfgmap[e['config']] < 0:
+                            raise Exception
+                    except:
+                        param.params.pobj.transaction_error("New configuration must be committed before committing %s!" % name)
+                        return
             except:
                 pass
             s = self.checkSetMutex(d, e)
@@ -735,7 +742,7 @@ class ObjModel(QtGui.QStandardItemModel):
         for (idx, s) in self.status.items():
             if ('N' in s or 'M' in s) and not 'D' in s:  # Paranoia.  We should never have DM or DN.
                 self.commit(idx)
-        if param.params.db.end_transaction(): 
+        if param.params.db.end_transaction():
             param.params.cfgmodel.cfgChangeDone()
             self.objChangeDone()
             return True
