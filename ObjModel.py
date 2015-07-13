@@ -88,14 +88,6 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             return self.objs[idx]
 
-    def setCfg(self, idx, cfg):
-        self.setValue(idx, 'cfgname', cfg)
-        try:
-            index = self.index(self.rowmap.index(idx), self.cfgcol)
-            self.dataChanged.emit(index, index)
-        except:
-            pass
-
     def getCfg(self, idx, f, GetEdit=True):
         if GetEdit:
             try:
@@ -863,6 +855,8 @@ class ObjModel(QtGui.QStandardItemModel):
     def revertone(self, table, index):
         (idx, f) = self.index2db(index)
         try:
+            if 'config' in self.edits[idx].keys():
+                self.setCfg(idx, self.getObj(idx)['config'])
             del self.edits[idx]
         except:
             pass
@@ -904,26 +898,33 @@ class ObjModel(QtGui.QStandardItemModel):
             self.rowmap = param.params.pobj.objs.keys()
         self.adjustSize()
 
+    def setCfg(self, idx, cfg):
+        self.setValue(idx, 'cfgname', cfg)
+        acts = self.getObj(idx)
+        flist = [d['fld'] for d in param.params.pobj.objflds]
+        for f in flist:
+            v = acts[f]
+            v2 = self.getCfg(idx, f) # Configured value
+            if v == None or v2 == None or param.equal(v, v2):
+                try:
+                    self.istatus[idx].remove(f)
+                except:
+                    pass
+            else:
+                self.istatus[idx].add(f)
+        r = self.rowmap.index(idx)
+        self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt - 1))
+
     def chparent(self, table, index):
         (idx, f) = self.index2db(index)
         d = self.getObj(idx)
         if (param.params.cfgdialog.exec_("Select new configuration for %s" % d['name'], d['config']) ==
             QtGui.QDialog.Accepted):
-            self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
-            acts = self.getObj(idx)
-            flist = [d['fld'] for d in param.params.pobj.objflds]
-            for f in flist:
-                v = acts[f]
-                v2 = self.getCfg(idx, f) # Configured value
-                if v == None or v2 == None or param.equal(v, v2):
-                    try:
-                        self.istatus[idx].remove(f)
-                    except:
-                        pass
-                else:
-                    self.istatus[idx].add(f)
-            r = index.row()
-            self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt - 1))
+            self.setCfg(idx, param.params.cfgdialog.result)
+            try:
+                print self.edits[idx]
+            except:
+                print "NO EDITS!"
 
     def cfgEdit(self, idx, f):
         f = str(f)
