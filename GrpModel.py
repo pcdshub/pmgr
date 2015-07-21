@@ -329,6 +329,8 @@ class GrpModel(QtGui.QStandardItemModel):
         self.dataChanged.emit(self.index(r, 0), self.index(r + 1, self.coff + self.maxLength()))
 
     def deleteGrpOK(self, table, index):
+        if not index.isValid():
+            return False
         id = self.getGroupId(index)
         if "D" in self.status[id]:
             return False
@@ -355,6 +357,8 @@ class GrpModel(QtGui.QStandardItemModel):
             self.dataChanged.emit(self.index(r, self.statcol), self.index(r, self.statcol))
 
     def undeleteGrpOK(self, table, index):
+        if not index.isValid():
+            return False
         id = self.getGroupId(index)
         if "D" in self.status[id]:
             return True
@@ -367,6 +371,8 @@ class GrpModel(QtGui.QStandardItemModel):
         self.status[id] = self.status[id].replace("D", "")
 
     def selectCfgOK(self, table, index):
+        if not index.isValid():
+            return False
         r = index.row()
         if r % 2 != 0:
             return False
@@ -378,6 +384,8 @@ class GrpModel(QtGui.QStandardItemModel):
         return True
 
     def addCfgOK(self, table, index):
+        if not index.isValid():
+            return False
         r = index.row()
         if r % 2 != 0:
             return False
@@ -393,6 +401,8 @@ class GrpModel(QtGui.QStandardItemModel):
             self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
 
     def commitOK(self, table, index):
+        if not index.isValid():
+            return False
         id = self.getGroupId(index)
         return id < 0 or "M" in self.status[id] or "D" in self.status[id]
 
@@ -491,6 +501,8 @@ class GrpModel(QtGui.QStandardItemModel):
                 self.status[id] = ""
 
     def applyOK(self, table, index):
+        if not index.isValid():
+            return False
         id = self.getGroupId(index)
         g = self.getGroup(index)
         return not "D" in self.status[id] and g['global']['active'] == 1
@@ -548,6 +560,8 @@ class GrpModel(QtGui.QStandardItemModel):
                 self.apply(g)
 
     def revertOK(self, table, index):
+        if not index.isValid():
+            return False
         id = self.getGroupId(index)
         return "M" in self.status[id]
 
