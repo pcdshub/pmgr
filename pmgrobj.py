@@ -420,10 +420,11 @@ class pmgrobj(object):
                     self.groups[id]['global'] = {'len' : 0, 'name' : g['name'], 'active': g['active']}
                 for g in cfggrp:
                     id = g['group_id']
-                    self.groups[id][g['dispseq']] = {'config': g['config_id'],
-                                                     'port': g['port_id']}
-                    sz = self.groups[id]['global']['len'] + 1
-                    self.groups[id]['global']['len'] = sz
+                    if id in self.groups.keys():
+                        self.groups[id][g['dispseq']] = {'config': g['config_id'],
+                                                         'port': g['port_id']}
+                        sz = self.groups[id]['global']['len'] + 1
+                        self.groups[id]['global']['len'] = sz
         return mask
 
     def start_transaction(self):
