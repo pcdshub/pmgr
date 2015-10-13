@@ -66,7 +66,7 @@ def caput(pvname,value,timeout=1.0):
         pv = Pv(pvname)
         pv.connect(timeout)
         pv.get(ctrl=False, timeout=timeout)
-        pv.put(value, timeout)
+        pv.put(value, timeout=timeout)
         pv.disconnect()
     except pyca.pyexc, e:
         print 'pyca exception: %s' %(e)
