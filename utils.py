@@ -61,11 +61,16 @@ class MyContextMenu(QtGui.QMenu):
 # Utility functions to deal with PVs.
 #
 
-def caput(pvname,value,timeout=1.0):
+def caput(pvname,value,timeout=1.0,**kw):
     try:
         pv = Pv(pvname)
         pv.connect(timeout)
         pv.get(ctrl=False, timeout=timeout)
+        try:
+            if kw['enum']:
+                pv.set_string_enum(True)
+        except:
+            pass
         pv.put(value, timeout=timeout)
         pv.disconnect()
     except pyca.pyexc, e:

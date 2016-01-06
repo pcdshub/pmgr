@@ -847,10 +847,12 @@ class pmgrobj(object):
                 if self.fldmap[f]['writezero']:
                     try:
                         z = self.fldmap[f]['enum'][0]
+                        haveenum = True
                     except:
                         z = 0
+                        haveenum = False
                     try:
-                        utils.caput(base + self.fldmap[f]['pv'], z)
+                        utils.caput(base + self.fldmap[f]['pv'], z, enum=haveenum)
                     except:
                         pass
             #
@@ -860,7 +862,13 @@ class pmgrobj(object):
                 if vals[f] == None or self.fldmap[f]['readonly']:
                     continue
                 try:
-                    utils.caput(base + self.fldmap[f]['pv'], vals[f])
+                    z = self.fldmap[f]['enum'][0]
+                    haveenum = True
+                except:
+                    z = 0
+                    haveenum = False
+                try:
+                    utils.caput(base + self.fldmap[f]['pv'], vals[f], enum=haveenum)
                 except:
                     pass
 
