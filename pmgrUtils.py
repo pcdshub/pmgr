@@ -188,8 +188,8 @@ object for {0} pmgr'".format(hutch.upper()))
 	cfgPmgr = pmgr.cfgs[cfgID]
 	objPmgr = pmgr.objs[objID]
 
-	printDiff(pmgr, objOld, cfgOld, objPmgr, cfgPmgr, verbose)
-
+	try: printDiff(pmgr, objOld, cfgOld, objPmgr, cfgPmgr, verbose)
+	except: pass
 
 	if zenity: system('zenity --info --text="Motor configuration successfully \
 saved into {0} pmgr"'.format(hutch.upper()))
@@ -282,7 +282,8 @@ def applyConfig(PV, hutches, SN, verbose, zenity):
 	cfgNew = utlp.getCfgVals(pmgr, PV)
 	objNew = utlp.getObjVals(pmgr, PV)
 
-	printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose)
+	try: printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose)
+	except: pass
 
 	if zenity:
 		system('zenity --info --text="Configuration successfully applied"')
@@ -807,7 +808,8 @@ def Diff(PV, hutch, pmgr, SN, verbose):
 	cfgPmgr = pmgr.cfgs[cfgID]
 	objPmgr = pmgr.objs[objID]
 
-	printDiff(pmgr, objLive, cfgLive, objPmgr, cfgPmgr, verbose) 
+	try: printDiff(pmgr, objLive, cfgLive, objPmgr, cfgPmgr, verbose) 
+	except: pass
 
 def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose):
 	""" Prints the diffs between the old values and new values"""
