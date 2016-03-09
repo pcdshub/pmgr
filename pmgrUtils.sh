@@ -14,7 +14,7 @@ fi
 
 # Look for configurations in both the sxr and amo pmgrs if using apply
 if [[ "$1" == "apply" ]] && [ "$sxd" = true ] ; then
-    python pmgrUtils.py $1 $2 -v -z --hutch=sxd
+    python /reg/g/pcds/pyps/apps/pmgr/latest/pmgrUtils.py $1 $2 -v -z --hutch=sxd
 else
-    python pmgrUtils.py $1 $2 -v -z
+    python /reg/g/pcds/pyps/apps/pmgr/latest/pmgrUtils.py $1 $2 -v -z
 fi
