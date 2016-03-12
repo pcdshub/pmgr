@@ -1,8 +1,7 @@
 # An Extension of utils to provide lower and mid level functions surrounding 
-# pmgr objs
+# for pmgrUtils. It is a mishmash of functions compiled into one script.
 
 import psp.Pv as pv
-import pyUtils as putl
 import logging
 import subprocess
 import os
@@ -12,22 +11,18 @@ from caget import caget
 from pprint import pprint
 from pmgrobj import pmgrobj
 from os import system
-
+from ConfigParser import SafeConfigParser
 
 logger = logging.getLogger(__name__)
 
 # Globals
 
-Hutches = ["amo", "sxr", "mec", "cxi", "tst", "xcs", "xpp"]
+parser = SafeConfigParser()
+parser.read("pmgrUtils.cfg")
 
-supportedHutches = ['sxr','amo','sxd']    # Hutches currently supported.
-# Add hutch names to this list for pmgr functionality. 
-# Note: for the hutch to work, it must already be in the pmgr.
-
-supportedObjTypes = ['ims_motor']         # ObjTypes currently supported.
-# Add objtypes to this list for pmgr functionality. 
-# This list is intended to allow for the script to handle newer objtypes as the
-# pmgr becomes gets used for more devices.
+# To add hutches or objTypes to the supported list, look in pmgrUtils.cfg
+supportedHutches = parser.get("pmgr", "supportedHutches")
+supportedObjTypes = parser.get("pmgr", "supportedObjTypes")
 
 nTries = 3                                # Number of attempts when using caget
 
@@ -89,11 +84,11 @@ def newObject(pmgr, objDict,typeStr=None, parent=None, owner=None):
 			objDict[field] = "None" 
 
 	if not parent:
-		parent = putl.getHutch(pmgr).upper()
+		parent = getHutch(pmgr).upper()
 	if type(parent) == str:
-		parent = putl.cfgFromName(pmgr, parent)
+		parent = cfgFromName(pmgr, parent)
 	if not owner:
-		owner = putl.getHutch(pmgr)
+		owner = getHutch(pmgr)
 	if "comment" not in objDict:
 		objDict["comment"] = "None"
 	if "rec_base" not in objDict:
@@ -137,7 +132,7 @@ def nextObjName(pmgr, name):
 	a valid name is found, returning the new name.
 	"""
 	allNames = allObjNames(pmgr)
-	name = putl.incrementMatching(str(name), allNames)
+	name = incrementMatching(str(name), allNames)
 	return str(name)
 
 def nextCfgName(pmgr, name):
@@ -145,8 +140,8 @@ def nextCfgName(pmgr, name):
 	""" 
 	Wrapper function for nextName that just makes sure the name is of type str
 	"""
-	allNames = putl.allCfgNames(pmgr)
-	name = putl.incrementMatching(str(name), allNames,  maxLength=15)
+	allNames = allCfgNames(pmgr)
+	name = incrementMatching(str(name), allNames,  maxLength=15)
 	return str(name)
 
 def objUpdate(pmgr, idx, objDict):
@@ -155,7 +150,7 @@ def objUpdate(pmgr, idx, objDict):
 	for field in objDict.keys():
 		try: obj[field] = objDict[field]
 		except: continue
-	return putl.transaction(pmgr, "objectChange", idx, obj)
+	return transaction(pmgr, "objectChange", idx, obj)
 
 
 def get_motor_PVs(partialPV):
@@ -177,9 +172,6 @@ def get_motor_PVs(partialPV):
             
     return motorPVs
 
-
-### Mid level functions
-
 def allObjNames(pmgr):
 	return setOfAllObjVal(pmgr, "name")
 
@@ -200,7 +192,7 @@ def setOfAllObjVal(pmgr, field, fcheck=None, fval=None):
 			vals.add(d[field])
 	return vals
 
-def getObjWithSN(pmgr, SN):
+def getObjWithSN(pmgr, SN, verbose):
 	"""
 	Returns the objID of the first object with the matching SN. None if no 
 	object exits. It will also pad SNs if they are less than 9 digits long
@@ -218,11 +210,12 @@ def getObjWithSN(pmgr, SN):
 			changed = True
 			
  		if changed and pmgr.objs[objID]["name"] != "DEFAULT":
- 			print "\nThe SN for motor {0} has an incorrect length. Adding zeros\
- to ensure proper pmgr functionality.".format(pmgr.objs[objID]["name"])
+			if verbose:
+				print "\nThe SN for motor {0} has an incorrect length. Adding \
+zeros to ensure proper pmgr functionality.".format(pmgr.objs[objID]["name"])
  			obj = pmgr.objs[objID]
  			obj["FLD_SN"] = pmgrSN
- 			putl.transaction(pmgr, "objectChange", objID, obj)
+ 			transaction(pmgr, "objectChange", objID, obj)
 
 		if pmgrSN == SN: 
 			return objID
@@ -285,7 +278,6 @@ def convertToApplyCfg(cfgDict):
 
 	return newDict
 		  
-### Lower Level Functions
 
 def checkSNLength(cfgDict):
 	""" 
@@ -311,10 +303,10 @@ def checkSNLength(cfgDict):
 		return cfgDict
 
 def listObjFields(pmgr):
-	return putl.listFieldsWith(pmgr, "obj", True)
+	return listFieldsWith(pmgr, "obj", True)
 
 def listCfgFields(pmgr):
-	return putl.listFieldsWith(pmgr, "obj", False)
+	return listFieldsWith(pmgr, "obj", False)
 
 
 def createmotordb(hutch, path):
@@ -451,12 +443,12 @@ def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose):
 	# cfgDict["name"] = cfgOld["name"]
 
 	if cfgOld["name"] in allNames: allNames.remove(cfgOld["name"])
-	cfgDict["name"] = putl.incrementMatching(cfgDict["name"],
+	cfgDict["name"] = incrementMatching(cfgDict["name"],
 	                                         allNames,
 	                                         maxLength=15)
 	print "Saving configuration..." 
 	# # Actually do the update
-	didWork = putl.cfgChange(pmgr, cfgID, cfgDict)
+	didWork = cfgChange(pmgr, cfgID, cfgDict)
 
 	return didWork, objOld, cfgOld
 
@@ -600,4 +592,407 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose):
 		print "Diffs:"
 		pprint(diffs)
 		print
+
+
+def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict):
+	""" Creates a new config and then sets it to the objID """
+	status = False
+	# Get a valid cfg name
+	cfgName = utlp.nextCfgName(pmgr, cfgDict["name"])
+	cfgDict["name"] = cfgName
+	cfgDict["FLD_TYPE"] = "{0}_{1}".format(cfgName, PV[:4])
+
+	# # Create new cfg
+	cfgID = newConfig(pmgr, cfgDict, cfgDict["name"])
+
+	if not cfgID: 
+		print "Failed to create cfg for {0}".format(cfgName)
+		if zenity: system("zenity --error --text='Error: Failed to create new config'")
+		return status
+
+	# # Set obj to use cfg
+	status = setObjCfg(pmgr, objID, cfgID)
+	return status
+
+def getMostRecentObj(hutches, SN, objType, verbose):
+	""" 
+	Finds all saved objs in all the pmgr instances for the SN inputted and 
+	returns the most recently updated one along with the corresponding pmgr
+	instance.
+	"""
+	objs = {}
+	for hutch in hutches:
+		pmgr = getPmgr(objType, hutch, verbose)
+		if not pmgr: continue
+
+		if verbose: print "Checking pmgr SNs for this motor"
+		objID = getObjWithSN(pmgr, SN)
+		if not objID:
+			print "Serial number {0} not found in {1} pmgr".format(SN,hutch.upper())
+			continue
+		time_Updated = pmgr.cfgs[pmgr.objs[objID]['config']]['dt_updated']
+		if verbose: 
+			print "Motor found"
+			print "Last motor update done on {0}".format(time_Updated)
+		objs[time_Updated] = [objID, hutch]
+
+	# Make sure there is at least one obj with the corresponding SN
+	if len(objs) == 0:
+		print "Failed to apply: Serial number {0} not found in pmgr".format(SN)
+		if zenity: system("zenity --error --text='Error: Motor not in pmgr'")
+		return None, None
+
+	# Use the most recent obj and the corresponding pmgr instance
+	mostRecent = max(objs.keys())
+	objID = objs[mostRecent][0]
+	print "Using most recent obj saved on {0} from {1} pmgr".format(mostRecent, 
+	                                                                objs[mostRecent][1])
+	pmgr = utlp.getPmgr(objType, objs[mostRecent][1], verbose)
+    
+	return objID, pmgr
+
+
+# Functions pulled from Zack's utils.py file
+# Original: /reg/neh/home/zlentz/python/pmgrPython/utils.py
+import time
+def timing(f):
+    def wrap(*args):
+        time1 = time.time()
+        ret = f(*args)
+        time2 = time.time()
+        print "{0} function took {1:0.3f} s".format(f.func_name, time2-time1)
+        return ret
+    return wrap
+
+def config(pmgr, PV):
+    d = pmgrConfig(pmgr, PV)
+    return d["name"]
+
+def pvConfig(pmgr, PV):
+    """ Returns live config dict associated with PV, or None """
+    configFields = listCfgFields(pmgr)
+    cfgDict = {}
+    for field in configFields:
+        if field != "FLD_TYPE":
+            pvExt = pmgr.fldmap[field]["pv"]
+            val = pv.get(PV + pvExt)
+            if val is None:
+                return None
+            fieldDict = pmgr.fldmap[field]
+            if "enum" in fieldDict:
+                choices = fieldDict["enum"]
+                if val >= len(choices):
+                    print "WARNING: index mismatch in field {0}.".format(field) 
+                    print "An ioc has been updated without updating the Parameter Manager!"
+                    val = len(choices) - 1
+                val = fieldDict["enum"][val]
+            cfgDict[field] = val
+    return cfgDict
+
+def pmgrConfig(pmgr, PV):
+    """ Returns config dict associated with PV in the pmgr, or None """
+    obj = objFromPV(pmgr, PV)
+    pmgr.updateTables()
+    cfg = pmgr.objs[obj]["config"]
+    d = cfgVals(pmgr, cfg)
+    return d
+
+def nameConfig(pmgr, name):
+    """ Returns config dict associated with configuration name """
+    ID = cfgFromName(pmgr, name)
+    cfg = cfgVals(pmgr, ID)
+    return cfg
+
+def newConfig(pmgr, cfgDict, name, typeStr=None, parent=None, owner=None):
+    """
+    Creates and saves a new config from cfgDict and the passed in parameters.
+    Input parent can be a string or the integer ID. By default, parent and
+    owner are those associated with this pmgr. (e.g. XPP and xpp). Returns
+    None in event of a failure.
+    """
+    if not cfgDict or not name:
+        return None
+    configFields = listCfgFields(pmgr)
+    for field in configFields:
+        if field not in cfgDict:
+            cfgDict[field] = None # configInsert freaks out over missing fields
+    if not parent:
+        parent = getHutch(pmgr).upper()
+    if type(parent) == str:
+        parent = cfgFromName(pmgr, parent)
+    if not owner:
+        owner = getHutch(pmgr)
+    if not typeStr:
+        typeStr = "{0}_{1}".format(name, owner)
+        typeStr = nextType(pmgr, typeStr)
+    cfgDict["config"] = parent
+    cfgDict["owner"] = owner
+    cfgDict["FLD_TYPE"] = typeStr
+    cfgDict["name"] = name
+    ID = cfgInsert(pmgr, cfgDict)
+    return ID
+
+def setConfig(pmgr, PV, config):
+    """ Sets the config name config to the object associated with PV """
+    obj = objFromPV(pmgr, PV)
+    if not obj:
+        print "Error connecting to PV {0}".format(PV)
+        return False
+    cfg = cfgFromName(pmgr, config)
+    if not cfg:
+        print "No configuration found for name {0}".format(config)
+        return False
+    return setObjCfg(pmgr, obj, cfg)
+
+def applyConfig(pmgr, PV):
+    """ Applies the config assigned to PV to the live values """
+    obj = objFromPV(pmgr, PV)
+    objApply(pmgr, obj)
+    # Unfortunately, the apply configurations interface has no error returns.
+    # We will not return True/False like the others and instead check in post
+    # with a diff in main.
+
+def defaultName(pmgr, PV):
+    """ Returns a default name for the config associated with PV """
+    name = pv.get(PV + ".DESC")
+    return nextName(pmgr, name)
+
+def nextName(pmgr, name):
+    """
+    Returns name if it's available and valid. Otherwise, appends numbers until
+    a valid name is found, returning the new name.
+    """
+    allNames = allCfgNames(pmgr) 
+    name = incrementMatching(name, allNames, maxLength=15)
+    return name
+
+def hutchCfgNames(pmgr, hutch):
+    return setOfAllCfgVal(pmgr, "name", "owner", hutch)
+
+def allCfgNames(pmgr):
+    return setOfAllCfgVal(pmgr, "name")
+
+def getAuto(pmgr, PV, reInit):
+    go = checkCanAuto(pmgr, PV)
+    if not go:
+        return "Object is not auto-configurable."
+    if reInit:
+        fixSN(pmgr, PV)
+    d = autoCfg(pmgr, PV)
+    if not d:
+        return "No autoconfig found."
+    return d
+
+def setDesc(pmgr, PV, desc):
+    objID = objFromPV(pmgr, PV)
+    obj = pmgr.objs[objID]
+    obj["FLD_DESC"] = desc
+    return transaction(pmgr, "objectChange", objID, obj)
+
+def changeConfig(pmgr, cfgName, **kwargs):
+    idx = cfgFromName(pmgr, cfgName)
+    cfgd = {}
+    nChange = 0
+    for field, value in kwargs.items():
+        ftry = findValidCfgField(pmgr, field)
+        if ftry is None:
+            print "{0} is not a valid field.".format(field)
+        else:
+            cfgd[ftry] = value
+            nChange += 1
+    didWork = cfgChange(pmgr, idx, cfgd)
+    if didWork:
+        return nChange
+    else:
+        return 0
+
+def nextType(pmgr, typeStr):
+    allTypes = setOfAllCfgVal(pmgr, "FLD_TYPE")
+    typeStr = incrementMatching(typeStr, allTypes)
+    return typeStr
+
+def cfgInsert(pmgr, cfg):
+    """ Adds partial configuration dict cfg to pmgr as a configuration. """
+    if "mutex" not in cfg:
+        cfg["mutex"] = "XY  "
+    cfg["_haveval"] = {} # We need this to appease configInsert
+    for field in cfg.keys():
+        if cfg[field] is None:
+            cfg["_haveval"][field] = False
+        else:
+            cfg["_haveval"][field] = True
+    cfg["_val"] = cfg["_haveval"] # Workaround for typo in pmgrobj.py
+    result = None
+    result = transaction(pmgr, "configInsert", cfg)
+    return result
+
+def setObjCfg(pmgr, objID, cfgID):
+    pmgr.updateTables()
+    d = pmgr.objs[objID]
+    d["config"] = cfgID
+    result = transaction(pmgr, "objectChange", objID, d)
+    if result and result == "error":
+        return False
+    return True
+
+def objApply(pmgr, objID):
+    result = transaction(pmgr, "applyConfig", objID)
+    if result and result == "error":
+        return False
+    return True
+
+def getHutch(pmgr):
+    return pmgr.hutch
+
+def listCfgFields(pmgr):
+    return listFieldsWith(pmgr, "obj", False)
+
+def setOfAllCfgVal(pmgr, field, fcheck=None, fval=None):
+    """
+    Returns a set of all configured values for field.
+    kwargs is a dict of field : value pairs that act as conditions for being
+    on this list. With no kwargs we return all of the values.
+    """
+    vals = set()
+    pmgr.updateTables()
+    for cfg in pmgr.cfgs:
+        d = pmgr.cfgs[cfg]
+        if fcheck and fval:
+            if d[fcheck] == fval:
+                vals.add(d[field])
+        else:
+            vals.add(d[field])
+    return vals
+
+def objFromPV(pmgr, PV):
+    """ Returns objID associated with PV, or None """
+    return firstObjWith(pmgr, "rec_base", PV)
+
+def cfgFromName(pmgr, name):
+    """ Returns cfgID associated with name, or None """
+    return firstCfgWith(pmgr, "name", name)
+
+def incrementMatching(text, matchSet, maxLength=None, n=2):
+    """
+    Adds incrementing n-digit numbers to text until it no longer matches any
+    entries on matchSet.
+    """
+    if maxLength is not None and len(text) > maxLength:
+        text = text[0:maxLength]
+    while text in matchSet:
+        if text[-n:].isdigit():
+            num = int(text[-n:])
+            num += 1
+            num = str(num)
+            while len(num) < n:
+                num = "0" + num
+            text = text[:-n]
+        else:
+            num = "0" * n
+        if maxLength is not None and len(text) > maxLength-n:
+            text = text[0:maxLength-n]
+        text += num
+    return text
+
+def fixSN(pmgr, PV):
+    pv.put(PV + ".RINI", 1) # Re-initialize motor to get accurate SN
+    objID = objFromPV(pmgr, PV)
+    pmgr.updateTables()
+    d = pmgr.objs[objID]
+    # Set up Pv object so we can specify a timeout and wait for init.
+    SNPV = pv.Pv(PV + ".SN")
+    SNPV.connect(timeout=5)
+    SN = SNPV.get() # Pull the value we need
+    SNPV.disconnect()
+    d["FLD_SN"] = SN
+    transaction(pmgr, "objectChange", objID, d)
+    
+def autoCfg(pmgr, PV):
+    objID = objFromPV(pmgr, PV)
+    pmgr.updateTables()
+    objDict = pmgr.objs[objID]
+    auto = transaction(pmgr, "getAutoCfg", objDict)
+    if auto:
+        cfgID = auto["cfgname"]
+    else:
+        return {}
+    return cfgVals(pmgr, cfgID)
+
+def checkCanAuto(pmgr, PV):
+    objID = objFromPV(pmgr, PV)
+    pmgr.updateTables()
+    obj = pmgr.objs[objID]
+    mode = obj["category"]
+    return mode == "Auto"
+
+def findValidCfgField(pmgr, field):
+    flds = listCfgFields(pmgr)
+    choices = [field, field.lower(), field.upper(), "FLD_" + field.upper()]
+    for c in choices:
+        if c in flds:
+            return c
+    return None
+
+def cfgChange(pmgr, idx, cfgd):
+    return transaction_bool(pmgr, "configChange", idx, cfgd)
+
+def transaction_bool(pmgr, method, *args):
+    """
+    Does transaction, but returns True if successful and False if errors
+    instead of normal output if successful and "error" if errors.
+    """
+    output = transaction(pmgr, method, *args)
+    if output == "error":
+        return False
+    return True
+
+def cfgVals(pmgr, idx):
+    pmgr.updateTables()
+    d = pmgr.getConfig(idx)
+    del d["dt_updated"]
+    del d["_haveval"]
+    return d
+
+def listFieldsWith(pmgr, property, value):
+    """ Returns a list of field names where property = value """
+    fWith = []
+    pmgr.updateTables()
+    for field in pmgr.objflds:
+        if field[property] == value:
+            fWith += [field["fld"]]
+    return fWith
+
+def firstObjWith(pmgr, field, val):
+    """ Returns the first objID found where field is value """
+    pmgr.updateTables()
+    for obj in pmgr.objs.keys():
+        if pmgr.objs[obj][field] == val:
+            return obj
+    return None
+
+def firstCfgWith(pmgr, field, val):
+    """ Returns the first cfgID found where field is value """
+    pmgr.updateTables()
+    for cfg in pmgr.cfgs.keys():
+        if pmgr.cfgs[cfg][field] == val:
+            return cfg
+    return None
+
+def transaction(pmgr, method, *args):
+    """
+    Does a safe database transaction using pmgrobj.pmgrmethod(*args). Prints
+    error strings to the terminal. Always closes transactions.
+    """
+    pmgr.updateTables()
+    pmgr.start_transaction()
+    try:
+        output = getattr(pmgr, method)(*args)
+    finally:
+        errors = pmgr.end_transaction()
+        if errors:
+            for e in errors:
+                print e
+            output = "error"
+        pmgr.updateTables()
+        return output
 
