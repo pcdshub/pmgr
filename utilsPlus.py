@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Globals
 
 parser = SafeConfigParser()
-parser.read("pmgrUtils.cfg")
+parser.read("/reg/g/pcds/pyps/apps/pmgr/latest/pmgrUtils.cfg")
 
 # To add hutches or objTypes to the supported list, look in pmgrUtils.cfg
 supportedHutches = parser.get("pmgr", "supportedHutches")
