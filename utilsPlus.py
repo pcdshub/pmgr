@@ -1,5 +1,6 @@
 # An Extension of utils to provide lower and mid level functions surrounding 
-# for pmgrUtils. It is a mishmash of functions compiled into one script.
+# pmgrUtils. It is a mishmash of functions compiled into one script so it is
+# to refer to it only when trying to understand specific funtions in pmgrUtils.
 
 import psp.Pv as pv
 import logging
@@ -35,7 +36,7 @@ def getCfgVals(pmgr, PV):
 	name = None
 
 	try:
-		name = caget(PV +".DESC")
+		name = pv.get(PV +".DESC")
 	except:
 		name = "Unknown"
 	
@@ -162,7 +163,7 @@ def get_motor_PVs(partialPV):
         print basePV
         
         try:
-	        SN = caget(basePV + ".SN")
+	        SN = pv.get(basePV + ".SN")
 	        
 	        if len(SN) >= 8:
 		        motor_PVs[sn] = basepv
@@ -380,7 +381,7 @@ def createmotordb(hutch, path):
     return motor_db
 
 
-def getFieldDict(cfgPath):
+def getImportFieldDict(cfgPath):
     '''
     Takes in a path to a cfg file, loads the text file and then parses the
     contents into a config dictionary
@@ -428,11 +429,11 @@ def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose):
 
 	# # Print live values for troubleshooting
 	if verbose:
-		print "\nLive cfg values for {0}".format(caget(PV+".DESC"))
+		print "\nLive cfg values for {0}".format(pv.get(PV+".DESC"))
 		pprint(objDict)
 		pprint(cfgDict)
 
-		print "\nPMGR cfg values for {0} before update".format(caget(PV+".DESC"))
+		print "\nPMGR cfg values for {0} before update".format(pv.get(PV+".DESC"))
 		pprint(objOld)
 		pprint(cfgOld)
 		print
@@ -478,7 +479,7 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
 		print "Hutches: {0}".format(hutches)
 
 	# Check for valid obj entry. Pmgr only supports ims motors as of 1/1/2016
-	if objType in supportedObjTypes: pass
+	if str(objType) in supportedObjTypes: pass
 	elif ":MMS:" in PV[0]: objType = "ims_motor"
 	else:
 		print "Unknown device type for {0}".format(PV[0])
@@ -492,7 +493,7 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
 	for motorPV in PV:
 		while i < nTries:
 			try:
-				SN[motorPV] = caget(motorPV + ".SN")
+				SN[motorPV] = pv.get(motorPV + ".SN")
 				break
 			except: i+=1
 
@@ -515,7 +516,7 @@ def dumbMotorCheck(PV):
 	
 	while i < nTries:
 		try: 
-			PN = caget(PV + ".PN")
+			PN = pv.get(PV + ".PN")
 			break
 		except: i += 1
 	
@@ -580,7 +581,7 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose):
 
 	for field in objOld.keys():
 		try:
-			if str(objNew[field]) != str(objOld[field]):
+			if str(objNew[field]) != str(objOld[field]) and field not in fields.keys():
 				diffs[field] = "New: {0}, Old: {1}".format(
 					objNew[field],
 				    objOld[field])
@@ -598,7 +599,7 @@ def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict):
 	""" Creates a new config and then sets it to the objID """
 	status = False
 	# Get a valid cfg name
-	cfgName = utlp.nextCfgName(pmgr, cfgDict["name"])
+	cfgName = nextCfgName(pmgr, cfgDict["name"])
 	cfgDict["name"] = cfgName
 	cfgDict["FLD_TYPE"] = "{0}_{1}".format(cfgName, PV[:4])
 
@@ -626,7 +627,7 @@ def getMostRecentObj(hutches, SN, objType, verbose):
 		if not pmgr: continue
 
 		if verbose: print "Checking pmgr SNs for this motor"
-		objID = getObjWithSN(pmgr, SN)
+		objID = getObjWithSN(pmgr, SN, verbose)
 		if not objID:
 			print "Serial number {0} not found in {1} pmgr".format(SN,hutch.upper())
 			continue
@@ -647,7 +648,7 @@ def getMostRecentObj(hutches, SN, objType, verbose):
 	objID = objs[mostRecent][0]
 	print "Using most recent obj saved on {0} from {1} pmgr".format(mostRecent, 
 	                                                                objs[mostRecent][1])
-	pmgr = utlp.getPmgr(objType, objs[mostRecent][1], verbose)
+	pmgr = getPmgr(objType, objs[mostRecent][1], verbose)
     
 	return objID, pmgr
 

@@ -60,6 +60,7 @@ long as it is already in the pmgr).
 """
 
 import utilsPlus as utlp
+import psp.Pv as pv
 
 from caget import caget
 from pprint import pprint
@@ -92,7 +93,7 @@ def saveConfig(PV, hutch, pmgr, SN, verbose, zenity):
 
 	# Look through pmgr objs for a motor with that id
 	if verbose: print "Checking {0} pmgr SNs for this motor".format(hutch.upper())
-	objID = utlp.getObjWithSN(pmgr, objDict["FLD_SN"]. verbose)
+	objID = utlp.getObjWithSN(pmgr, objDict["FLD_SN"], verbose)
 	if verbose: print "ObjID obtained from {0} pmgr: {1}".format(hutch.upper(), objID)
 
 
@@ -182,7 +183,7 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity):
 	# Change rec_base field to the base PV and the port field to the live port
 	obj = pmgr.objs[objID]
 	obj["rec_base"] = PV
-	obj["FLD_PORT"] = caget(PV + ".PORT")
+	obj["FLD_PORT"] = pv.get(PV + ".PORT")
 	utlp.transaction(pmgr, "objectChange", objID, obj)
 
 
@@ -237,7 +238,7 @@ def dumbMotorApply(PV, hutches, objType, SN, verbose, zenity):
 	# Change rec_base to the base PV and port to the current port
 	obj = pmgr.objs[objID]
 	obj["rec_base"] = PV
-	obj["FLD_PORT"] = caget(PV + ".PORT")
+	obj["FLD_PORT"] = pv.get(PV + ".PORT")
 	utlp.transaction(pmgr, "objectChange", objID, obj)
 
 
@@ -321,8 +322,8 @@ def importConfigs(hutch, pmgr, path, update = False, verbose = False):
     pmgr_SNs = utlp.get_all_SN(pmgr)
 
     for motor in old_cfg_paths.keys():
-        cfgDict = utlp.getFieldDict(old_cfg_paths[motor])
-        objDict = utlp.getFieldDict(old_cfg_paths[motor])
+        cfgDict = utlp.getImportFieldDict(old_cfg_paths[motor])
+        objDict = utlp.getImportFieldDict(old_cfg_paths[motor])
 
         pmgr.updateTables()
         name = None
@@ -531,7 +532,7 @@ if __name__ == "__main__":
 	# Loop through each of the motorPVs
 	for PV in motorPVs:
 		print "Motor PV: {0}".format(PV)
-		m_DESC = caget(PV + ".DESC")
+		m_DESC = pv.get(PV + ".DESC")
 		print "Motor description: {0}".format(m_DESC)
 		if not SNs[PV]: continue
 		else: SN = SNs[PV]
