@@ -531,11 +531,15 @@ if __name__ == "__main__":
 
 	# Loop through each of the motorPVs
 	for PV in motorPVs:
+		# Print some motor info
 		print "Motor PV: {0}".format(PV)
 		m_DESC = pv.get(PV + ".DESC")
 		print "Motor description: {0}".format(m_DESC)
-		if not SNs[PV]: continue
-		else: SN = SNs[PV]
+		if not SNs[PV]:
+			print "Could not get SN for motor: {0}.".format(m_DESC)
+			print "Skippin motor.\n"
+			continue
+		SN = SNs[PV]
 		print "Motor SN: {0}\n".format(SN)
 
 
