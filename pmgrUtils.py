@@ -68,6 +68,7 @@ from os import system
 from docopt import docopt
 from sys import exit
 
+
 def saveConfig(PV, hutch, pmgr, SN, verbose, zenity):
 	"""
 	Searches for the SN of the PV and then saves the live configuration values
@@ -80,7 +81,6 @@ def saveConfig(PV, hutch, pmgr, SN, verbose, zenity):
 	If a hutch is specified, the function will save the motor obj and cfg to the
 	pmgr of that hutch. Otherwise it will save to the hutch listed on the PV.
 
-	Currently only supports sxr and amo.
 	"""
 
 	print "Saving motor info to {0} pmgr".format(hutch.upper())
@@ -90,12 +90,10 @@ def saveConfig(PV, hutch, pmgr, SN, verbose, zenity):
 	objDict = utlp.getObjVals(pmgr, PV)
 	allNames = utlp.allCfgNames(pmgr)
 
-
 	# Look through pmgr objs for a motor with that id
 	if verbose: print "Checking {0} pmgr SNs for this motor".format(hutch.upper())
 	objID = utlp.getObjWithSN(pmgr, objDict["FLD_SN"], verbose)
 	if verbose: print "ObjID obtained from {0} pmgr: {1}".format(hutch.upper(), objID)
-
 
 	# If an objID was found, update the obj
 	if objID: 
@@ -103,7 +101,6 @@ def saveConfig(PV, hutch, pmgr, SN, verbose, zenity):
 		utlp.objUpdate(pmgr, objID, objDict)
 		if verbose: print "\nMotor SN found in {0} pmgr, motor information \
 updated".format(hutch.upper())
-
 
 	# Else try to create a new obj
 	else:
@@ -119,11 +116,9 @@ updated".format(hutch.upper())
 object for {0} pmgr'".format(hutch.upper()))
 			return 
 
-
 	# Try to get the cfg id the obj uses
 	try: cfgID = pmgr.objs[objID]["config"]
 	except: cfgID = None
-
 
 	# If there was a valid cfgID and it isnt the default one, try to update the cfg
 	if cfgID and pmgr.cfgs[cfgID]["name"].upper() != hutch.upper():
@@ -135,7 +130,6 @@ object for {0} pmgr'".format(hutch.upper()))
 				system("zenity --error --text='Error: Failed to update config'")
 			return
 
-
 	# Else create a new configuration and try to set it to the objID
 	else:
 		print "\nInvalid config associated with motor {0}. Adding new config.".format(SN)
@@ -145,10 +139,8 @@ object for {0} pmgr'".format(hutch.upper()))
 			return 
 		print "Motor '{0}' successfully added to pmgr".format(objDict["name"])
 
-
 	pmgr.updateTables()
 	print "\nSuccessfully saved motor info and configuration into {0} pmgr".format(hutch)
-
 
 	# Try to print the diffs 
 	cfgPmgr = pmgr.cfgs[cfgID]
@@ -160,7 +152,6 @@ object for {0} pmgr'".format(hutch.upper()))
 saved into {0} pmgr"'.format(hutch.upper()))
 
 		
-			
 def applyConfig(PV, hutches, objType, SN, verbose, zenity):
 	"""
 	Searches the pmgr for the correct SN and then applies the configuration
@@ -173,7 +164,6 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity):
 	if verbose: print "Getting most recently updated obj\n"
 	objID, pmgr = utlp.getMostRecentObj(hutches, SN, objType, verbose)
 	if not objID or not pmgr: return
-	
 
 	# # Work-around for applyConfig
 	# # applyObject uses the rec_base field of the obj to apply the PV values
@@ -186,12 +176,10 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity):
 	obj["FLD_PORT"] = pv.get(PV + ".PORT")
 	utlp.transaction(pmgr, "objectChange", objID, obj)
 
-
 	# For future diff comparison
 	cfgOld = utlp.getCfgVals(pmgr, PV)
 	objOld = utlp.getObjVals(pmgr, PV)
 
-	
 	# Apply the pmgr configuration to the motor
 	print "Applying configuration, please wait..."
 	status = False
@@ -204,7 +192,6 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity):
 
 	print "Successfully completed apply"
 
-
 	# Try to print the diffs
 	cfgNew = utlp.getCfgVals(pmgr, PV)
 	objNew = utlp.getObjVals(pmgr, PV)
@@ -212,7 +199,6 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity):
 	except: pass
 
 	if zenity: system('zenity --info --text="Configuration successfully applied"')
-
 
 
 # This routine has not been tested yet 2/18/16
@@ -229,7 +215,6 @@ def dumbMotorApply(PV, hutches, objType, SN, verbose, zenity):
 	objID, pmgr = utlp.getMostRecentObj(hutches, SN, objType, verbose)
 	if not objID or not pmgr: return
 
-	
 	# # Work-around for applyConfig
 	# # applyObject uses the rec_base field of the obj to apply the PV values
 	# # so for it to work properly we have to set rec_base to the correct 
@@ -299,7 +284,6 @@ failure'")
 	
 	print "Successfully completed apply"
 	if zenity: system('zenity --info --text="Configuration successfully applied"')
-
 
 
 def importConfigs(hutch, pmgr, path, update = False, verbose = False):
@@ -395,6 +379,7 @@ def importConfigs(hutch, pmgr, path, update = False, verbose = False):
 		        print "Motor '{0}' failed to be added to pmgr".format(
 			        objDict["name"])
 	        continue
+
 
 def Diff(PV, hutch, pmgr, SN, verbose):
 	""" 
@@ -537,7 +522,7 @@ if __name__ == "__main__":
 		print "Motor description: {0}".format(m_DESC)
 		if not SNs[PV]:
 			print "Could not get SN for motor: {0}.".format(m_DESC)
-			print "Skippin motor.\n"
+			print "Skipping motor.\n"
 			continue
 		SN = SNs[PV]
 		print "Motor SN: {0}\n".format(SN)

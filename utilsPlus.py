@@ -440,9 +440,6 @@ def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose):
 
 	cfgDict["FLD_TYPE"] = pmgr.cfgs[cfgID]["FLD_TYPE"]
 
-	# Though this will ensure cfg Naming needs to be smarter
-	# cfgDict["name"] = cfgOld["name"]
-
 	if cfgOld["name"] in allNames: allNames.remove(cfgOld["name"])
 	cfgDict["name"] = incrementMatching(cfgDict["name"],
 	                                         allNames,
@@ -474,7 +471,7 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
 		if 'amo' not in hutches: hutches.append('amo')
 		if 'sxr' not in hutches: hutches.append('sxr')
 		hutches.remove('sxd')
-	if not hutches: return hutches, objType, pmgr, SN
+	if not hutches: return hutches, objType, SN
 	if verbose: 
 		print "Hutches: {0}".format(hutches)
 
