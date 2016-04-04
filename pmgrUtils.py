@@ -62,7 +62,6 @@ long as it is already in the pmgr).
 import utilsPlus as utlp
 import psp.Pv as pv
 
-from caget import caget
 from pprint import pprint
 from os import system
 from docopt import docopt

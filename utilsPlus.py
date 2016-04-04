@@ -8,7 +8,6 @@ import subprocess
 import os
 import string
                 
-from caget import caget
 from pprint import pprint
 from pmgrobj import pmgrobj
 from os import system
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 # Globals
 
 parser = SafeConfigParser()
-parser.read("/reg/g/pcds/pyps/apps/pmgr/latest/pmgrUtils.cfg")
+parser.read(os.path.dirname(os.path.abspath(__file__)) + "/pmgrUtils.cfg")
 
 # To add hutches or objTypes to the supported list, look in pmgrUtils.cfg
 supportedHutches = parser.get("pmgr", "supportedHutches")
