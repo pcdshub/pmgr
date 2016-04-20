@@ -591,7 +591,7 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose):
 		print
 
 
-def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict):
+def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict, zenity=False):
 	""" Creates a new config and then sets it to the objID """
 	status = False
 	# Get a valid cfg name
@@ -611,7 +611,7 @@ def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict):
 	status = setObjCfg(pmgr, objID, cfgID)
 	return status
 
-def getMostRecentObj(hutches, SN, objType, verbose):
+def getMostRecentObj(hutches, SN, objType, verbose, zenity=False):
 	""" 
 	Finds all saved objs in all the pmgr instances for the SN inputted and 
 	returns the most recently updated one along with the corresponding pmgr
