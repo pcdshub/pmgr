@@ -13,9 +13,19 @@ else
     sxd=false
 fi
 
-# Look for configurations in both the sxr and amo pmgrs if using apply
-if [[ "$1" == "apply" ]] && [ "$sxd" = true ] ; then
-    python /reg/g/pcds/pyps/apps/pmgr/latest/pmgrUtils.py $1 $2 -v -z --hutch=sxd
+# Check if this is xpp or xcs
+if [[ "${2:0:3}" == "XPP" ]] || [[ "${2:0:3}" == "XCS" ]]; then
+    hxr=true
 else
-    python /reg/g/pcds/pyps/apps/pmgr/latest/pmgrUtils.py $1 $2 -v -z
+    hxr=false
+fi
+
+# Check for hutch-specific options
+dir=`dirname $(readlink -f "$0")`
+if [[ "$1" == "apply" ]] && [ "$sxd" = true ] ; then
+    python $dir/pmgrUtils.py $1 $2 -v -z --hutch=sxd
+elif [ "$hxr" = true ] ; then
+    python $dir/pmgrUtils.py $1 $2
+else
+    python $dir/pmgrUtils.py $1 $2 -v -z
 fi
