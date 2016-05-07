@@ -66,6 +66,7 @@ from pprint import pprint
 from os import system
 from docopt import docopt
 from sys import exit
+from difflib import get_close_matches
 
 
 def saveConfig(PV, hutch, pmgr, SN, verbose, zenity):
@@ -151,14 +152,13 @@ object for {0} pmgr'".format(hutch.upper()))
 saved into {0} pmgr"'.format(hutch.upper()))
 
         
-def applyConfig(PV, hutches, objType, SN, verbose, zenity):
+def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False, dumb_cfg=None, dumb_confirm=True):
     """
     Searches the pmgr for the correct SN and then applies the configuration
     currently associated with that motor.
     
     If it fails to find either a SN or a configuration it will exit.
     """
-
     # Find the most recently updated obj in the pmgrs of each hutch inputted
     if verbose: print "Getting most recently updated obj\n"
     objID, pmgr = utlp.getMostRecentObj(hutches, SN, objType, verbose)
@@ -171,9 +171,55 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity):
     
     # Change rec_base field to the base PV and the port field to the live port
     obj = pmgr.objs[objID]
-    obj["rec_base"] = PV
-    obj["FLD_PORT"] = pv.get(PV + ".PORT")
-    utlp.transaction(pmgr, "objectChange", objID, obj)
+    port = pv.get(PV + ".PORT")
+    if obj["rec_base"] != PV or obj["FLD_PORT"] != port:
+        obj["rec_base"] = PV
+        obj["FLD_PORT"] = port
+        utlp.transaction(pmgr, "objectChange", objID, obj)
+
+    if dumb:
+        # Get all the cfg names
+        allNames = {}
+        for hutch in hutches:
+            pmgr = utlp.getPmgr(objType, hutch, verbose)
+            names = utlp.allCfgNames(pmgr)
+            for name in names: allNames[name] = hutch
+
+        # Make sure the user inputs a correct configuration
+        cfgName = dumb_cfg
+        if dumb_confirm:
+            confirm = "no"
+            while(confirm[0].lower() != "y"):
+                if cfgName is not None:
+                    print "Closest matches to your input:"
+                    closest_cfgs = get_close_matches(cfgName, allNames.keys(), 10, 0.1)
+                    pprint(closest_cfgs)
+                cfgName = raw_input("Please input a configuration to apply or search:\n")
+                if cfgName not in allNames:
+                    print "Invalid configuration inputted."
+                    continue
+                confirm = raw_input("\nAre you sure you want to apply {0} to {1}?\n".format(cfgName, PV))
+        elif cfgName not in allNames:
+            print "Invalid configuration {} chosen.".format(cfgName)
+            return
+
+        # Get the selected configuration's ID
+        pmgr = utlp.getPmgr(objType, allNames[cfgName], verbose)
+        cfgID = utlp.cfgFromName(pmgr, cfgName)
+        if not cfgID:
+            print "Error when getting config ID from name: {0}".format(cfgName)
+            if zenity: system("zenity --error --text='Error: Failed to get cfgID'")
+            return
+
+        # Set configuration of dumb motor pmgr object
+        if obj["config"] != cfgID:
+            status = False
+            status = utlp.setObjCfg(pmgr, objID, cfgID)
+            if not status:
+                print "Failed set cfg to object"
+                if zenity: system("zenity --error --text='Error: Failed to set cfgID to object'")
+                return
+
 
     # For future diff comparison
     cfgOld = utlp.getCfgVals(pmgr, PV)
@@ -200,7 +246,6 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity):
     if zenity: system('zenity --info --text="Configuration successfully applied"')
 
 
-# This routine has not been tested yet 2/18/16
 def dumbMotorApply(PV, hutches, objType, SN, verbose, zenity):
     """
     Routine used to handle dumb motors.
@@ -208,81 +253,7 @@ def dumbMotorApply(PV, hutches, objType, SN, verbose, zenity):
     Will open a terminal and prompt the user for a configuration name and then
     once a valid config is selected it will apply it.
     """
-
-    # Find the most recently updated obj in the pmgrs of each hutch inputted
-    if verbose: print "Getting most recently updated obj\n"
-    objID, pmgr = utlp.getMostRecentObj(hutches, SN, objType, verbose)
-    if not objID or not pmgr: return
-
-    # # Work-around for applyConfig
-    # # applyObject uses the rec_base field of the obj to apply the PV values
-    # # so for it to work properly we have to set rec_base to the correct 
-    # # PV value associated with that motor at the moment
-
-    # Change rec_base to the base PV and port to the current port
-    obj = pmgr.objs[objID]
-    obj["rec_base"] = PV
-    obj["FLD_PORT"] = pv.get(PV + ".PORT")
-    utlp.transaction(pmgr, "objectChange", objID, obj)
-
-
-    # Get all the cfg names
-    allNames = {}
-    for hutch in hutches:
-        pmgr = utlp.getPmgr(objType, hutch, verbose)
-        names = utlp.allCfgNames(pmgr)
-        for name in names: allNames[name] = hutch
-
-    # Show the names to the user
-    pprint(allNames.keys())
-    print "\nAbove is a list of all the valid configuration names in the \
-inputted hutch(es)."
-
-
-    # Make sure the user inputs a correct configuration
-    confirm = "no"
-    cfgName = None
-    
-    while(confirm[:1].lower() != "y"):
-        cfgName = input("Please input a correct configuration to apply\n")
-
-        if cfgName.lower() not in allNames.keys():
-            print "Invalid configuration inputted"
-            continue
-        confirm = input("\nAre you sure you want to apply {0}?\n".format(cfgName))
-
-
-    # Get the selected configuration's ID
-    print "Applying {0} to {1}..".format(cfgName, PV)
-    pmgr = utlp.getPmgr(objType, getallNames[cfgName], verbose)              
-    cfgID = utlp.cfgFromName(pmgr, cfgName)
-    if not cfgID:
-        print "Error when getting config ID from name: {0}".format(cfgName)
-        if zenity: system("zenity --error --text='Error: Failed to get cfgID'")
-        return
-
-
-    # Set the cfg to the motor object
-    status = False
-    status = utlp.setObjCfg(pmgr, objID, cfgID)
-    if not status:
-        print "Failed set cfg to object"
-        if zenity: system("zenity --error --text='Error: Failed to set cfgID \
-to object'")
-        return
-    
-
-    # Apply the config
-    status = False
-    status = utlp.objApply(pmgr, objID)
-    if not status:
-        print "Failed to apply: pmgr transaction failure"
-        if zenity: system("zenity --error --text='Error: pmgr transaction \
-failure'")
-        return
-    
-    print "Successfully completed apply"
-    if zenity: system('zenity --info --text="Configuration successfully applied"')
+    applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=True)
 
 
 def importConfigs(hutch, pmgr, path, update = False, verbose = False):
@@ -452,7 +423,7 @@ def parsePVArguments(PVArguments):
 
 
 ###############################################################################
-##                                  Main                                     ## 
+##                                  Main                                     ##
 ###############################################################################
 
 

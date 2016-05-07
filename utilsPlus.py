@@ -833,10 +833,11 @@ def setObjCfg(pmgr, objID, cfgID):
     return True
 
 def objApply(pmgr, objID):
-    result = transaction(pmgr, "applyConfig", objID)
-    if result and result == "error":
+    try:
+        pmgr.applyConfig(objID)
+        return True
+    except Exception:
         return False
-    return True
 
 def getHutch(pmgr):
     return pmgr.hutch

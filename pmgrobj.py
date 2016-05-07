@@ -1,5 +1,6 @@
 import MySQLdb as mdb
 import _mysql_exceptions
+import time
 import datetime
 import re
 import utils
@@ -349,9 +350,9 @@ class pmgrobj(object):
             return 0      # Not now!
         try:
             v = 0
-            cur.execute("select * from %s_update where tbl_name = 'config' or tbl_name = %s or tbl_name = %s",
-                        (self.table, self.hutch, self.hutch + "_grp"))
-            for d in cur.fetchall():
+            self.cur.execute("select * from %s_update where tbl_name = 'config' or tbl_name = '%s' or tbl_name = '%s'" %
+                            (self.table, self.hutch, self.hutch + "_grp"))
+            for d in self.cur.fetchall():
                 if d['tbl_name'] == 'config':
                     if d['dt_updated'] != self.lastcfg:
                         self.lastcfg = d['dt_updated']
