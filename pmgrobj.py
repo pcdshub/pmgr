@@ -210,6 +210,7 @@ class pmgrobj(object):
         self.autoconfig = None
         self.in_trans = False
         self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols')
+        self.con.autocommit(False)
         self.cur = self.con.cursor(mdb.cursors.DictCursor)
         self.cur.execute("call init_pcds()")
         self.readFormat()
@@ -431,30 +432,25 @@ class pmgrobj(object):
     def start_transaction(self):
         self.in_trans = True
         self.errorlist = []
-        try:
-            self.cur.execute("lock tables %s write, %s_cfg write, %s_grp write, %s_cfg_grp write" % \
-                             (self.table, self.table, self.table, self.table))
-            return True
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-            return False
+        return True
 
     def transaction_error(self, msg):
         self.errorlist.append(_mysql_exceptions.Error(0, msg))
 
     def end_transaction(self):
-        if self.errorlist != []:
+        didcommit = False
+        if self.errorlist == []:
+            try:
+                self.con.commit()
+                if self.debug:
+                    print "COMMIT!"
+                didcommit = True
+            except _mysql_exceptions.Error as e:
+                self.errorlist.append(e)
+        if not didcommit:
             self.con.rollback()
             if self.debug:
                 print "ROLLBACK!"
-        else:
-            self.con.commit()
-            if self.debug:
-                print "COMMIT!"
-        try:
-            self.cur.execute("unlock tables")
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
         self.in_trans = False
         el = []
         for e in self.errorlist:

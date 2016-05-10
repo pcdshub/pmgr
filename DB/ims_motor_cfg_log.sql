@@ -1,6 +1,6 @@
 --
 -- Table structure for table `ims_motor_cfg_log`
--- NOTE: This must match ims_motor_cfg, with the addition of seq and action and
+-- NOTE: This must match ims_motor_cfg, with the addition of date, seq and action and
 -- the removal of all uniques and auto_increments!
 --
 
