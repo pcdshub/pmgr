@@ -512,7 +512,7 @@ dmapply\n".format(PV)
         # Else if inputted dumb apply try apply routine for dumb motors
         elif arguments["dmapply"]:
             if utlp.dumbMotorCheck(PV):
-                dumbMotorApply(PV, hutch, objType, SN, verbose, zenity)
+                dumbMotorApply(PV, hutches, objType, SN, verbose, zenity)
             else:
                 print "Motor connected to PV:{0} is a smart motor, must use \
 apply\n".format(PV)
