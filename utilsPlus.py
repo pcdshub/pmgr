@@ -7,7 +7,8 @@ import logging
 import subprocess
 import os
 import string
-                
+import datetime
+                 
 from pprint import pprint
 from pmgrobj import pmgrobj
 from os import system
@@ -16,7 +17,7 @@ from ConfigParser import SafeConfigParser
 logger = logging.getLogger(__name__)
 
 # Globals
-
+maxLenName = 42
 parser = SafeConfigParser()
 parser.read(os.path.dirname(os.path.abspath(__file__)) + "/pmgrUtils.cfg")
 
@@ -61,7 +62,7 @@ def getObjVals(pmgr, PV):
         name = "Unknown"
 
     # Make sure the SN is a 9 digit string *with* the leading zero if necessary
-    objDict = checkSNLength(objDict)
+    objDict = checkSNLength(objDict, pmgr)
 
     objDict["name"] = name
     
@@ -132,7 +133,7 @@ def nextObjName(pmgr, name):
     a valid name is found, returning the new name.
     """
     allNames = allObjNames(pmgr)
-    name = incrementMatching(str(name), allNames)
+    name = incrementMatching(str(name), allNames, maxLength=maxLenName)
     return str(name)
 
 def nextCfgName(pmgr, name):
@@ -141,7 +142,7 @@ def nextCfgName(pmgr, name):
     Wrapper function for nextName that just makes sure the name is of type str
     """
     allNames = allCfgNames(pmgr)
-    name = incrementMatching(str(name), allNames,  maxLength=15)
+    name = incrementMatching(str(name), allNames,  maxLength=maxLenName)
     return str(name)
 
 def objUpdate(pmgr, idx, objDict):
@@ -152,24 +153,28 @@ def objUpdate(pmgr, idx, objDict):
         except: continue
     return transaction(pmgr, "objectChange", idx, obj)
 
+def cfgUpdate(pmgr, idx, cfgDict):
+    """ Updates the cfg using the fields specified in cfgDict """
+    cfg = pmgr.cfgs[idx]
+    for field in cfgDict.keys():
+        try: cfg[field] = cfgDict[field]
+        except: continue
+    return transaction(pmgr, "configChange", idx, cfg)
+
 
 def get_motor_PVs(partialPV):
     motorPVs = []
     i = 1
-
     while i != 40:
         basePV = "%s:%02d"%(partialPV, i)
         print basePV
-        
         try:
             SN = pv.get(basePV + ".SN")
-            
             if len(SN) >= 8:
                 motor_PVs[sn] = basepv
                 print "PV: {0} is active".format(basePV)
                 motorPVs += basePV
         except: pass
-            
     return motorPVs
 
 def allObjNames(pmgr):
@@ -279,7 +284,7 @@ def convertToApplyCfg(cfgDict):
     return newDict
           
 
-def checkSNLength(cfgDict):
+def checkSNLength(cfgDict, pmgr):
     """ 
     Function that checks to make sure the SN in the configuration dictionary is
     9 digits long. Issues have come up becasue leading zeros get dropped 
@@ -289,12 +294,12 @@ def checkSNLength(cfgDict):
 
     # Make sure it is a string
     cfgDict["FLD_SN"] = str(cfgDict["FLD_SN"])
-
+    
+    SN = cfgDict["FLD_SN"]
     try:
         # Continue adding 0s until the SN is the correct length
         while len(cfgDict["FLD_SN"]) < 9:
             cfgDict["FLD_SN"] = "0" + cfgDict["FLD_SN"]
-        
         return cfgDict
 
     # If it fails in any way just return the dictionary
@@ -432,17 +437,22 @@ def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose):
         pprint(objDict)
         pprint(cfgDict)
 
-        print "\nPMGR cfg values for {0} before update".format(pv.get(PV+".DESC"))
+        print "\nPMGR cfg valu es for {0} before update".format(pv.get(PV+".DESC"))
         pprint(objOld)
         pprint(cfgOld)
         print
 
+
+    print cfgDict["name"], objDict["name"]
+
+
     cfgDict["FLD_TYPE"] = pmgr.cfgs[cfgID]["FLD_TYPE"]
+    cfgDict["name"] = objDict["name"]
 
     if cfgOld["name"] in allNames: allNames.remove(cfgOld["name"])
     cfgDict["name"] = incrementMatching(cfgDict["name"],
                                              allNames,
-                                             maxLength=15)
+                                             maxLength=maxLenName)
     print "Saving configuration..." 
     # # Actually do the update
     didWork = cfgChange(pmgr, cfgID, cfgDict)
@@ -595,7 +605,7 @@ def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict, zenity=False):
     """ Creates a new config and then sets it to the objID """
     status = False
     # Get a valid cfg name
-    cfgName = nextCfgName(pmgr, cfgDict["name"])
+    cfgName = nextCfgName(pmgr, objDict["name"])
     cfgDict["name"] = cfgName
     cfgDict["FLD_TYPE"] = "{0}_{1}".format(cfgName, PV[:4])
 
@@ -648,6 +658,20 @@ def getMostRecentObj(hutches, SN, objType, verbose, zenity=False):
     
     return objID, pmgr
 
+def getBasePV(PVArguments):
+	"""
+	Returns the first base PV found in the list of PVArguments. It looks for the 
+	first colon starting from the right and then returns the string up until
+	the colon. Takes as input a string or a list of strings.
+	"""
+	if type(PVArguments) != list:
+		PVArguments = [PVArguments]
+	for arg in PVArguments:
+		if ':' not in arg: continue
+		for i, char in enumerate(arg[::-1]):
+			if char == ':':
+				return arg[:-i]
+	return None
 
 # Functions pulled from Zack's utils.py file
 # Original: /reg/neh/home/zlentz/python/pmgrPython/utils.py
@@ -744,6 +768,7 @@ def setConfig(pmgr, PV, config):
 def applyConfig(pmgr, PV):
     """ Applies the config assigned to PV to the live values """
     obj = objFromPV(pmgr, PV)
+    pprint(obj)
     objApply(pmgr, obj)
     # Unfortunately, the apply configurations interface has no error returns.
     # We will not return True/False like the others and instead check in post
@@ -760,7 +785,7 @@ def nextName(pmgr, name):
     a valid name is found, returning the new name.
     """
     allNames = allCfgNames(pmgr) 
-    name = incrementMatching(name, allNames, maxLength=15)
+    name = incrementMatching(name, allNames, maxLength=maxLenName)
     return name
 
 def hutchCfgNames(pmgr, hutch):
