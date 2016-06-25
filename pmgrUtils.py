@@ -61,13 +61,12 @@ long as it is already in the pmgr).
 
 import utilsPlus as utlp
 import psp.Pv as pv
-
 from pprint import pprint
 from os import system
 from docopt import docopt
 from sys import exit
 from difflib import get_close_matches
-from optparse import OptionParser
+# from optparse import OptionParser
 
 def saveConfig(PV, hutch, pmgr, SN, verbose, zenity):
     """
