@@ -127,7 +127,7 @@ def connectPv(name, timeout=-1.0):
             pv.connect(timeout)
         else:
             pv.connect(timeout)
-            pv.get(False, timeout)
+            pv.get(ctrl=False, timeout=timeout)
         return pv
     except:
       return None
@@ -137,12 +137,13 @@ def __connect_callback(pv, isconn):
         pv.connect_cb = pv.save_connect_cb
         if pv.connect_cb:
             pv.connect_cb(isconn)
-        pv.get(False, -1.0)
+        pv.get(ctrl=False, timeout=-1.0)
 
 def __getevt_callback(pv, e=None):
     if pv.handler:
         pv.handler(pv, e)
     if e is None:
+        pv._Pv__getevt_handler(e)
         pv.getevt_cb = None
         pv.monitor(pyca.DBE_VALUE)
         pyca.flush_io()

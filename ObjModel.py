@@ -780,7 +780,7 @@ class ObjModel(QtGui.QStandardItemModel):
                             if param.params.debug:
                                 print "Put %s to %s" % (str(z), pv.name)
                             else:
-                                pv.put(z, -1.0)
+                                pv.put(z, timeout=-1.0)
                         except:
                             pass
             pyca.flush_io()
@@ -796,7 +796,7 @@ class ObjModel(QtGui.QStandardItemModel):
                         if param.params.debug:
                             print "Put %s to %s" % (str(v2), pv.name)
                         else:
-                            pv.put(v2, -1.0)
+                            pv.put(v2, timeout=-1.0)
                     except:
                         pass
             pyca.flush_io()
