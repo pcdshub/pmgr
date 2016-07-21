@@ -561,15 +561,16 @@ def getPmgr(objType, hutch, verbose):
         pmgr = None
     return pmgr
 
-def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose):
+def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, **kwargs):
     """ Prints the diffs between the old values and new values"""
-
+    name1 = kwargs.get("name1", "Old")
+    name2 = kwargs.get("name2", "New")
     if verbose:
-        print "Old values:"
+        print "{0}:".format(name1)
         pprint(objOld)
         pprint(cfgOld)
         
-        print "\nNew values:"
+        print "\n{0}:".format(name2)
         pprint(objNew)
         pprint(cfgNew)
 
@@ -579,27 +580,23 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose):
     for field in cfgOld.keys():
         try:
             if str(cfgNew[field]) != str(cfgOld[field]):
-                diffs[field] = "New: {0}, Old: {1}".format(
-                    cfgNew[field],
-                    cfgOld[field])
+                diffs[field] = "{0}: {1: <20}  {2}: {3: <20}".format(
+                    name1, cfgNew[field], name2, cfgOld[field])
                 ndiffs += 1
         except: pass
 
     for field in objOld.keys():
         try:
             if str(objNew[field]) != str(objOld[field]) and field not in fields.keys():
-                diffs[field] = "New: {0}, Old: {1}".format(
-                    objNew[field],
-                    objOld[field])
+                diffs[field] = "{0}: {1: <20}  {2}: {3: <20}".format(
+                    name1, objNew[field], name2, objOld[field])
                 ndiffs += 1
         except: pass
 
     print "\nNumber of diffs: {0}".format(ndiffs)
     if ndiffs > 0:
-        print "Diffs:"
-        pprint(diffs)
-        print
-
+        for fld in diffs.keys():
+            print "  {0: <15}: {1}".format(fld, diffs[fld])
 
 def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict, zenity=False):
     """ Creates a new config and then sets it to the objID """

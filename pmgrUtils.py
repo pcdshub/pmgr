@@ -390,7 +390,9 @@ def Diff(PV, hutch, pmgr, SN, verbose):
     cfgPmgr = pmgr.cfgs[cfgID]
     objPmgr = pmgr.objs[objID]
     # Print the diffs between the live and pmgr configs
-    try: utlp.printDiff(pmgr, objLive, cfgLive, objPmgr, cfgPmgr, verbose) 
+    # Fix this so that it prints something sensible
+    try: utlp.printDiff(pmgr, objLive, cfgLive, objPmgr, cfgPmgr, verbose, 
+                        name1 = "Live", name2 = "Pmgr") 
     except: pass
 
 def parsePVArguments(PVArguments):
@@ -483,7 +485,7 @@ if __name__ == "__main__":
     # Loop through each of the motorPVs
     for PV in motorPVs:
         # Print some motor info
-        print "Motor PV: {0}".format(PV)
+        print "Motor PV:          {0}".format(PV)
         m_DESC = pv.get(PV + ".DESC")
         print "Motor description: {0}".format(m_DESC)
         if not SNs[PV]:
@@ -491,7 +493,8 @@ if __name__ == "__main__":
             print "Skipping motor.\n"
             continue
         SN = SNs[PV]
-        print "Motor SN: {0}\n".format(SN)
+        if verbose: 
+            print "Motor SN: {0}\n".format(SN)
 
         # If inputted apply, run apply routine and sure it is a smart motor
         if arguments["apply"]:
