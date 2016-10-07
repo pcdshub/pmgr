@@ -2,12 +2,12 @@
 pmgrUtils
 
 Usage:
-    pmgrUtils.py (save | apply | dmapply | import | diff) <PV>...
-    pmgrUtils.py save <PV>... [--hutch=H] [-v|--verbose] [-z|--zenity]
-    pmgrUtils.py apply <PV>... [--hutch=H] [-v|--verbose] [-z|--zenity]
-    pmgrUtils.py dmapply <PV>... [--hutch=H] [-v|--verbose] [-z|--zenity]
+    pmgrUtils.py (save | apply | dmapply | import | diff) [PV]... [<hutch>]
+    pmgrUtils.py save [<PV>]... [--hutch=H] [-v|--verbose] [-z|--zenity] [--path=p]
+    pmgrUtils.py apply [<PV>]... [--hutch=H] [-v|--verbose] [-z|--zenity] [--path=p]
+    pmgrUtils.py dmapply [<PV>]... [--hutch=H] [-v|--verbose] [-z|--zenity] [--path=p]
     pmgrUtils.py import [<hutch>] [--hutch=H] [-u|--update] [-v|--verbose] [-z|--zenity] [--path=p]
-    pmgrUtils.py diff <PV>... [--hutch=H] [-v|--verbose] [-z|--zenity]
+    pmgrUtils.py diff [<PV>]... [--hutch=H] [-v|--verbose] [-z|--zenity] [--path=p]
     pmgrUtils.py [-h | --help]
 
 Arguments
@@ -61,14 +61,18 @@ long as it is already in the pmgr).
 
 import utilsPlus as utlp
 import psp.Pv as pv
+import argparse
+from sys import argv
 from pprint import pprint
 from os import system
 from docopt import docopt
 from sys import exit
 from difflib import get_close_matches
-# from optparse import OptionParser
 
-def saveConfig(PV, hutch, pmgr, SN, verbose, zenity):
+allHutches = set(["sxr", "amo", "xpp", "cxi", "xcs", "mfx", "mec"])
+
+def saveConfig(PV, hutch, pmgr, SN, verbose, zenity, dumb=False, 
+                dumb_cfg=None, dumb_confirm=True):
     """
     Searches for the SN of the PV and then saves the live configuration values
     to the pmgr. 
@@ -192,7 +196,7 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False,
             while(confirm[0].lower() != "y"):
                 if cfgName is not None:
                     print "Closest matches to your input:"
-                    closest_cfgs = get_close_matches(cfgName, allNames.keys(), 15, 0.1)
+                    closest_cfgs = get_close_matches(cfgName, allNames.keys(), 10, 0.1)
                     pprint(closest_cfgs)
                 cfgName = raw_input("Please input a configuration to apply or search:\n")
                 if cfgName not in allNames:
@@ -267,6 +271,8 @@ def importConfigs(hutch, pmgr, path, update = False, verbose = False):
 	to determine if the motor should be added as a new motor, have its fields
 	updated, or skipped.
 	"""
+	print hutch, pmgr, path
+
 	if verbose: print "Creating motor DB"
 	old_cfg_paths = utlp.createmotordb(hutch, path)
 	pmgr_SNs = utlp.get_all_SN(pmgr)
@@ -274,7 +280,7 @@ def importConfigs(hutch, pmgr, path, update = False, verbose = False):
 	for motor in old_cfg_paths.keys():
 		allNames = utlp.allCfgNames(pmgr)
 		cfgDict = utlp.getImportFieldDict(old_cfg_paths[motor])
-		objDict = utlp.getImportFieldDict(old_cfg_paths[motor])        
+		objDict = utlp.getImportFieldDict(old_cfg_paths[motor])
 		if "MFI" in objDict["FLD_PN"]:
 			dumb = True
 		else: dumb = False 
@@ -323,7 +329,7 @@ def importConfigs(hutch, pmgr, path, update = False, verbose = False):
 				if verbose: print "    Skipping motor"
 				continue
 			if verbose: print "    Updating motor fields"
-			objID = utlp.firstObjWith(pmgr, "FLD_SN", str(cfgDict["FLD_SN"]))
+			objID = utlp.getObjWithSN(pmgr, cfgDict["FLD_SN"], verbose)
 			utlp.objUpdate(pmgr, objID, objDict)
 			cfgID = pmgr.objs[objID]["config"]
 			if cfgID and pmgr.cfgs[cfgID]["name"] != hutch.upper():
@@ -386,20 +392,23 @@ def Diff(PV, hutch, pmgr, SN, verbose):
     if not cfgID:
         print "\nInvalid config associated with motor, cannot find diffs".format(SN)
         return
+    
     # Get pmgr configurations
     cfgPmgr = pmgr.cfgs[cfgID]
     objPmgr = pmgr.objs[objID]
     # Print the diffs between the live and pmgr configs
     # Fix this so that it prints something sensible
+    
     try: utlp.printDiff(pmgr, objLive, cfgLive, objPmgr, cfgPmgr, verbose, 
                         name1 = "Live", name2 = "Pmgr") 
     except: pass
-
+        
 def parsePVArguments(PVArguments):
 	"""
 	Parses PV input arguments and returns a set of motor PVs that will have
 	the pmgrUtil functions applied to.
 	"""
+	
 	PVs = set()
 	if len(PVArguments) == 0: return None
 	basePV = utlp.getBasePV(PVArguments)
@@ -420,32 +429,45 @@ def parsePVArguments(PVArguments):
 				PVs.add(basePV + "{:02}".format(int(arg)))
 			else: pass
 		except: pass
+		
 	PVs = list(PVs)
 	PVs.sort()
 	return PVs
-
+                                                                  
 ################################################################################
 ##                                   Main                                     ##
 ################################################################################
 
 if __name__ == "__main__":
-    # Parse docopt variables
-    arguments = docopt(__doc__)
-    PVArguments = arguments["<PV>"]
-    if arguments["--path"]: path = arguments["--path"]
-    else: path = []
-    if arguments["--verbose"] or arguments["-v"]: verbose = True
-    else: verbose = False
-    if arguments["--zenity"] or arguments["-z"]: zenity = True
-    else: zenity = False
-    if arguments["--update"] or arguments["-u"]: update = True
-    else: update = False
-    if arguments["--hutch"]: 
-        hutches = [hutch.lower() for hutch in arguments["--hutch"].split(',')]
-    else: hutches = []
-    if arguments["<hutch>"]:
-        hutchPaths = [hutch.lower() for hutch in arguments["<hutch>"].split(',')]
-    elif len(path) > 0:  hutchPaths = ['sxd']
+	Parse docopt variables
+	arguments = docopt(__doc__)
+	print arguments
+	PVArguments = arguments["<PV>"]
+	if arguments["--path"]: path = arguments["--path"]
+	else: path = []
+	if arguments["--verbose"] or arguments["-v"]: verbose = True
+	else: verbose = False
+	if arguments["--zenity"] or arguments["-z"]: zenity = True
+	else: zenity = False
+	if arguments["--update"] or arguments["-u"]: update = True
+	else: update = False
+	if arguments["--hutch"]: 
+		hutches = [hutch.lower() for hutch in arguments["--hutch"].split(',')]
+	else: 
+		hutches = []
+		
+    # There seems to be a bug in docopt. It cant recognize that what is inputted
+    # is <hutch> rather than <PV>
+    # if arguments["<hutch>"]:
+        # hutchPaths = [hutch.lower() for hutch in arguments["<hutch>"].split(',')]
+
+    hutchPaths = []
+    if PVArguments:
+        for arg in PVArguments:
+	        if arg.lower() in allHutches:
+		        hutchPaths.append(arg.lower())
+    elif len(path) > 0:  
+        hutchPaths = ['sxd']
     else: hutchPaths = []
 
     # Try import first

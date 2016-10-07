@@ -1,10 +1,9 @@
 #! /bin/bash
 
 # Set up env
-export PSPKG_ROOT=/reg/common/package
-export PSPKG_RELEASE=controls-0.0.8
+export PSPKG_ROOT=/reg/g/pcds/pkg_mgr
+export PSPKG_RELEASE=controls-0.1.0
 source $PSPKG_ROOT/etc/set_env.sh
-source /reg/g/pcds/setup/pyca27.sh
 
 # Check if this is amo or sxr
 if [[ "${2:0:3}" == "SXR" ]] || [[ "${2:0:3}" == "AMO" ]]; then
@@ -23,9 +22,9 @@ fi
 # Check for hutch-specific options
 dir=`dirname $(readlink -f "$0")`
 if [[ "$1" == "apply" ]] && [ "$sxd" = true ] ; then
-    python $dir/pmgrUtils.py $1 $2 -v -z --hutch=sxd
+    python $dir/pmgrUtils.py $@ --hutch=sxd
 elif [ "$hxr" = true ] ; then
-    python $dir/pmgrUtils.py $1 $2
+    python $dir/pmgrUtils.py $@
 else
-    python $dir/pmgrUtils.py $1 $2 -v -z
+    python $dir/pmgrUtils.py $@
 fi
