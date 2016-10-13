@@ -2,7 +2,7 @@
 pmgrUtils
 
 Usage:
-    pmgrUtils.py (save | apply | dmapply | import | diff) [PV]... [<hutch>]
+    pmgrUtils.py (save | apply | dmapply | import | diff) [<PV>]... [<hutch>]
     pmgrUtils.py save [<PV>]... [--hutch=H] [-v|--verbose] [-z|--zenity] [--path=p]
     pmgrUtils.py apply [<PV>]... [--hutch=H] [-v|--verbose] [-z|--zenity] [--path=p]
     pmgrUtils.py dmapply [<PV>]... [--hutch=H] [-v|--verbose] [-z|--zenity] [--path=p]
@@ -439,22 +439,22 @@ def parsePVArguments(PVArguments):
 ################################################################################
 
 if __name__ == "__main__":
-	Parse docopt variables
-	arguments = docopt(__doc__)
-	print arguments
-	PVArguments = arguments["<PV>"]
-	if arguments["--path"]: path = arguments["--path"]
-	else: path = []
-	if arguments["--verbose"] or arguments["-v"]: verbose = True
-	else: verbose = False
-	if arguments["--zenity"] or arguments["-z"]: zenity = True
-	else: zenity = False
-	if arguments["--update"] or arguments["-u"]: update = True
-	else: update = False
-	if arguments["--hutch"]: 
-		hutches = [hutch.lower() for hutch in arguments["--hutch"].split(',')]
-	else: 
-		hutches = []
+	# Parse docopt variables
+    arguments = docopt(__doc__)
+    print arguments
+    PVArguments = arguments["<PV>"]
+    if arguments["--path"]: path = arguments["--path"]
+    else: path = []
+    if arguments["--verbose"] or arguments["-v"]: verbose = True
+    else: verbose = False
+    if arguments["--zenity"] or arguments["-z"]: zenity = True
+    else: zenity = False
+    if arguments["--update"] or arguments["-u"]: update = True
+    else: update = False
+    if arguments["--hutch"]: 
+        hutches = [hutch.lower() for hutch in arguments["--hutch"].split(',')]
+    else: 
+        hutches = []
 		
     # There seems to be a bug in docopt. It cant recognize that what is inputted
     # is <hutch> rather than <PV>
@@ -469,6 +469,8 @@ if __name__ == "__main__":
     elif len(path) > 0:  
         hutchPaths = ['sxd']
     else: hutchPaths = []
+
+    print PVArguments
 
     # Try import first
     if arguments["import"]:
