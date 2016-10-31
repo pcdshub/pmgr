@@ -400,7 +400,7 @@ def Diff(PV, hutch, pmgr, SN, verbose):
     # Fix this so that it prints something sensible
     
     try: utlp.printDiff(pmgr, objLive, cfgLive, objPmgr, cfgPmgr, verbose, 
-                        name1 = "Live", name2 = "Pmgr") 
+                        name1 = "Pmgr", name2 = "Live") 
     except: pass
         
 def parsePVArguments(PVArguments):
