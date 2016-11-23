@@ -472,7 +472,7 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
     if not hutches: hutches.append(PV[0][:3].lower())
     for hutch in hutches:
         if hutch not in supportedHutches:
-            print "Invalid hutch: {0}. Only supports sxr and amo.".format(hutch.upper())
+            print "Invalid hutch: {0}.".format(hutch.upper())
             print "Removing hutch: {0}".format(hutch.upper())
             hutches.remove(hutch)
     # Replace sxd with amo and sxr if present

@@ -69,7 +69,7 @@ from docopt import docopt
 from sys import exit
 from difflib import get_close_matches
 
-allHutches = set(["sxr", "amo", "xpp", "cxi", "xcs", "mfx", "mec"])
+allHutches = set(["sxr", "amo", "xpp", "cxi", "xcs", "mfx", "mec", "det"])
 
 def saveConfig(PV, hutch, pmgr, SN, verbose, zenity, dumb=False, 
                 dumb_cfg=None, dumb_confirm=True):
