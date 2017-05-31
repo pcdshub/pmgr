@@ -3,7 +3,7 @@ pmgrUtils
 
 Usage:
     pmgrUtils.py (save | apply | dmapply | import | diff) [<PV>]... [<hutch>]
-    pmgrUtils.py save [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p]
+    pmgrUtils.py save [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p] [--norename]
     pmgrUtils.py apply [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p]
     pmgrUtils.py dmapply [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p]
     pmgrUtils.py import [<hutch>] [--hutch=H] [--objtype=O] [-u|--update] [-v|--verbose] [-z|--zenity] [--path=p]
@@ -74,7 +74,7 @@ from difflib import get_close_matches
 allHutches = set(["sxr", "amo", "xpp", "cxi", "xcs", "mfx", "mec", "det"])
 
 def saveConfig(PV, hutch, pmgr, SN, verbose, zenity, dumb=False, 
-                dumb_cfg=None, dumb_confirm=True):
+                dumb_cfg=None, dumb_confirm=True, rename=True):
     """
     Searches for the SN of the PV and then saves the live configuration values
     to the pmgr. 
@@ -88,14 +88,21 @@ def saveConfig(PV, hutch, pmgr, SN, verbose, zenity, dumb=False,
     """
     print "Saving motor info to {0} pmgr".format(hutch.upper())
     # Grab motor information and configuration
-    cfgDict = utlp.getCfgVals(pmgr, PV)
-    objDict = utlp.getObjVals(pmgr, PV)
+    cfgDict = utlp.getCfgVals(pmgr, PV, rename)
+    objDict = utlp.getObjVals(pmgr, PV, rename)
     allNames = utlp.allCfgNames(pmgr)
 
+    if rename:
+        name = objDict["name"]
+    else:
+        name = pv.get(PV +".DESC")
+    
     # Look through pmgr objs for a motor with that id
-    if verbose: print "Checking {0} pmgr SNs for this motor".format(hutch.upper())
+    if verbose: 
+        print "Checking {0} pmgr SNs for this motor".format(hutch.upper())
     objID = utlp.getObjWithSN(pmgr, objDict["FLD_SN"], verbose)
-    if verbose: print "ObjID obtained from {0} pmgr: {1}".format(hutch.upper(), objID)
+    if verbose: 
+        print "ObjID obtained from {0} pmgr: {1}".format(hutch.upper(), objID)
 
     # If an objID was found, update the obj
     if objID: 
@@ -107,7 +114,10 @@ updated".format(hutch.upper())
     else:
         print "\nSN {0} not found in pmgr, adding new motor obj...".format(SN)
         # Name availability check
-        objDict["name"] = utlp.nextObjName(pmgr, objDict["name"])
+        try:
+            objDict["name"] = utlp.nextObjName(pmgr, objDict["name"])
+        except KeyError:
+            objDict["name"] = utlp.nextObjName(pmgr, pv.get(PV +".DESC"))
         # Create new obj
         objID = utlp.newObject(pmgr, objDict)
         if not objID:
@@ -118,13 +128,15 @@ object for {0} pmgr'".format(hutch.upper()))
             return 
 
     # Try to get the cfg id the obj uses
-    try: cfgID = pmgr.objs[objID]["config"]
-    except: cfgID = None
+    try: 
+        cfgID = pmgr.objs[objID]["config"]
+    except Exception as e: 
+        cfgID = None
 
     # If there was a valid cfgID and it isnt the default one, try to update the cfg
     if cfgID and pmgr.cfgs[cfgID]["name"].upper() != hutch.upper():
-        didWork, objOld, cfgOld = utlp.updateConfig(PV, pmgr, objID, cfgID, objDict, 
-                                                    cfgDict, allNames, verbose)
+        didWork, objOld, cfgOld = utlp.updateConfig(
+            PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose, rename)
         if not didWork:
             print "Failed to update the cfg with new values"
             if zenity: 
@@ -132,23 +144,26 @@ object for {0} pmgr'".format(hutch.upper()))
             return
     # Else create a new configuration and try to set it to the objID
     else:
-        print "\nInvalid config associated with motor {0}. Adding new config.".format(SN)
+        print "\nInvalid config associated with motor {0}. Adding new \
+config.".format(SN)
         status = utlp.getAndSetConfig(PV, pmgr, objID, objDict, cfgDict)
         if not status:
-            print "Motor '{0}' failed to be added to pmgr".format(objDict["name"])
+            print "Motor '{0}' failed to be added to pmgr".format(name)
             return 
-        print "Motor '{0}' successfully added to pmgr".format(objDict["name"])
+        print "Motor '{0}' successfully added to pmgr".format(name)
 
     pmgr.updateTables()
     # Change the config and object names to be the motor description
-    obj = pmgr.objs[objID]
-    cfg = pmgr.cfgs[obj["config"]]
-    obj["name"] = utlp.nextObjName(pmgr, obj["FLD_DESC"])
-    cfg["name"] = utlp.nextCfgName(pmgr, obj["FLD_DESC"])
-    utlp.transaction(pmgr, "objectChange", objID, obj)
-    utlp.transaction(pmgr, "configChange", cfgID, cfg)
+    if rename:
+        obj = pmgr.objs[objID]
+        cfg = pmgr.cfgs[obj["config"]]
+        obj["name"] = utlp.nextObjName(pmgr, obj["FLD_DESC"])
+        cfg["name"] = utlp.nextCfgName(pmgr, obj["FLD_DESC"])
+        utlp.transaction(pmgr, "objectChange", objID, obj)
+        utlp.transaction(pmgr, "configChange", cfgID, cfg)
     
-    print "\nSuccessfully saved motor info and configuration into {0} pmgr".format(hutch)
+    print "\nSuccessfully saved motor info and configuration into {0} \
+pmgr".format(hutch)
     # Try to print the diffs
     if cfgID and objID:
         cfgPmgr = pmgr.cfgs[cfgID]
@@ -463,6 +478,9 @@ if __name__ == "__main__":
     if arguments["--objtype"]: 
         objType = arguments["--objtype"]
     else: objType = None
+    if arguments["--norename"]: 
+        rename = False
+    else: rename = True
         
     # There seems to be a bug in docopt. It cant recognize that what is inputted
     # is <hutch> rather than <PV>
@@ -561,5 +579,6 @@ apply\n".format(PV)
                     Diff(PV, hutch, pmgr, SN, verbose)
                     continue
                 if arguments["save"]:
-                    saveConfig(PV, hutch, pmgr, SN, verbose, zenity)
+                    saveConfig(PV, hutch, pmgr, SN, verbose, zenity, 
+                               rename=rename)
                     continue

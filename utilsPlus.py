@@ -27,45 +27,43 @@ supportedObjTypes = parser.get("pmgr", "supportedObjTypes")
 
 nTries = 3                                # Number of attempts when using caget
 
-def getCfgVals(pmgr, PV):
+def getCfgVals(pmgr, PV, rename=True):
     """ Returns a dictionary of the live cfg fields associated with a PV """
     PV = PV.upper()
     configFields = listCfgFields(pmgr)
     cfgDict = getFieldDict(pmgr, PV, configFields)
 
-    name = None
-
-    try:
-        name = pv.get(PV +".DESC")
-    except:
-        name = "Unknown"
-    
-    cfgDict["name"] = name
-    cfgDict["FLD_TYPE"] = "{0}_{1}".format(name, PV[:4])
+    if rename:
+        name = None
+        try:
+            name = pv.get(PV +".DESC")
+        except:
+            name = "Unknown"
+        cfgDict["name"] = name
+        cfgDict["FLD_TYPE"] = "{0}_{1}".format(name, PV[:4])
 
     return cfgDict
 
-def getObjVals(pmgr, PV):
+def getObjVals(pmgr, PV, rename=True):
     """ Returns a dictionary of the live obj fields associated with a PV """
     PV = PV.upper()
     objectFields = listObjFields(pmgr)
     objDict = getFieldDict(pmgr, PV, objectFields)
     objDict["rec_base"] = PV
     
-    name = None
-
-    if objDict["FLD_DESC"]:
-        name = objDict["FLD_DESC"]
-    elif objDict["FLD_SN"]:
-        name = "SN:{0}".format(objDict["FLD_SN"])
-    else:
-        name = "Unknown"
+    if rename:
+        name = None
+        if objDict["FLD_DESC"]:
+            name = objDict["FLD_DESC"]
+        elif objDict["FLD_SN"]:
+            name = "SN:{0}".format(objDict["FLD_SN"])
+        else:
+            name = "Unknown"
+        objDict["name"] = name
 
     # Make sure the SN is a 9 digit string *with* the leading zero if necessary
     objDict = checkSNLength(objDict, pmgr)
 
-    objDict["name"] = name
-    
     return objDict
 
 def newObject(pmgr, objDict,typeStr=None, parent=None, owner=None):
@@ -425,7 +423,8 @@ def getImportFieldDict(cfgPath):
     return cfgDict
 
 
-def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose):
+def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose, 
+                 rename=True):
     """ Routine to update the configuration of an obj """
     # # PMGR cfg values for comparisons
     objOld = pmgr.objs[objID]
@@ -442,19 +441,18 @@ def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose):
         pprint(cfgOld)
         print
 
-
-    print cfgDict["name"], objDict["name"]
-
-
     cfgDict["FLD_TYPE"] = pmgr.cfgs[cfgID]["FLD_TYPE"]
-    cfgDict["name"] = objDict["name"]
 
-    if cfgOld["name"] in allNames: allNames.remove(cfgOld["name"])
-    cfgDict["name"] = incrementMatching(cfgDict["name"],
-                                             allNames,
-                                             maxLength=maxLenName)
-    print "Saving configuration..." 
+    if rename: 
+        # Keep config names and obj names in sync
+        cfgDict["name"] = objDict["name"]
+        if cfgOld["name"] in allNames: 
+            allNames.remove(cfgOld["name"])
+        cfgDict["name"] = incrementMatching(
+            cfgDict["name"], allNames, maxLength=maxLenName)
+
     # # Actually do the update
+    print "Saving configuration..." 
     didWork = cfgChange(pmgr, cfgID, cfgDict)
 
     return didWork, objOld, cfgOld
