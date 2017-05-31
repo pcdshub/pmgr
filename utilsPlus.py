@@ -657,19 +657,19 @@ def getMostRecentObj(hutches, SN, objType, verbose, zenity=False):
     return objID, pmgr
 
 def getBasePV(PVArguments):
-	"""
-	Returns the first base PV found in the list of PVArguments. It looks for the 
-	first colon starting from the right and then returns the string up until
-	the colon. Takes as input a string or a list of strings.
-	"""
-	if type(PVArguments) != list:
-		PVArguments = [PVArguments]
-	for arg in PVArguments:
-		if ':' not in arg: continue
-		for i, char in enumerate(arg[::-1]):
-			if char == ':':
-				return arg[:-i]
-	return None
+    """
+    Returns the first base PV found in the list of PVArguments. It looks for the 
+    first colon starting from the right and then returns the string up until
+    the colon. Takes as input a string or a list of strings.
+    """
+    if type(PVArguments) != list:
+        PVArguments = [PVArguments]
+    for arg in PVArguments:
+        if ':' not in arg: continue
+        for i, char in enumerate(arg[::-1]):
+            if char == ':':
+                return arg[:-i]
+    return None
 
 # Functions pulled from Zack's utils.py file
 # Original: /reg/neh/home/zlentz/python/pmgrPython/utils.py
