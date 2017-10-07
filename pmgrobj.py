@@ -830,7 +830,7 @@ class pmgrobj(object):
     def applyConfig(self, idx):
         vals = {}
         vals.update(self.objs[idx])
-        vals.update(self.cfgs[vals['config']])
+        vals.update(self.getConfig(vals['config']))
         base = vals['rec_base']
         if base == "":
             return

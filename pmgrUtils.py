@@ -174,7 +174,7 @@ pmgr".format(hutch)
 successfully saved into {0} pmgr"'.format(hutch.upper()))
 
 def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False, 
-                dumb_cfg=None, dumb_confirm=True):
+                dumb_cfg=None, dumb_confirm=True, name=None):
     """
     Searches the pmgr for the correct SN and then applies the configuration
     currently associated with that motor.
@@ -197,6 +197,15 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False,
         obj["rec_base"] = PV
         obj["FLD_PORT"] = port
         utlp.transaction(pmgr, "objectChange", objID, obj)
+        pmgr.updateTables()
+        obj = pmgr.objs[objID]
+
+    if name is not None:
+        obj["name"] = name
+        obj["FLD_DESC"] = name
+        utlp.transaction(pmgr, "objectChange", objID, obj)
+        pmgr.updateTables()
+        obj = pmgr.objs[objID]
 
     if dumb:
         # Get all the cfg names
@@ -215,7 +224,9 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False,
                     print "Closest matches to your input:"
                     closest_cfgs = get_close_matches(cfgName, allNames.keys(), 10, 0.1)
                     pprint(closest_cfgs)
-                cfgName = raw_input("Please input a configuration to apply or search:\n")
+                cfgName = raw_input("Please input a configuration to apply or search: (or 'quit' to quit)\n")
+                if cfgName == 'quit':
+                    return
                 if cfgName not in allNames:
                     print "Invalid configuration inputted."
                     continue
@@ -236,15 +247,20 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False,
         if obj["config"] != cfgID:
             status = False
             status = utlp.setObjCfg(pmgr, objID, cfgID)
+            pmgr.updateTables()
+            obj = pmgr.objs[objID]
             if not status:
                 print "Failed set cfg to object"
                 if zenity: system("zenity --error --text='Error: Failed to set cfgID to object'")
                 return
 
         # Set the obj name and desc to use the cfg name (only for dumb motors)
-        obj["name"] = utlp.nextObjName(pmgr, pmgr.cfgs[cfgID]["name"])
-        obj["FLD_DESC"] = pmgr.cfgs[cfgID]["name"]
-        utlp.transaction(pmgr, "objectChange", objID, obj)
+        if name is None:
+            obj["name"] = utlp.nextObjName(pmgr, pmgr.cfgs[cfgID]["name"])
+            obj["FLD_DESC"] = pmgr.cfgs[cfgID]["name"]
+            utlp.transaction(pmgr, "objectChange", objID, obj)
+            pmgr.updateTables()
+            obj = pmgr.objs[objID]
 
     # For future diff comparison
     cfgOld = utlp.getCfgVals(pmgr, PV)
@@ -264,7 +280,8 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False,
     # Try to print the diffs
     cfgNew = utlp.getCfgVals(pmgr, PV)
     objNew = utlp.getObjVals(pmgr, PV)
-    try: utlp.printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose)
+    try: utlp.printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose,
+                        kind='changes')
     except: pass
     if zenity: system('zenity --info --text="Configuration successfully applied"')
 
@@ -395,8 +412,8 @@ def Diff(PV, hutch, pmgr, SN, verbose):
     pmgr.
     """
     # Get live configuration
-    cfgLive = utlp.getCfgVals(pmgr, PV)
-    objLive = utlp.getObjVals(pmgr, PV)
+    cfgLive = utlp.getCfgVals(pmgr, PV, rename=False)
+    objLive = utlp.getObjVals(pmgr, PV, rename=False)
     # Look through pmgr objs for a motor with that SN
     if verbose: 
         print "Checking {0} pmgr SNs for this motor".format(hutch.upper())
@@ -411,7 +428,7 @@ def Diff(PV, hutch, pmgr, SN, verbose):
         return
     
     # Get pmgr configurations
-    cfgPmgr = pmgr.cfgs[cfgID]
+    cfgPmgr = pmgr.getConfig(cfgID)
     objPmgr = pmgr.objs[objID]
     # Print the diffs between the live and pmgr configs
     # Fix this so that it prints something sensible

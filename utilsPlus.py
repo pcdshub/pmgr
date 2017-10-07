@@ -559,7 +559,8 @@ def getPmgr(objType, hutch, verbose):
         pmgr = None
     return pmgr
 
-def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, **kwargs):
+def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind='diffs',
+              **kwargs):
     """ Prints the diffs between the old values and new values"""
     name1 = kwargs.get("name1", "New")
     name2 = kwargs.get("name2", "Old")
@@ -575,23 +576,36 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, **kwargs):
     diffs = {}
     ndiffs = 0
 
+    exclude_fields = ['FLD_TYPE']
     for field in cfgOld.keys():
+        if field in exclude_fields:
+            continue
         try:
-            if str(cfgNew[field]) != str(cfgOld[field]):
+            value1 = cfgNew[field]
+            value2 = cfgOld[field]
+            if None in [value1, value2]:
+                continue
+            if str(value1) != str(value2):
                 diffs[field] = "{0}: {1:<20}  {2}: {3:<20}".format(
                     name1, str(cfgNew[field]), name2, str(cfgOld[field]))
                 ndiffs += 1
         except: pass
 
     for field in objOld.keys():
+        if field in exclude_fields:
+            continue
         try:
-            if str(objNew[field]) != str(objOld[field]) and field not in fields.keys():
+            value1 = cfgNew[field]
+            value2 = cfgOld[field]
+            if None in [value1, value2]:
+                continue
+            if str(value1) != str(value2):
                 diffs[field] = "{0}: {1:<20}  {2}: {3:<20}".format(
                     name1, str(objNew[field]), name2, str(objOld[field]))
                 ndiffs += 1
         except: pass
 
-    print "\nNumber of diffs: {0}".format(ndiffs)
+    print "\nNumber of {0}: {1}".format(kind, ndiffs)
     if ndiffs > 0:
         for fld in diffs.keys():
             print "  {0:<15}: {1}".format(fld, diffs[fld])
