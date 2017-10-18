@@ -2,7 +2,7 @@
 pmgrUtils
 
 Usage:
-    pmgrUtils.py (save | apply | dmapply | import | diff | change) [<PV>]... [<hutch>]
+    pmgrUtils.py (save | apply | dmapply | import | diff | changesn) [<PV>]... [<hutch>]
     pmgrUtils.py save [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p] [--norename]
     pmgrUtils.py apply [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p]
     pmgrUtils.py dmapply [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p]
