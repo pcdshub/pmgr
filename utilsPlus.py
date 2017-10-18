@@ -77,7 +77,7 @@ def newObject(pmgr, objDict,typeStr=None, parent=None, owner=None):
 
     objectFields = listObjFields(pmgr)
 
-    # Pmgr doesnt handle missing fields well
+    # Pmgr doesn't handle missing fields well
     for field in objectFields:
         if field not in objDict:
             objDict[field] = "None" 
@@ -222,7 +222,10 @@ zeros to ensure proper pmgr functionality.".format(pmgr.objs[objID]["name"])
 
         if pmgrSN == SN: 
             return objID
-    
+
+    #If we get here, we know the SN wasn't found
+    if verbose:
+        print "Serial number {0} not found in {1} pmgr".format(SN,getHutch(pmgr).upper())
     return None    
 
 def getFieldDict(pmgr, PV, fields):
@@ -426,17 +429,17 @@ def getImportFieldDict(cfgPath):
 def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose, 
                  rename=True):
     """ Routine to update the configuration of an obj """
-    # # PMGR cfg values for comparisons
+    # PMGR cfg values for comparisons
     objOld = pmgr.objs[objID]
     cfgOld = pmgr.cfgs[cfgID]
 
-    # # Print live values for troubleshooting
+    # Print live values for troubleshooting
     if verbose:
         print "\nLive cfg values for {0}".format(pv.get(PV+".DESC"))
         pprint(objDict)
         pprint(cfgDict)
 
-        print "\nPMGR cfg valu es for {0} before update".format(pv.get(PV+".DESC"))
+        print "\nPMGR cfg values for {0} before update".format(pv.get(PV+".DESC"))
         pprint(objOld)
         pprint(cfgOld)
         print
@@ -451,16 +454,15 @@ def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose,
         cfgDict["name"] = incrementMatching(
             cfgDict["name"], allNames, maxLength=maxLenName)
 
-    # # Actually do the update
+    # Actually do the update
     print "Saving configuration..." 
     didWork = cfgChange(pmgr, cfgID, cfgDict)
 
     return didWork, objOld, cfgOld
 
-
 def motorPrelimChecks(PV, hutches, objType, verbose=False):
     """
-    Runs prelimenary checks on the paramter manager inputs, and returns a 
+    Runs preliminary checks on the parameter manager inputs, and returns a 
     valid hutch name, and serial number. Returns false
     for any of the variables if there are any issues when obtaining them.
     """
@@ -509,7 +511,6 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
     # Wherever the function is called needs to have a check that ensures none of
     # the return values are None
 
-
 def dumbMotorCheck(PV):
     """
     Takes in a PV attempts caget on the PN nTries times and then checks the PN 
@@ -553,7 +554,7 @@ def getPmgr(objType, hutch, verbose):
     try:
         pmgr = pmgrobj(objType, hutch.lower())  # Launch pmgr instance
         pmgr.updateTables()                     # And update
-        if verbose: print "Pmgr instance initialized for hutch: {0}".format(hutch.upper())
+        if verbose: print "Pmgr instance initialized for hutch or area: {0}".format(hutch.upper())
     except:
         print "Failed to create pmgr instance for hutch: {0}".format(hutch.upper())
         pmgr = None
@@ -619,7 +620,7 @@ def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict, zenity=False):
     cfgDict["name"] = cfgName
     cfgDict["FLD_TYPE"] = "{0}_{1}".format(cfgName, PV[:4])
 
-    # # Create new cfg
+    # Create new cfg
     cfgID = newConfig(pmgr, cfgDict, cfgDict["name"])
 
     if not cfgID: 
@@ -627,7 +628,7 @@ def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict, zenity=False):
         if zenity: system("zenity --error --text='Error: Failed to create new config'")
         return status
 
-    # # Set obj to use cfg
+    # Set obj to use cfg
     status = setObjCfg(pmgr, objID, cfgID)
     return status
 
@@ -655,7 +656,7 @@ def getMostRecentObj(hutches, SN, objType, verbose, zenity=False):
 
     # Make sure there is at least one obj with the corresponding SN
     if len(objs) == 0:
-        print "Failed to apply: Serial number {0} not found in pmgr".format(SN)
+        print "Failed: Serial number {0} not found in pmgr".format(SN)
         if zenity: system("zenity --error --text='Error: Motor not in pmgr'")
         return None, None
 
@@ -875,7 +876,21 @@ def objApply(pmgr, objID):
         return False
 
 def getHutch(pmgr):
-    return pmgr.hutch
+    try:
+        return pmgr.hutch
+    except AttributeError:
+        print "getHutch: Error, pmgr likely does not exist!"
+        exit()
+
+def getObjPV(pmgr, objID):
+    """
+    Returns last known PV for obj if it exists.
+    """
+    try:
+        return pmgr.objs[objID]["rec_base"]
+    except AttributeError:
+        print "getObjPV: Error with pmgr and/or objID, one or both may not exist!"
+        exit()
 
 def listCfgFields(pmgr):
     return listFieldsWith(pmgr, "obj", False)

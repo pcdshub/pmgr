@@ -12,8 +12,9 @@ else
     sxd=false
 fi
 
-# Check if this is xpp or xcs
-if [[ "${2:0:3}" == "XPP" ]] || [[ "${2:0:3}" == "XCS" ]]; then
+# Check if this is a hard x-ray hutch
+if [[ "${2:0:3}" == "XPP" ]] || [[ "${2:0:3}" == "XCS" ]] || 
+[[ "${2:0:3}" == "MFX" ]] || [[ "${2:0:3}" == "CXI" ]] || [[ "${2:0:3}" == "MEC" ]]; then
     hxr=true
 else
     hxr=false

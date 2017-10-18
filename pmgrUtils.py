@@ -2,12 +2,13 @@
 pmgrUtils
 
 Usage:
-    pmgrUtils.py (save | apply | dmapply | import | diff) [<PV>]... [<hutch>]
+    pmgrUtils.py (save | apply | dmapply | import | diff | change) [<PV>]... [<hutch>]
     pmgrUtils.py save [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p] [--norename]
     pmgrUtils.py apply [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p]
     pmgrUtils.py dmapply [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p]
     pmgrUtils.py import [<hutch>] [--hutch=H] [--objtype=O] [-u|--update] [-v|--verbose] [-z|--zenity] [--path=p]
     pmgrUtils.py diff [<PV>]... [--hutch=H] [--objtype=O] [-v|--verbose] [-z|--zenity] [--path=p]
+    pmgrUtils.py changesn [<old SN>] [<new SN>] [--hutch=H] [-v|--verbose] [--objtype=O]
     pmgrUtils.py [-h | --help]
 
 Arguments
@@ -25,12 +26,17 @@ Arguments
 
                       /reg/neh/operator/sxropr/device_config/ims/
 
+    [<old SN>]     Old serial number for changesn routine
+
+    [<new SN>]     New serial number for changesn routine
+
 Commands:
     save          Save live motor configuration
     apply         Apply the saved motor configuration to live values
     dmapply       Run dumb motor apply routine
     import        Imports configuration files from the <hutch>opr ims folder
     diff          Prints differences between pmgr and live values
+    changesn      Changes pmgr object/config serial number from old to new value
 
 Options:
     --hutch=H     Save or apply the config using the pmgr of the specified 
@@ -38,7 +44,7 @@ Options:
                   variable. Can handle multiple comma-separated hutch inputs. 
                   Will save and import into all inputted hutches, and will apply
                   from the most recently updated pmgr. 
-    --objtype=O   Perform the operation on the pv assuming the inputted object
+    --objtype=O   Perform the operation on the object assuming the inputted object
                   type. Must be a valid object type defined in the config file.
     -u|--update   When importing, if serial number is already in the pmgr, the
                   config is overwitten by the one in the ims folder.
@@ -98,10 +104,10 @@ def saveConfig(PV, hutch, pmgr, SN, verbose, zenity, dumb=False,
         name = pv.get(PV +".DESC")
     
     # Look through pmgr objs for a motor with that id
-    if verbose: 
+    if verbose:
         print "Checking {0} pmgr SNs for this motor".format(hutch.upper())
     objID = utlp.getObjWithSN(pmgr, objDict["FLD_SN"], verbose)
-    if verbose: 
+    if verbose:
         print "ObjID obtained from {0} pmgr: {1}".format(hutch.upper(), objID)
 
     # If an objID was found, update the obj
@@ -477,6 +483,8 @@ if __name__ == "__main__":
     arguments = docopt(__doc__)
     # print arguments
     PVArguments = arguments["<PV>"]
+    oldSN = arguments["<old SN>"]
+    newSN = arguments["<new SN>"]
     if arguments["--path"]: 
         path = arguments["--path"]
     else: path = []
@@ -498,8 +506,8 @@ if __name__ == "__main__":
     if arguments["--norename"]: 
         rename = False
     else: rename = True
-        
-    # There seems to be a bug in docopt. It cant recognize that what is inputted
+    
+    # There seems to be a bug in docopt. It can't recognize that what is inputted
     # is <hutch> rather than <PV>
     # if arguments["<hutch>"]:
         # hutchPaths = [hutch.lower() for hutch in arguments["<hutch>"].split(',')]
@@ -512,8 +520,6 @@ if __name__ == "__main__":
     elif len(path) > 0:  
         hutchPaths = ['sxd']
     else: hutchPaths = []
-
-    # print PVArguments
 
     # Try import first
     if arguments["import"]:
@@ -535,14 +541,44 @@ if __name__ == "__main__":
                 importConfigs(hutchPath, pmgr, path, update, verbose)
             if path: break
         exit()                            # Do not continue
+
         
+    # Try changesn next
+    if arguments["changesn"]:
+        if not oldSN or not newSN:
+            print "For changesn routine old and new serial numbers must be inputted.  Try --help"
+            exit()
+        if not objType: objType = "ims_motor"
+        if not hutches: hutches = allHutches
+        # Loop through all hutches to find and change serial no
+        if verbose:
+            print "Checking hutch(es) for all {0} objects with old SN\n".format(objType)
+        for hutch in hutches:
+            pmgr = utlp.getPmgr(objType, hutch, verbose)
+            if not pmgr: continue
+            # Look for obj (default is ims_motor type) with previous serial no
+            objDict = {'FLD_SN': oldSN}
+            objID = utlp.getObjWithSN(pmgr, objDict['FLD_SN'], verbose)
+            if not objID: continue 
+            print "Motor found: ObjID = {0}, hutch = {1}".format(objID, hutch.upper())
+            # Create simple dict to change SN, then do it
+            objDict = {'FLD_SN':newSN}
+            if verbose:
+                print "Now saving object with new SN..."
+            output = utlp.objUpdate(pmgr, objID, objDict)
+            pmgr.updateTables()
+            # Now print updated SN for verification, and in case it was padded
+            if output != "error" :
+                print "Motor SN successfully updated to {0}.\n".format(pmgr.objs[objID]['FLD_SN'])
+        exit()                            # Do not continue
+
     # Parse the PV input into full PV names, exit if none inputted
     if len(PVArguments) > 0: motorPVs = parsePVArguments(PVArguments)
     else:
-        if zenity: system("zenity --error --text='No PV inputted'")
-        exit("No PV inputted.")
+        if zenity: system("zenity --error --text='No PV inputted.  Try --help'")
+        exit("No PV inputted.  Try --help")
 
-    # Run some prelimenary checks
+    # Run some preliminary checks
     if verbose: print "\nPerforming preliminary checks for pmgr paramters\n"
     if arguments["--hutch"]: 
         hutches = [hutch.lower() for hutch in arguments["--hutch"].split(',')]
@@ -550,8 +586,8 @@ if __name__ == "__main__":
     hutches, objType, SNs = utlp.motorPrelimChecks(
         motorPVs, hutches, objType, verbose)
     if not hutches or not objType or not SNs:
-        if zenity: system("zenity --error --text='Failed prelimenary checks'")
-        exit("\nFailed prelimenary checks\n")
+        if zenity: system("zenity --error --text='Failed preliminary checks on hutch, PV and/or objType'")
+        exit("\nFailed preliminary checks on hutch, PV and/or objType\n")
 
     # Loop through each of the motorPVs
     for PV in motorPVs:
@@ -586,7 +622,7 @@ dmapply\n".format(PV)
 apply\n".format(PV)
                 if zenity:
                     system("zenity --error --text='Error: Smart motor detected'")
-        
+
         # Else loop through the hutches and check for diff and save 
         else:
             for hutch in hutches:

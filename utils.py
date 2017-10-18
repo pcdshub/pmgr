@@ -100,7 +100,7 @@ def __get_callback(pv, e):
         pyca.flush_io()
 
 #
-# Do an assynchronous caget, but notify a threading.Event after it
+# Do an asynchronous caget, but notify a threading.Event after it
 # completes instead of just waiting.
 #
 def caget_async(pvname):
