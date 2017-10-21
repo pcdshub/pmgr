@@ -557,8 +557,7 @@ if __name__ == "__main__":
             pmgr = utlp.getPmgr(objType, hutch, verbose)
             if not pmgr: continue
             # Look for obj (default is ims_motor type) with previous serial no
-            objDict = {'FLD_SN': oldSN}
-            objID = utlp.getObjWithSN(pmgr, objDict['FLD_SN'], verbose)
+            objID = utlp.getObjWithSN(pmgr, oldSN, verbose)
             if not objID: continue 
             print "Motor found: ObjID = {0}, hutch = {1}".format(objID, hutch.upper())
             # Create simple dict to change SN, then do it
