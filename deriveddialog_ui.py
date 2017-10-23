@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'deriveddialog.ui'
 #
-# Created: Thu Dec  4 12:45:00 2014
-#      by: PyQt4 UI code generator 4.9.1
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,7 +11,16 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_deriveddialog(object):
     def setupUi(self, deriveddialog):
@@ -45,7 +53,7 @@ class Ui_deriveddialog(object):
         QtCore.QMetaObject.connectSlotsByName(deriveddialog)
 
     def retranslateUi(self, deriveddialog):
-        deriveddialog.setWindowTitle(QtGui.QApplication.translate("deriveddialog", "Derived Quantity Selection", None, QtGui.QApplication.UnicodeUTF8))
-        self.label.setText(QtGui.QApplication.translate("deriveddialog", "Please select which field is a derived quantity:", None, QtGui.QApplication.UnicodeUTF8))
-        self.groupBox.setTitle(QtGui.QApplication.translate("deriveddialog", "Fields", None, QtGui.QApplication.UnicodeUTF8))
+        deriveddialog.setWindowTitle(_translate("deriveddialog", "Derived Quantity Selection", None))
+        self.label.setText(_translate("deriveddialog", "Please select which field is a derived quantity:", None))
+        self.groupBox.setTitle(_translate("deriveddialog", "Fields", None))
 
