@@ -546,7 +546,7 @@ if __name__ == "__main__":
     # Try changesn next
     if arguments["changesn"]:
         if not oldSN or not newSN:
-            print "For changesn routine old and new serial numbers must be inputted.  Try --help"
+            print "For changesn routine old and new serial numbers must be inputted.  You may also need to add --hutch {HUTCH}.  Try --help"
             exit()
         if not objType: objType = "ims_motor"
         if not hutches: hutches = allHutches
