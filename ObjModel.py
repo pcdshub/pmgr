@@ -557,7 +557,8 @@ class ObjModel(QtGui.QStandardItemModel):
         menu.addAction("Revert this object", self.revertone,
                        lambda table, index: self.checkStatus(index, 'M'))
         menu.addAction("Auto config this object", self.autoone, self.testAuto)
-        menu.addAction("Auto config all", self.autoall)
+        if param.params.applyOK:
+            menu.addAction("Auto config all", self.autoall)
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table)
 
