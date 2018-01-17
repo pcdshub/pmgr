@@ -144,11 +144,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         if param.params.applyOK:
             self.connect(ui.applyButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)
         else:
-            self.connect(ui.applyButton, QtCore.SIGNAL("clicked()"),
-                         lambda : 
-                         QtGui.QMessageBox.critical(None, "Error", 
-                                                    "Apply disabled.  Restart with --applyenable.",
-                                                    QtGui.QMessageBox.Ok))
+            ui.applyButton.hide()
         self.connect(ui.actionAuto,      QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
         self.connect(ui.actionProtected, QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
         self.connect(ui.actionManual,    QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)

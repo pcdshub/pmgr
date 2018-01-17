@@ -601,7 +601,8 @@ class GrpModel(QtGui.QStandardItemModel):
         menu.addAction("Commit this group", self.commitone, self.commitOK)
         menu.addAction("Revert this group", self.revertone, self.revertOK)
         menu.addAction("Apply this group", self.applyone, self.applyOK)
-        menu.addAction("Apply all", self.applyall)
+        if param.params.applyOK:
+            menu.addAction("Apply all", self.applyall)
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table, [], False, False)
 
