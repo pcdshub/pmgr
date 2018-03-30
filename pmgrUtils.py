@@ -58,8 +58,9 @@ Options:
 
 pmgrUtils allows certain parameter manager transactions to be done using the
 command line. Fundamentally, it will perform these transactions on motors using
-their individual serial numbers allowing the same motor can be plugged into
-any digi port and the script will push the same configuration into that motor.
+their individual serial numbers (for smart motors) or associated names (dumb 
+motors) allowing the same motor can be plugged into any digi port and the script
+will push the same configuration into that motor.
 Conversely, motor configurations can also be saved from any port.
 
 Hutches that are supported are listed in the pmgrUtils.cfg file. Adding a hutch
