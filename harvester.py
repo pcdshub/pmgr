@@ -8,7 +8,8 @@ from psp.options import Options
 from psp.Pv import Pv
 from pmgrobj import pmgrobj
 import pyca
-import fcntl, re, sys, ast, StringIO, os, operator
+import fcntl, re, sys, ast, os, operator
+from io import StringIO
 
 CONFIG_FILE    = "/reg/g/pcds/pyps/config/%s/iocmanager.cfg"
 EPICS_TOP      = "/reg/g/pcds/package/epics/"
@@ -31,11 +32,11 @@ def caget(pvname,timeout=30.0):
         v = pv.value
         pv.disconnect()
         return v
-    except pyca.pyexc, e:
-        print 'pyca exception: %s' %(e)
+    except pyca.pyexc as e:
+        print('pyca exception: %s' %(e))
         return None
-    except pyca.caexc, e:
-        print 'channel access exception: %s' %(e)
+    except pyca.caexc as e:
+        print('channel access exception: %s' %(e))
         return None
 
 def readConfig():
@@ -133,7 +134,7 @@ class config():
 
         fp = open(file)
         if not fp:
-            raise IOError, "File %s not found!" % ( file )
+            raise IOError("File %s not found!" % ( file ))
         lines = [l + "\n" for l in extra] + fp.readlines()
         fp.close()
         origlines = lines
@@ -172,7 +173,7 @@ class config():
                 d[var] = val;
                 continue
             if l != "" and l[0] != '#':
-                print "Skipping unknown line: %s" % l
+                print("Skipping unknown line: %s" % l)
         self.ddict = d
 
         # Now that we have the aliases, reprocess the config!
@@ -212,7 +213,7 @@ class config():
                         if m != None:
                             loc += m.end()
                             if haveeq:
-                                print "Double equal sign in |%s|" % l
+                                print("Double equal sign in |%s|" % l)
                             haveeq = True
                             continue   # Just ignore it!
 
@@ -290,7 +291,7 @@ class config():
                             except:
                                 m = prmidx.search(params)
                                 if m == None:
-                                    print "Unknown parameter in line %s" % params
+                                    print("Unknown parameter in line %s" % params)
                                     params = ""
                                     continue
                                 useinst = m.group(1)
@@ -304,7 +305,7 @@ class config():
                                 val = used[k]
                                 dd[var] = val
                         else:
-                            print "Unknown parameter in line %s" % params
+                            print("Unknown parameter in line %s" % params)
                             params = ""
                 self.finish_instance(iname, i, dd)
                 continue
@@ -326,7 +327,7 @@ class config():
                 d[var] = val;
                 continue
             if l != "" and l[0] != '#':
-                print "Skipping unknown line: %s" % l
+                print("Skipping unknown line: %s" % l)
         if ininst:
             self.finish_instance(iname, i, dd)
         self.idict = i
@@ -415,7 +416,7 @@ def expand(cfg, lines, f):
                     endloop = re.compile("(.*?)\$\$ENDLOOP\(" + iname + "(\))")
                     t = searchforend(lines, endloop, startloop, endloop, i, loc)
                     if t == None:
-                        print "Cannot find $$ENDLOOP(%s)?" % iname
+                        print("Cannot find $$ENDLOOP(%s)?" % iname)
                         sys.exit(1)
                     if iname[0] >= "0" and iname[0] <= "9":
                         try:
@@ -449,7 +450,7 @@ def expand(cfg, lines, f):
                     elsere = re.compile("(.*?)\$\$ELSE\(" + iname + "(\))")
                     t = searchforend(lines, endre, ifre, endre, i, loc)
                     if t == None:
-                        print "Cannot find $$ENDIF(%s)?" % iname
+                        print("Cannot find $$ENDIF(%s)?" % iname)
                         sys.exit(1)
                     elset = searchforend(t[0], elsere, ifre, endre, 0, 0)
                     try:
@@ -494,7 +495,7 @@ def expand(cfg, lines, f):
                         newlines=open(fn).readlines()
                         expand(cfg, newlines, f)
                     except:
-                        print "Cannot open file %s!" % fn
+                        print("Cannot open file %s!" % fn)
                 elif kw == "COUNT":
                     try:
                         cnt = str(len(cfg.idict[argm.group(1)]))
@@ -534,7 +535,7 @@ def expand(cfg, lines, f):
                     except:
                         pass
             else:
-                print "Malformed $$%s statement?" % kw
+                print("Malformed $$%s statement?" % kw)
                 sys.exit(1)
             continue
         
@@ -554,7 +555,7 @@ def expand(cfg, lines, f):
             else:
                 loc += m.end(1)
         else:
-            print "Can't find variable name?!?"
+            print("Can't find variable name?!?")
 
 def getMotorVals(pvbase):
     d = {}
@@ -574,7 +575,7 @@ def makeMotor(ioc, pvbase, port, extra=""):
         cat = "Auto"
     else:
         if pn != "":
-            print "Unknown PN %s!" % pn
+            print("Unknown PN %s!" % pn)
         cat = "Protected"
     if extra != "":
         extra = " " + extra
@@ -599,7 +600,7 @@ def findMotors(cfglist, ioc):
         try:
             cfg.read_config(dir +  "/" + name + ".cfg", {})
         except:
-            print "WARNING: %s has no configuration file!" % name
+            print("WARNING: %s has no configuration file!" % name)
             continue   # Wow, XCS has one *really* old controller!!
         for k in cfg.idict.keys():
             if k == 'MOTOR':
@@ -662,7 +663,7 @@ if __name__ == '__main__':
     options = Options(['hutch'], ['ioc'], ['debug'])
     try:
         options.parse()
-    except Exception, msg:
+    except Exception as msg:
         options.usage(str(msg))
         sys.exit()
     hutch   = options.hutch
@@ -671,11 +672,11 @@ if __name__ == '__main__':
     pmgr    = pmgrobj("ims_motor", hutch)
     if options.debug != None:
         for m in motors:
-            print m['name'], m['FLD_PORT'], caget(m['rec_base']+".PN")
+            print(m['name'], m['FLD_PORT'], caget(m['rec_base']+".PN"))
     else:
         pmgr.start_transaction()
         for m in motors:
             pmgr.objectInsert(m)
         errlist = pmgr.end_transaction()
         for e in errlist:
-            print e
+            print(e)

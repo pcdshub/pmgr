@@ -1,12 +1,21 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtCore, QtGui, QtWidgets
 import param
 import utils
 import colmgr
 import datetime
 import utils
 import pyca
+from functools import reduce
+
+try:
+    QString = unicode
+except NameError:
+    # Python 3
+    QString = str
 
 class ObjModel(QtGui.QStandardItemModel):
+    layoutAboutToBeChanged = QtCore.pyqtSignal()
+    layoutChanged = QtCore.pyqtSignal()
     cname   = ["Status", "Name", "Config", "PV Base", "Owner", "Config Mode", "Comment"]
     cfld    = ["status", "name", "cfgname", "rec_base", "owner", "category", "comment"]
     ctips   = ["C = All PVs Connected\nD = Deleted\nM = Modified\nN = New\nX = Inconsistent",
@@ -37,7 +46,7 @@ class ObjModel(QtGui.QStandardItemModel):
         self.colcnt = len(param.params.pobj.objflds) + self.coff
         self.setColumnCount(self.colcnt)
         self.setRowCount(len(param.params.pobj.objs))
-        self.rowmap = param.params.pobj.objs.keys()
+        self.rowmap = list(param.params.pobj.objs.keys())
         font = QtGui.QFont()
         font.setBold(True)
         for c in range(self.colcnt):
@@ -54,8 +63,8 @@ class ObjModel(QtGui.QStandardItemModel):
         self.createStatus()
         self.connectAllPVs()
 
-        self.connect(self, QtCore.SIGNAL("layoutAboutToBeChanged()"), self.doShowAll)
-        self.connect(self, QtCore.SIGNAL("layoutChanged()"), self.doShow)
+        self.layoutAboutToBeChanged.connect(self.doShowAll)
+        self.layoutChanged.connect(self.doShow)
 
     def createStatus(self):
         for d in param.params.pobj.objs.values():
@@ -265,19 +274,9 @@ class ObjModel(QtGui.QStandardItemModel):
         except:
             pass
 
-    def setData(self, index, value, role=QtCore.Qt.EditRole):
+    def setData(self, index, v, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
             return QtGui.QStandardItemModel.setData(self, index, value, role)
-        t = value.type()
-        if t == QtCore.QMetaType.QString:
-            v = str(value.toString())
-        elif t == QtCore.QMetaType.Int:
-            (v, ok) = value.toInt()
-        elif t == QtCore.QMetaType.Double:
-            (v, ok) = value.toDouble()
-        else:
-            print "Unexpected QVariant type %d" % value.type()
-            return False
         (idx, f) = self.index2db(index)
         
         self.setValue(idx, f, v)
@@ -364,11 +363,11 @@ class ObjModel(QtGui.QStandardItemModel):
     def sort(self, Ncol, order):
         if (Ncol, order) != self.lastsort:
             self.lastsort = (Ncol, order)
-            self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+            self.layoutAboutToBeChanged.emit()
             self.rowmap = sorted(self.rowmap, key=lambda idx: self.sortkey(idx, Ncol))
             if order == QtCore.Qt.DescendingOrder:
                 self.rowmap.reverse()
-            self.emit(QtCore.SIGNAL("layoutChanged()"))
+            self.layoutChanged.emit()
 
     def objchange(self):
         self.createStatus()
@@ -377,8 +376,8 @@ class ObjModel(QtGui.QStandardItemModel):
 
     def cfgchange(self):
         # This is really a sledgehammer.  Maybe we should check what really needs changing?
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        self.layoutAboutToBeChanged.emit()
+        self.layoutChanged.emit()
 
     def statchange(self, id):
         try:
@@ -461,6 +460,7 @@ class ObjModel(QtGui.QStandardItemModel):
                 pass
             try:
                 index = self.index(self.rowmap.index(pv.obj['id']), idx + self.coff)
+                v = self.data(index) # Just to force a status change!
                 self.dataChanged.emit(index, index)
             except:
                 pass
@@ -620,7 +620,7 @@ class ObjModel(QtGui.QStandardItemModel):
     def createcfg(self, table, index):
         (idx, f) = self.index2db(index)
         if (param.params.cfgdialog.exec_("Select parent configuration for configuration of %s" % self.getObjName(idx), 0)
-            == QtGui.QDialog.Accepted):
+            == QtWidgets.QDialog.Accepted):
             v = param.params.cfgmodel.create_child(param.params.cfgdialog.result, self.getObj(idx), False, True)
             self.setCfg(idx, v)
 
@@ -743,14 +743,14 @@ class ObjModel(QtGui.QStandardItemModel):
             return False
 
     def revertall(self):
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        self.layoutAboutToBeChanged.emit()
         for idx in self.edits.keys():
             try:
                 del self.edits[idx]
             except:
                 pass
             self.status[idx] = self.status[idx].replace("M", "")
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        self.layoutChanged.emit()
         param.params.cfgmodel.revertall()
         param.params.grpmodel.revertall()
 
@@ -779,7 +779,7 @@ class ObjModel(QtGui.QStandardItemModel):
                         try:
                             pv = pvd[f]
                             if param.params.debug:
-                                print "Put %s to %s" % (str(z), pv.name)
+                                print("Put %s to %s" % (str(z), pv.name))
                             else:
                                 pv.put(z, timeout=-1.0)
                         except:
@@ -795,7 +795,7 @@ class ObjModel(QtGui.QStandardItemModel):
                     try:
                         pv = pvd[f]
                         if param.params.debug:
-                            print "Put %s to %s" % (str(v2), pv.name)
+                            print("Put %s to %s" % (str(v2), pv.name))
                         else:
                             pv.put(v2, timeout=-1.0)
                     except:
@@ -811,26 +811,26 @@ class ObjModel(QtGui.QStandardItemModel):
             self.apply(idx)
 
     def applyVerify(self, changes):
-        d = QtGui.QDialog();
+        d = QtWidgets.QDialog();
         d.setWindowTitle("Apply Confirmation")
-        d.layout = QtGui.QVBoxLayout(d)
-        d.mlabel = QtGui.QLabel(d)
+        d.layout = QtWidgets.QVBoxLayout(d)
+        d.mlabel = QtWidgets.QLabel(d)
         d.mlabel.setText("Apply will modify settings on the following motors:")
         d.layout.addWidget(d.mlabel)
         d.checks = []
         for idx in changes:
-            check = QtGui.QCheckBox(d)
+            check = QtWidgets.QCheckBox(d)
             check.setChecked(True)
             check.setText(self.getObjName(idx))
             d.layout.addWidget(check)
             d.checks.append(check)
-        d.buttonBox = QtGui.QDialogButtonBox(d)
+        d.buttonBox = QtWidgets.QDialogButtonBox(d)
         d.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        d.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
+        d.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
         d.layout.addWidget(d.buttonBox)
-        d.connect(d.buttonBox, QtCore.SIGNAL("accepted()"), d.accept)
-        d.connect(d.buttonBox, QtCore.SIGNAL("rejected()"), d.reject)
-        if d.exec_() == QtGui.QDialog.Accepted:
+        d.buttonBox.accepted.connect(d.accept)
+        d.buttonBox.rejected.connect(d.reject)
+        if d.exec_() == QtWidgets.QDialog.Accepted:
             checks =  [c.isChecked() for c in d.checks]
             return [changes[i] for i in range(len(changes)) if checks[i]]
         else:
@@ -845,8 +845,8 @@ class ObjModel(QtGui.QStandardItemModel):
         if not self.commitall():
             return
         if not utils.permission(param.params.hutch, None):
-            QtGui.QMessageBox.critical(None, "Error", "Not authorized to apply changes!",
-                                       QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(None, "Error", "Not authorized to apply changes!",
+                                       QtWidgets.QMessageBox.Ok)
             return
         changes = [idx for idx in self.rowmap if "X" in self.getStatus(idx)]
         changes = self.applyVerify(changes)
@@ -881,7 +881,7 @@ class ObjModel(QtGui.QStandardItemModel):
                 else:
                     self.status[idx] = ""
                 self.statchange(idx)
-            self.rowmap = param.params.pobj.objs.keys()
+            self.rowmap = list(param.params.pobj.objs.keys())
             self.rowmap[:0] = self.objs.keys()
         else:
             self.edits = {}
@@ -896,7 +896,7 @@ class ObjModel(QtGui.QStandardItemModel):
                     else:
                         self.status[k] = ""
                     self.statchange(k)
-            self.rowmap = param.params.pobj.objs.keys()
+            self.rowmap = list(param.params.pobj.objs.keys())
         self.adjustSize()
 
     def setCfg(self, idx, cfg):
@@ -920,12 +920,8 @@ class ObjModel(QtGui.QStandardItemModel):
         (idx, f) = self.index2db(index)
         d = self.getObj(idx)
         if (param.params.cfgdialog.exec_("Select new configuration for %s" % d['name'], d['config']) ==
-            QtGui.QDialog.Accepted):
+            QtWidgets.QDialog.Accepted):
             self.setCfg(idx, param.params.cfgdialog.result)
-            try:
-                print self.edits[idx]
-            except:
-                print "NO EDITS!"
 
     def cfgEdit(self, idx, f):
         f = str(f)
@@ -1042,7 +1038,8 @@ class ObjModel(QtGui.QStandardItemModel):
 
     def doAuto(self, idx):
         d = param.params.pobj.getAutoCfg(self.getObj(idx))
-        for (k, v) in d.iteritems():
+        print("items = %s" % str(d.items()))
+        for (k, v) in d.items():
             if v != None:
                 self.setValue(idx, k, v)
 

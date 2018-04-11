@@ -1,26 +1,25 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 ######################################################################
 
-class FreezeHeaderView(QtGui.QHeaderView):
+class FreezeHeaderView(QtWidgets.QHeaderView):
     def __init__(self, orientation, parent=None):
-        QtGui.QHeaderView.__init__(self, orientation, parent)
+        QtWidgets.QHeaderView.__init__(self, orientation, parent)
         self.__hdr = None
         self.__parent = parent
         self.__orientation = orientation
         self.sortindicator = (None, None)
-        self.connect(self, QtCore.SIGNAL("sectionResized(int,int,int)"),
-                     self.updateSectionWidth)
-        self.connect(self, QtCore.SIGNAL("sortIndicatorChanged(int,Qt::SortOrder)"), self.selfSortChanged)
-        self.setClickable(True)  # Sigh.  Why isn't this done when we ask it to be sortable?!?
+        self.sectionResized.connect(self.updateSectionWidth)
+        self.sortIndicatorChanged.connect(self.selfSortChanged)
+        #MCB self.setClickable(True)  # Sigh.  Why isn't this done when we ask it to be sortable?!?
 
     def setShadowHeader(self, hdr):
         self.__hdr = hdr
-        self.connect(self.__hdr, QtCore.SIGNAL("sortIndicatorChanged(int,Qt::SortOrder)"), self.parentSortChanged)
+        self.__hdr.sortIndicatorChanged.connect(self.parentSortChanged)
 
     def sectionSizeFromContents(self, logidx):
         if self.__hdr == None:
-            return QtGui.QHeaderView.sectionSizeFromContents(self, logidx)
+            return QtWidgets.QHeaderView.sectionSizeFromContents(self, logidx)
         elif self.__orientation == QtCore.Qt.Horizontal:
             return QtCore.QSize(self.__hdr.sectionSize(logidx), self.__hdr.height())
         else:
@@ -42,9 +41,9 @@ class FreezeHeaderView(QtGui.QHeaderView):
 
 ######################################################################
 
-class DropTableView(QtGui.QTableView):
+class DropTableView(QtWidgets.QTableView):
     def __init__(self, parent, rows, cols, name):
-        QtGui.QTableView.__init__(self, parent)
+        QtWidgets.QTableView.__init__(self, parent)
         self.hiderows = rows
         self.hidecols = cols
         self.debugname = name
@@ -53,7 +52,7 @@ class DropTableView(QtGui.QTableView):
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
-        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.horizontalHeader().setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         # MCB - This doesn't work.  Probably because we aren't actually
@@ -61,11 +60,8 @@ class DropTableView(QtGui.QTableView):
         # So just turn it off.
         self.horizontalHeader().setHighlightSections(False)
         
-        self.connect(self, QtCore.SIGNAL("customContextMenuRequested(const QPoint&)"),
-                     self.showContextMenu)
-        self.connect(self.horizontalHeader(),
-                     QtCore.SIGNAL("customContextMenuRequested(const QPoint&)"),
-                     self.showHeaderContextMenu)
+        self.customContextMenuRequested.connect(self.showContextMenu)
+        self.horizontalHeader().customContextMenuRequested.connect(self.showHeaderContextMenu)
 
     #
     # We're cheating here.  We are making a distinction between a drag (which
@@ -78,14 +74,12 @@ class DropTableView(QtGui.QTableView):
         self.model().originalAction = event.proposedAction()
         if event.proposedAction() == QtCore.Qt.MoveAction:
             event.setDropAction(QtCore.Qt.CopyAction)
-        QtGui.QTableView.dropEvent(self, event)
+        QtWidgets.QTableView.dropEvent(self, event)
 
     def setModel(self, model):
-        QtGui.QTableView.setModel(self, model)
-        self.connect(model, QtCore.SIGNAL("columnsInserted(QModelIndex,int,int)"),
-                     self.insertColumns)
-        self.connect(model, QtCore.SIGNAL("rowsInserted(QModelIndex,int,int)"),
-                     self.insertRows)
+        QtWidgets.QTableView.setModel(self, model)
+        model.columnsInserted.connect(self.insertColumns)
+        model.rowsInserted.connect(self.insertRows)
         
     def insertColumns(self, parent, start, finish):
         if self.hidecols != -1:
@@ -254,35 +248,21 @@ class FreezeTableView(DropTableView):
         self.cTV.setItemDelegate(delegate)
         self.rTV.setItemDelegate(delegate)
         
-        self.connect(self.horizontalHeader(), QtCore.SIGNAL("sectionResized(int,int,int)"),
-                     self.updateSectionWidth)
-        self.connect(self.verticalHeader(), QtCore.SIGNAL("sectionResized(int,int,int)"),
-                     self.updateSectionHeight)
+        self.horizontalHeader().sectionResized.connect(self.updateSectionWidth)
+        self.verticalHeader().sectionResized.connect(self.updateSectionHeight)
         
-        self.connect(cTV.verticalScrollBar(), QtCore.SIGNAL("valueChanged(int)"),
-                     self.verticalScrollBar().setValue)
-        self.connect(self.verticalScrollBar(), QtCore.SIGNAL("valueChanged(int)"),
-                     cTV.verticalScrollBar().setValue)
+        cTV.verticalScrollBar().valueChanged.connect(self.verticalScrollBar().setValue)
+        self.verticalScrollBar().valueChanged.connect(cTV.verticalScrollBar().setValue)
         
-        self.connect(rTV.horizontalScrollBar(), QtCore.SIGNAL("valueChanged(int)"),
-                     self.horizontalScrollBar().setValue)
-        self.connect(self.horizontalScrollBar(), QtCore.SIGNAL("valueChanged(int)"),
-                     rTV.horizontalScrollBar().setValue)
+        rTV.horizontalScrollBar().valueChanged.connect(self.horizontalScrollBar().setValue)
+        self.horizontalScrollBar().valueChanged.connect(rTV.horizontalScrollBar().setValue)
 
-        self.connect(self.selectionModel(),
-                     QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
-                     self.parentSelectionChanged)
-        self.connect(cTV.selectionModel(),
-                     QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
-                     self.colSelectionChanged)
-        self.connect(rTV.selectionModel(),
-                     QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
-                     self.rowSelectionChanged)
-        self.connect(fTV.selectionModel(),
-                     QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
-                     self.frozenSelectionChanged)
+        self.selectionModel().selectionChanged.connect(self.parentSelectionChanged)
+        cTV.selectionModel().selectionChanged.connect(self.colSelectionChanged)
+        rTV.selectionModel().selectionChanged.connect(self.rowSelectionChanged)
+        fTV.selectionModel().selectionChanged.connect(self.frozenSelectionChanged)
 
-        self.connect(self.horizontalHeader(), QtCore.SIGNAL("sectionMoved(int,int,int)"), self.fixColumnMove)
+        self.horizontalHeader().sectionMoved.connect(self.fixColumnMove)
         self.didinit = True
 
     #
@@ -376,12 +356,12 @@ class FreezeTableView(DropTableView):
 
     def moveCursor(self, ca, mods):
         cur = DropTableView.moveCursor(self, ca, mods)
-        if (ca == QtGui.QAbstractItemView.MoveLeft and cur.column() > 0 and
+        if (ca == QtWidgets.QAbstractItemView.MoveLeft and cur.column() > 0 and
             self.visualRect(cur).topLeft().x() < self.fcolwidth):
             nv = (self.horizontalScrollBar().value() + self.visualRect(cur).topLeft().x() -
                   self.fcolwidth)
             self.horizontalScrollBar().setValue(nv)
-        if (ca == QtGui.QAbstractItemView.MoveUp and cur.row() > 0 and
+        if (ca == QtWidgets.QAbstractItemView.MoveUp and cur.row() > 0 and
             self.visualRect(cur).topLeft().y() < self.frowheight):
             nv = (self.verticalScrollBar().value() + self.visualRect(cur).topLeft().y() -
                   self.frowheight)
@@ -413,8 +393,7 @@ class FreezeTableView(DropTableView):
     def setHorizontalHeader(self, header):
         DropTableView.setHorizontalHeader(self, header)
         self.fTV.horizontalHeader().setShadowHeader(self.horizontalHeader())
-        self.connect(self.horizontalHeader(), QtCore.SIGNAL("sectionResized(int,int,int)"),
-                     self.updateSectionWidth)
+        self.horizontalHeader().sectionResized.connect(self.updateSectionWidth)
         
     def setItemDelegateForRow(self, row, delegate):
         DropTableView.setItemDelegateForRow(self, row, delegate)
@@ -471,8 +450,8 @@ class FreezeTableView(DropTableView):
         self.rTV.setRowHeight(row, size)
 
     def printSize(self, n):
-        print "%d: main=%d, fTV=%d, rTV=%d, cTV=%d" % (n, self.rowHeight(n), self.fTV.rowHeight(n),
-                                                       self.rTV.rowHeight(n), self.cTV.rowHeight(n))
+        print("%d: main=%d, fTV=%d, rTV=%d, cTV=%d" % (n, self.rowHeight(n), self.fTV.rowHeight(n),
+                                                       self.rTV.rowHeight(n), self.cTV.rowHeight(n)))
 
     def addContextMenu(self, menu):
         DropTableView.addContextMenu(self, menu)

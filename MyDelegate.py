@@ -1,5 +1,6 @@
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 import re
 import numpy as np
 import param
@@ -18,11 +19,11 @@ def valid_float_string(string):
 class FloatValidator(QValidator):
     def validate(self, string, position):
         if valid_float_string(string):
-            return (QValidator.Acceptable, position)
+            return (QValidator.Acceptable, string, position)
         s = str(string)
         if s == "" or s[position-1] in 'e.-+':
-            return (QValidator.Intermediate, position)
-        return (QValidator.Invalid, position)
+            return (QValidator.Intermediate, string, position)
+        return (QValidator.Invalid, string, position)
 
     def fixup(self, text):
         match = _float_re.search(str(text))
@@ -91,7 +92,7 @@ class MyDelegate(QStyledItemDelegate):
 
     def setEditorData(self, editor, index):
         if editor.mydelegate:
-            value = index.model().data(index, Qt.EditRole).toString()
+            value = index.model().data(index, Qt.EditRole).value()
             try:
                 idx = editor.enum.index(value)
                 editor.setCurrentIndex(idx)
@@ -106,16 +107,13 @@ class MyDelegate(QStyledItemDelegate):
             if editor.enum == None:
                 v = editor.checkState()
                 if v == Qt.Checked:
-                    model.setData(index, QVariant(1))
+                    model.setData(index, 1)
                 else:
-                    model.setData(index, QVariant(0))
+                    model.setData(index, 0)
             else:
-                model.setData(index, QVariant(editor.currentText()))
+                model.setData(index, editor.currentText())
         else:
             QStyledItemDelegate.setModelData(self, editor, model, index)
-
-    def do_commit(self, n, editor):
-        self.emit(SIGNAL("commitData(QWidget*)"), editor)
 
     def sizeHint(self, option, index):
         return QStyledItemDelegate.sizeHint(self, option, index)

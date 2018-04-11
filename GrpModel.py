@@ -1,4 +1,4 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtCore, QtGui, QtWidgets
 import param
 import utils
 import colmgr
@@ -7,7 +7,15 @@ import utils
 import pyca
 from copy import deepcopy
 
+try:
+    QString = unicode
+except NameError:
+    # Python 3
+    QString = str
+
 class GrpModel(QtGui.QStandardItemModel):
+    layoutAboutToBeChanged = QtCore.pyqtSignal()
+    layoutChanged = QtCore.pyqtSignal()
     cname   = ["Status", "Active", "Group Name"]
     cfld    = ["status", "active", "name"]
     ctips   = ["D = Deleted\nM = Modified\nN = New", "Group is in use?", "Group name"]
@@ -40,7 +48,7 @@ class GrpModel(QtGui.QStandardItemModel):
             return max(self.length.values())
         
     def getGroupId(self, index):
-        return self.rowmap[index.row() / 2]
+        return self.rowmap[index.row() // 2]
     
     def getGroup(self, index, withEdits=True):
         if isinstance(index, QtCore.QModelIndex):
@@ -69,7 +77,7 @@ class GrpModel(QtGui.QStandardItemModel):
     def index2isf(self, index):
         r = index.row()
         c = index.column()
-        id = self.rowmap[r/2]
+        id = self.rowmap[r//2]
         if r % 2 == 0:                 # Name and configurations
             if c < self.coff:
                 seq = 'global'
@@ -144,17 +152,10 @@ class GrpModel(QtGui.QStandardItemModel):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and role != QtCore.Qt.CheckStateRole:
             return QtGui.QStandardItemModel.setData(self, index, value, role)
         t = value.type()
-        if t == QtCore.QMetaType.QString:
-            v = str(value.toString())
-        elif t == QtCore.QMetaType.Int:
-            (v, ok) = value.toInt()
-        elif t == QtCore.QMetaType.Double:
-            (v, ok) = value.toDouble()
-        elif t == QtCore.QMetaType.Void:
+        if t == QtCore.QMetaType.Void:
             v = None
         else:
-            print "Unexpected QVariant type %d" % value.type()
-            return False
+            v = value.value()
         (id, seq, f) = self.index2isf(index)
         if f == 'port':
             v = param.params.objmodel.getObjId(v)
@@ -271,7 +272,7 @@ class GrpModel(QtGui.QStandardItemModel):
         self.setHorizontalHeaderItem(c, item)
 
     def grpchange(self):
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        self.layoutAboutToBeChanged.emit()
         self.rowmap = param.params.pobj.groupids[:]   # Copy!
         self.rowmap.extend(self.newids[:])
         self.length = {}
@@ -303,7 +304,7 @@ class GrpModel(QtGui.QStandardItemModel):
         self.setColumnCount(self.coff + self.maxLength() + 1);
         for c in range(self.columnCount()):         # Make sure we have a header!
             self.addColumnHeader(c)
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        self.layoutChanged.emit()
 
     def cfgchange(self):
         pass
@@ -343,14 +344,14 @@ class GrpModel(QtGui.QStandardItemModel):
             r -= 1
         id = self.getGroupId(index)
         if id < 0:
-            self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+            self.layoutAboutToBeChanged.emit()
             self.newids.remove(id)
             del self.grps[id]
             del self.status[id]
             del self.length[id]
             self.rowmap.remove(id)
             self.setRowCount(2 * len(self.rowmap))
-            self.emit(QtCore.SIGNAL("layoutChanged()"))
+            self.layoutChanged.emit()
         else:
             self.deletes.append(id)
             self.status[id] = "".join(sorted("D" + self.status[id]))
@@ -397,7 +398,7 @@ class GrpModel(QtGui.QStandardItemModel):
     def selectCfg(self, table, index):
         title = ("Select configuration #%d for group %s" %
                  (index.column() - self.coff + 1, self.getGroup(index)['global']['name']))
-        if (param.params.cfgdialog.exec_(title) == QtGui.QDialog.Accepted):
+        if (param.params.cfgdialog.exec_(title) == QtWidgets.QDialog.Accepted):
             self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
 
     def commitOK(self, table, index):
@@ -653,5 +654,5 @@ class GrpModel(QtGui.QStandardItemModel):
                     pass
 
     def doDebug(self):
-        print self.edits
+        print(self.edits)
         param.params.debug = not param.params.debug

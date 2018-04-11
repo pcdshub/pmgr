@@ -1,5 +1,7 @@
 #!/bin/bash
-export PSPKG_ROOT=/reg/common/package
-export PSPKG_RELEASE=controls-0.0.8
-source $PSPKG_ROOT/etc/set_env.sh
+unset PYTHONPATH
+unset LD_LIBRARY_PATH
+source /reg/g/pcds/pyps/conda/py36/etc/profile.d/conda.sh
+VER="pcds-1.0.0"
+conda activate "${VER}"
 $0.py "$@"

@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from psp.Pv import Pv
 import pyca
 import threading
@@ -18,9 +18,9 @@ import param
 #         - Create a menu item named "name" that, when selected, calls
 #           action(table, index) to perform the action.
 #
-class MyContextMenu(QtGui.QMenu):
+class MyContextMenu(QtWidgets.QMenu):
     def __init__(self, isAct=None):
-        QtGui.QMenu.__init__(self)
+        QtWidgets.QMenu.__init__(self)
         self.isAct = isAct
         self.actions = []
         self.havecond = False
@@ -31,7 +31,7 @@ class MyContextMenu(QtGui.QMenu):
                 self.clear()
                 for name, action, cond in self.actions:
                     if cond == None or cond(table, index):
-                        QtGui.QMenu.addAction(self, name)
+                        QtWidgets.QMenu.addAction(self, name)
             return True
         else:
             return False
@@ -40,7 +40,7 @@ class MyContextMenu(QtGui.QMenu):
         if cond != None:
             self.havecond = True
         self.actions.append((name, action, cond))
-        QtGui.QMenu.addAction(self, name)
+        QtWidgets.QMenu.addAction(self, name)
 
     def doMenu(self, table, pos, index):
         if type(index) == int:
@@ -73,10 +73,10 @@ def caput(pvname,value,timeout=1.0,**kw):
             pass
         pv.put(value, timeout=timeout)
         pv.disconnect()
-    except pyca.pyexc, e:
-        print 'pyca exception: %s' %(e)
-    except pyca.caexc, e:
-        print 'channel access exception: %s' %(e)
+    except pyca.pyexc as e:
+        print('pyca exception: %s' %(e))
+    except pyca.caexc as e:
+        print('channel access exception: %s' %(e))
 
 def caget(pvname,timeout=1.0):
     try:
@@ -86,11 +86,11 @@ def caget(pvname,timeout=1.0):
         v = pv.value
         pv.disconnect()
         return v
-    except pyca.pyexc, e:
-        print 'pyca exception: %s' %(e)
+    except pyca.pyexc as e:
+        print('pyca exception: %s' %(e))
         return None
-    except pyca.caexc, e:
-        print 'channel access exception: %s' %(e)
+    except pyca.caexc as e:
+        print('channel access exception: %s' %(e))
         return None
 
 def __get_callback(pv, e):
@@ -111,11 +111,11 @@ def caget_async(pvname):
         pv.getevt_cb = lambda e=None: __get_callback(pv, e)
         pv.connect(-1)
         return pv
-    except pyca.pyexc, e:
-        print 'pyca exception: %s' %(e)
+    except pyca.pyexc as e:
+        print('pyca exception: %s' %(e))
         return None
-    except pyca.caexc, e:
-        print 'channel access exception: %s' %(e)
+    except pyca.caexc as e:
+        print('channel access exception: %s' %(e))
         return None
 
 def connectPv(name, timeout=-1.0):

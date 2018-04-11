@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 import cfgdialog_ui
 import coluse_ui
 import colsave_ui
@@ -6,9 +6,9 @@ import errordialog_ui
 import deriveddialog_ui
 import confirmdialog_ui
 
-class cfgdialog(QtGui.QDialog):
+class cfgdialog(QtWidgets.QDialog):
     def __init__(self, model, parent=None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
         self.ui = cfgdialog_ui.Ui_Dialog()
         self.ui.setupUi(self)
         self.model = model
@@ -19,41 +19,41 @@ class cfgdialog(QtGui.QDialog):
         if idx != None:
             self.ui.treeWidget.setCurrentItem(t[idx]['ditem'])
             self.ui.treeWidget.expandItem(t[idx]['ditem'])
-        code = QtGui.QDialog.exec_(self)
-        if code == QtGui.QDialog.Accepted:
+        code = QtWidgets.QDialog.exec_(self)
+        if code == QtWidgets.QDialog.Accepted:
             try:
                 self.result = self.ui.treeWidget.currentItem().id
             except:
-                return QtGui.QDialog.Rejected  # No selection made!
+                return QtWidgets.QDialog.Rejected  # No selection made!
         return code
 
-class colusedialog(QtGui.QDialog):
+class colusedialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
         self.ui = coluse_ui.Ui_Dialog()
         self.ui.setupUi(self)
 
-class colsavedialog(QtGui.QDialog):
+class colsavedialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
         self.ui = colsave_ui.Ui_Dialog()
         self.ui.setupUi(self)
 
-class errordialog(QtGui.QDialog):
+class errordialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
         self.ui = errordialog_ui.Ui_Dialog()
         self.ui.setupUi(self)
 
-class confirmdialog(QtGui.QDialog):
+class confirmdialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
         self.ui = confirmdialog_ui.Ui_Dialog()
         self.ui.setupUi(self)
 
-class deriveddialog(QtGui.QDialog):
+class deriveddialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
         self.ui = deriveddialog_ui.Ui_deriveddialog()
         self.ui.setupUi(self)
         self.buttonlist = []
@@ -65,7 +65,7 @@ class deriveddialog(QtGui.QDialog):
         self.buttonlist = []
 
     def addValue(self, s, v):
-        b = QtGui.QRadioButton(s, self)
+        b = QtWidgets.QRadioButton(s, self)
         if self.buttonlist == []:
             b.setChecked(True)
         b.return_value = v
@@ -83,4 +83,4 @@ class deriveddialog(QtGui.QDialog):
     def exec_(self):
         # MCB - This is an ugly hack.  I should figure out how to do it properly.
         QtCore.QTimer.singleShot(100, self.fixSize)
-        return QtGui.QDialog.exec_(self)
+        return QtWidgets.QDialog.exec_(self)

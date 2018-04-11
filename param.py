@@ -1,4 +1,4 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtCore, QtGui
 import pwd, os
 
 AUTH_FILE = "/reg/g/pcds/pyps/config/%s/pmgr.auth"

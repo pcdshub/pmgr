@@ -1,4 +1,4 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtCore, QtGui, QtWidgets
 import utils
 import param
 import colchoose_ui
@@ -49,26 +49,26 @@ def choosecol(table, index):
     try:
         d = m.colchoosedialog
     except:
-        d = QtGui.QDialog()
+        d = QtWidgets.QDialog()
         d.ui = colchoose_ui.Ui_Dialog()
         d.ui.setupUi(d)
         c = []
         for i in range(m.mutable):
             c.append(None)
         for i in range(m.mutable, m.columnCount()):
-            cb = QtGui.QCheckBox(d)
+            cb = QtWidgets.QCheckBox(d)
             cb.setText(m.horizontalHeaderItem(i).text())
             c.append(cb)
             d.ui.gridLayout.addWidget(cb, (i - m.mutable) / 5, (i - m.mutable) % 5)
-        d.connect(d.ui.allButton, QtCore.SIGNAL("clicked()"), lambda : doAllButton(d))
-        d.connect(d.ui.noneButton, QtCore.SIGNAL("clicked()"), lambda : doNoneButton(d))
+        d.ui.allButton.clicked.connect(lambda : doAllButton(d))
+        d.ui.noneButton.clicked.connect(lambda : doNoneButton(d))
         d.cols = c
         d.resize(0,0)
         m.colchoosedialog = d
     c = d.cols
     for i in range(m.mutable, m.columnCount()):
         c[i].setChecked(not h.isSectionHidden(i))
-    if d.exec_() == QtGui.QDialog.Accepted:
+    if d.exec_() == QtWidgets.QDialog.Accepted:
         for i in range(m.mutable, m.columnCount()):
             if c[i].isChecked():
                 h.showSection(i)
@@ -88,7 +88,7 @@ def doNoneButton(d):
 def savecol(table, index):
     d = param.params.colsavedialog
     d.ui.lineEdit.setText("")
-    if d.exec_() == QtGui.QDialog.Accepted:
+    if d.exec_() == QtWidgets.QDialog.Accepted:
         cfg = str(d.ui.lineEdit.text())
         if cfg == "":
             # Complain!
@@ -104,6 +104,6 @@ def restorecol(table, index):
     d.ui.comboBox.clear()
     for x in list(settings.childKeys()):
         d.ui.comboBox.addItem(x)
-    if d.exec_() == QtGui.QDialog.Accepted:
+    if d.exec_() == QtWidgets.QDialog.Accepted:
         cfg = str(d.ui.comboBox.currentText())
         table.restoreHeaderState(settings.value(cfg).toByteArray())

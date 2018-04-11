@@ -1,14 +1,22 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtCore, QtGui, QtWidgets
 import param
 import utils
 import colmgr
 import sys
 import datetime
 
+try:
+    QString = unicode
+except NameError:
+    # Python 3
+    QString = str
+
 class CfgModel(QtGui.QStandardItemModel):
-    newname = QtCore.pyqtSignal(int, QtCore.QString)
-    cfgChanged = QtCore.pyqtSignal(int, QtCore.QString)
+    newname = QtCore.pyqtSignal(int, 'QString')
+    cfgChanged = QtCore.pyqtSignal(int, 'QString')
     
+    layoutAboutToBeChanged = QtCore.pyqtSignal()
+    layoutChanged = QtCore.pyqtSignal()
     cname   = ["Status", "Name", "Parent", "Owner"]
     cfld    = ["status", "name", "cfgname", "owner"]
     ctips   = ["D = Deleted\nM = Modified\nN = New", "Configuration Name", "Parent Configuration", "Owner"]
@@ -29,13 +37,9 @@ class CfgModel(QtGui.QStandardItemModel):
         self.cfgs = {}
         self.status = {}
         self.nextid = -1
-        self.connect(param.params.ui.treeWidget,
-                     QtCore.SIGNAL("currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)"),
-                     self.treeNavigation)
-        self.connect(param.params.ui.treeWidget, QtCore.SIGNAL("itemCollapsed(QTreeWidgetItem *)"),
-                     self.treeCollapse)
-        self.connect(param.params.ui.treeWidget, QtCore.SIGNAL("itemExpanded(QTreeWidgetItem *)"),
-                     self.treeExpand)
+        param.params.ui.treeWidget.currentItemChanged.connect(self.treeNavigation)
+        param.params.ui.treeWidget.itemCollapsed.connect(self.treeCollapse)
+        param.params.ui.treeWidget.itemExpanded.connect(self.treeExpand)
         # Setup headers
         self.colcnt = len(param.params.pobj.cfgflds) + self.coff
         self.setColumnCount(self.colcnt)
@@ -177,10 +181,10 @@ class CfgModel(QtGui.QStandardItemModel):
                 continue
             d.append(id)
             if id in self.root:
-                item = QtGui.QTreeWidgetItem(tree)
+                item = QtWidgets.QTreeWidgetItem(tree)
                 parent = None
             else:
-                item = QtGui.QTreeWidgetItem()
+                item = QtWidgets.QTreeWidgetItem()
                 parent = t[id]['link']
             item.id = id
             item.setText(0, t[id]['name'])
@@ -336,25 +340,13 @@ class CfgModel(QtGui.QStandardItemModel):
         else:
             try:
                 v = self.edits[idx][f]
-                return QtCore.QVariant(v)
             except:
-                return QtCore.QVariant(d[f])
+                v = d[f]
+            return QtCore.QVariant(v)
         
-    def setData(self, index, value, role=QtCore.Qt.EditRole):
+    def setData(self, index, v, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
             return QtGui.QStandardItemModel.setData(self, index, value, role)
-        t = value.type()
-        if t == QtCore.QMetaType.QString:
-            v = str(value.toString())
-        elif t == QtCore.QMetaType.Int:
-            (v, ok) = value.toInt()
-        elif t == QtCore.QMetaType.Double:
-            (v, ok) = value.toDouble()
-        elif t == QtCore.QMetaType.Void:
-            v = None
-        else:
-            print "Unexpected QVariant type %d" % value.type()
-            return False
         (idx, f) = self.index2db(index)
         # Get all the edits for this config.
         try:
@@ -530,7 +522,7 @@ class CfgModel(QtGui.QStandardItemModel):
         
     def setCurIdx(self, id):
         self.curidx = id
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        self.layoutAboutToBeChanged.emit()
         idx = id
         path = [idx];
         while self.tree[idx]['link'] != None:
@@ -543,7 +535,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 path.append(c)
         self.path = path
         self.setRowCount(len(path))
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        self.layoutChanged.emit()
 
     def selectConfig(self, cfg):
         param.params.ui.treeWidget.setCurrentItem(self.tree[cfg]['item'])
@@ -1002,10 +994,10 @@ class CfgModel(QtGui.QStandardItemModel):
             self.cfgChangeDone(idx)
 
     def revertall(self):
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        self.layoutAboutToBeChanged.emit()
         for idx in self.edits.keys():
             self.revertone(None, idx, True)
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        self.layoutChanged.emit()
         
     def revertone(self, table, index, doall=False):
         if doall:
@@ -1093,9 +1085,9 @@ class CfgModel(QtGui.QStandardItemModel):
                 statidx = self.index(index.row(), self.statcol)
                 self.dataChanged.emit(statidx, statidx)
             else:
-                QtGui.QMessageBox.critical(None, "Error",
+                QtWidgets.QMessageBox.critical(None, "Error",
                                            "Cannot delete root configuration!",
-                                           QtGui.QMessageBox.Ok)
+                                           QtWidgets.QMessageBox.Ok)
         else:
             del self.cfgs[idx]
             del self.status[idx]
@@ -1116,18 +1108,18 @@ class CfgModel(QtGui.QStandardItemModel):
         (idx, f) = self.index2db(index)
         d = self.getCfg(idx)
         if d['config'] == None:
-            QtGui.QMessageBox.critical(None, "Error",
+            QtWidgets.QMessageBox.critical(None, "Error",
                                        "Cannot change parent of root class!",
-                                       QtGui.QMessageBox.Ok)
+                                       QtWidgets.QMessageBox.Ok)
             return
         if (param.params.cfgdialog.exec_("Select new parent for %s" % d['name'], d['config']) ==
-            QtGui.QDialog.Accepted):
+            QtWidgets.QDialog.Accepted):
             (idx, f) = self.index2db(index)
             p = param.params.cfgdialog.result
             if p == d['id']:
-                QtGui.QMessageBox.critical(None, "Error",
+                QtWidgets.QMessageBox.critical(None, "Error",
                                            "Cannot change parent to self!",
-                                           QtGui.QMessageBox.Ok)
+                                           QtWidgets.QMessageBox.Ok)
                 return
             self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
             p = self.getCfg(param.params.cfgdialog.result)
@@ -1226,7 +1218,7 @@ class CfgModel(QtGui.QStandardItemModel):
             return True
         d.ui.label.setText("This commit will affect %d configurations and %d motors." %
                            (nc, no))
-        return d.exec_() == QtGui.QDialog.Accepted
+        return d.exec_() == QtWidgets.QDialog.Accepted
 
     def editorInfo(self, index):
         c = index.column()

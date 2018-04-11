@@ -20,7 +20,7 @@ def m2pType(name):
         return int
     if name[:6] == 'double':
         return float
-    print "Unknown type %s" % name
+    print("Unknown type %s" % name)
     return None
 
 # Map MySQL field names to PV extensions.
@@ -443,14 +443,14 @@ class pmgrobj(object):
             try:
                 self.con.commit()
                 if self.debug:
-                    print "COMMIT!"
+                    print("COMMIT!")
                 didcommit = True
             except _mysql_exceptions.Error as e:
                 self.errorlist.append(e)
         if not didcommit:
             self.con.rollback()
             if self.debug:
-                print "ROLLBACK!"
+                print("ROLLBACK!")
         self.in_trans = False
         el = []
         for e in self.errorlist:
@@ -500,7 +500,7 @@ class pmgrobj(object):
                 vlist.append(d[fld])
         cmd += ')'
         if self.debug:
-            print cmd % tuple(vlist)
+            print(cmd % tuple(vlist))
             id = self.dbgid
             self.dbgid += 1
             return id
@@ -511,7 +511,7 @@ class pmgrobj(object):
             return None
         try:
             self.cur.execute("select last_insert_id()")
-            return self.cur.fetchone().values()[0]
+            return list(self.cur.fetchone().values())[0]
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
             return None
@@ -548,7 +548,7 @@ class pmgrobj(object):
         cmd += ' where id = %s'
         vlist.append(idx)
         if self.debug:
-            print cmd % tuple(vlist)
+            print(cmd % tuple(vlist))
             return
         try:
             self.cur.execute(cmd, tuple(vlist))
@@ -584,7 +584,7 @@ class pmgrobj(object):
             vlist.append(d[fld])
         cmd += ')'
         if self.debug:
-            print cmd % tuple(vlist)
+            print(cmd % tuple(vlist))
             id = self.dbgid
             self.dbgid += 1
             return id
@@ -594,7 +594,7 @@ class pmgrobj(object):
             self.errorlist.append(e)
         try:
             self.cur.execute("select last_insert_id()")
-            return self.cur.fetchone().values()[0]
+            return list(self.cur.fetchone().values())[0]
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
             return None
@@ -651,7 +651,7 @@ class pmgrobj(object):
         cmd += ' where id = %s'
         vlist.append(idx)
         if self.debug:
-            print cmd % tuple(vlist)
+            print(cmd % tuple(vlist))
             return
         try:
             self.cur.execute(cmd, tuple(vlist))
@@ -660,7 +660,7 @@ class pmgrobj(object):
 
     def groupClear(self, id):
         if self.debug:
-            print "delete from %s_cfg_grp where group_id = %d" % (self.table, id)
+            print("delete from %s_cfg_grp where group_id = %d" % (self.table, id))
             return True
         try:
             self.cur.execute("delete from %s_cfg_grp where group_id = %%s" % self.table, (id, ))
@@ -673,7 +673,7 @@ class pmgrobj(object):
         if not self.groupClear(id):
             return False
         if self.debug:
-            print "delete from %s_grp where id = %d" % (self.table, id)
+            print("delete from %s_grp where id = %d" % (self.table, id))
             return True
         try:
             self.cur.execute("delete from %s_grp where id = %%s" % self.table, (id, ))
@@ -684,9 +684,9 @@ class pmgrobj(object):
 
     def groupInsert(self, g):
         if self.debug:
-            print "insert %s_grp (name, owner, active, dt_created, dt_updated) values (%s, %s, 0, now(), now())" % \
-                  (self.table, g['global']['name'], self.hutch)
-            print "select last_insert_id()"
+            print("insert %s_grp (name, owner, active, dt_created, dt_updated) values (%s, %s, 0, now(), now())" % \
+                  (self.table, g['global']['name'], self.hutch))
+            print("select last_insert_id()")
             id = self.dbgid
             self.dbgid += 1
         else:
@@ -694,7 +694,7 @@ class pmgrobj(object):
                 self.cur.execute("insert %s_grp (name, owner, active, dt_created, dt_updated) values (%%s, %%s, 0, now(), now())" \
                                  % self.table, (g['global']['name'], self.hutch))
                 self.cur.execute("select last_insert_id()")
-                id = self.cur.fetchone().values()[0]
+                id = list(self.cur.fetchone().values())[0]
             except _mysql_exceptions.Error as e:
                 self.errorlist.append(e)
                 return False
@@ -717,7 +717,7 @@ class pmgrobj(object):
                     except:
                         port = "0"
                     if self.debug:
-                        print cmd % (str(id), str(g[k]['config']), port, str(seq))
+                        print(cmd % (str(id), str(g[k]['config']), port, str(seq)))
                     else:
                         self.cur.execute(cmd, (id, g[k]['config'], port, seq))
                     seq += 1
@@ -727,7 +727,7 @@ class pmgrobj(object):
         try:
             cmd = "update %s_grp set active = %%s, name = %%s, dt_updated = now() where id = %%s" % self.table
             if self.debug:
-                print cmd % (g['global']['active'], id)
+                print(cmd % (g['global']['active'], id))
             else:
                 self.cur.execute(cmd, (g['global']['active'], g['global']['name'], id))
             return True
@@ -745,7 +745,7 @@ class pmgrobj(object):
             p = " or "
         try:
             self.cur.execute(cmd)
-            return self.cur.fetchone().values()[0]
+            return list(self.cur.fetchone().values())[0]
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
 
@@ -755,19 +755,20 @@ class pmgrobj(object):
         cmd = "select max(seq) from %s_log where %s = %%s and owner = %%s and action != 'delete' group by id" % \
               (self.table, f)
         if self.debug:
-            print cmd % (v, self.hutch)
+            print(cmd % (v, self.hutch))
         try:
             if self.cur.execute(cmd, (v, self.hutch)) != 1:
                 # Couldn't find it in our hutch, look in any!
                 cmd = "select max(seq) from %s_log where %s = %%s and action != 'delete' group by id" % \
                       (self.table, f)
                 if self.debug:
-                    print cmd % (v)
+                    print(cmd % (v))
                 self.cur.execute(cmd, (v))
-            seq = self.cur.fetchone().values()[0]
+            seq = list(self.cur.fetchone().values())[0]
             cmd = "select * from %s_log where seq = %%s" % (self.table)
             if self.debug:
-                print cmd % seq
+                print("debug?")
+                print(cmd % seq)
             self.cur.execute(cmd, seq)
             r = self.cur.fetchone()
             try:
@@ -787,7 +788,7 @@ class pmgrobj(object):
                 pass
             return r
         except _mysql_exceptions.Error as err:
-            print err
+            print(err)
             return {}
 
     def getConfig(self, idx, loop=[]):

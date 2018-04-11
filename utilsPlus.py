@@ -12,7 +12,7 @@ import datetime
 from pprint import pprint
 from pmgrobj import pmgrobj
 from os import system
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 
 logger = logging.getLogger(__name__)
 
@@ -165,12 +165,12 @@ def get_motor_PVs(partialPV):
     i = 1
     while i != 40:
         basePV = "%s:%02d"%(partialPV, i)
-        print basePV
+        print(basePV)
         try:
             SN = pv.get(basePV + ".SN")
             if len(SN) >= 8:
                 motor_PVs[sn] = basepv
-                print "PV: {0} is active".format(basePV)
+                print("PV: {0} is active".format(basePV))
                 motorPVs += basePV
         except: pass
     return motorPVs
@@ -214,8 +214,8 @@ def getObjWithSN(pmgr, SN, verbose):
             
         if changed and pmgr.objs[objID]["name"] != "DEFAULT":
             if verbose:
-                print "\nThe SN for motor {0} has an incorrect length. Adding \
-zeros to ensure proper pmgr functionality.".format(pmgr.objs[objID]["name"])
+                print("\nThe SN for motor {0} has an incorrect length. Adding \
+zeros to ensure proper pmgr functionality.".format(pmgr.objs[objID]["name"]))
             obj = pmgr.objs[objID]
             obj["FLD_SN"] = pmgrSN
             transaction(pmgr, "objectChange", objID, obj)
@@ -225,7 +225,7 @@ zeros to ensure proper pmgr functionality.".format(pmgr.objs[objID]["name"])
 
     #If we get here, we know the SN wasn't found
     if verbose:
-        print "Serial number {0} not found in {1} pmgr".format(SN,getHutch(pmgr).upper())
+        print("Serial number {0} not found in {1} pmgr".format(SN,getHutch(pmgr).upper()))
     return None    
 
 def getFieldDict(pmgr, PV, fields):
@@ -240,8 +240,8 @@ def getFieldDict(pmgr, PV, fields):
             if "enum" in fieldDict:
                 choices = fieldDict["enum"]
                 if val >= len(choices):
-                    print "WARNING: index mismatch in field {0}.".format(field) 
-                    print "An ioc has been updated without updating the Parameter Manager!"
+                    print("WARNING: index mismatch in field {0}.".format(field) )
+                    print("An ioc has been updated without updating the Parameter Manager!")
                     val = len(choices) - 1
                 val = fieldDict["enum"][val]
             fldDict[field] = val
@@ -305,7 +305,7 @@ def checkSNLength(cfgDict, pmgr):
 
     # If it fails in any way just return the dictionary
     except:
-        print "Failed to check SN"
+        print("Failed to check SN")
         return cfgDict
 
 def listObjFields(pmgr):
@@ -435,11 +435,11 @@ def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose,
 
     # Print live values for troubleshooting
     if verbose:
-        print "\nLive cfg values for {0}".format(pv.get(PV+".DESC"))
+        print("\nLive cfg values for {0}".format(pv.get(PV+".DESC")))
         pprint(objDict)
         pprint(cfgDict)
 
-        print "\nPMGR cfg values for {0} before update".format(pv.get(PV+".DESC"))
+        print("\nPMGR cfg values for {0} before update".format(pv.get(PV+".DESC")))
         pprint(objOld)
         pprint(cfgOld)
         print
@@ -455,7 +455,7 @@ def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose,
             cfgDict["name"], allNames, maxLength=maxLenName)
 
     # Actually do the update
-    print "Saving configuration..." 
+    print("Saving configuration..." )
     didWork = cfgChange(pmgr, cfgID, cfgDict)
 
     return didWork, objOld, cfgOld
@@ -472,8 +472,8 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
     if not hutches: hutches.append(PV[0][:3].lower())
     for hutch in hutches:
         if hutch not in supportedHutches:
-            print "Invalid hutch: {0}.".format(hutch.upper())
-            print "Removing hutch: {0}".format(hutch.upper())
+            print("Invalid hutch: {0}.".format(hutch.upper()))
+            print("Removing hutch: {0}".format(hutch.upper()))
             hutches.remove(hutch)
     # Replace sxd with amo and sxr if present
     if 'sxd' in hutches:
@@ -482,13 +482,13 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
         hutches.remove('sxd')
     if not hutches: return hutches, objType, SN
     if verbose: 
-        print "Hutches: {0}".format(hutches)
+        print("Hutches: {0}".format(hutches))
 
     # Check for valid obj entry. Pmgr only supports ims motors as of 1/1/2016
     if str(objType) in supportedObjTypes: pass
     elif ":MMS:" in PV[0]: objType = "ims_motor"
     else:
-        print "Unknown device type for {0}".format(PV[0])
+        print("Unknown device type for {0}".format(PV[0]))
         objType = False
         return hutches, objType, SN
 
@@ -504,7 +504,7 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
             except: i+=1
 
         if not SN:
-            print "Failed to get motor serial number for motor {0}".format(motorPV)
+            print("Failed to get motor serial number for motor {0}".format(motorPV))
             continue
 
     return hutches, objType, SN
@@ -554,9 +554,9 @@ def getPmgr(objType, hutch, verbose):
     try:
         pmgr = pmgrobj(objType, hutch.lower())  # Launch pmgr instance
         pmgr.updateTables()                     # And update
-        if verbose: print "Pmgr instance initialized for hutch or area: {0}".format(hutch.upper())
+        if verbose: print("Pmgr instance initialized for hutch or area: {0}".format(hutch.upper()))
     except:
-        print "Failed to create pmgr instance for hutch: {0}".format(hutch.upper())
+        print("Failed to create pmgr instance for hutch: {0}".format(hutch.upper()))
         pmgr = None
     return pmgr
 
@@ -566,11 +566,11 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind='diffs',
     name1 = kwargs.get("name1", "New")
     name2 = kwargs.get("name2", "Old")
     if verbose:
-        print "{0}:".format(name1)
+        print("{0}:".format(name1))
         pprint(objOld)
         pprint(cfgOld)
         
-        print "\n{0}:".format(name2)
+        print("\n{0}:".format(name2))
         pprint(objNew)
         pprint(cfgNew)
 
@@ -606,10 +606,10 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind='diffs',
                 ndiffs += 1
         except: pass
 
-    print "\nNumber of {0}: {1}".format(kind, ndiffs)
+    print("\nNumber of {0}: {1}".format(kind, ndiffs))
     if ndiffs > 0:
         for fld in diffs.keys():
-            print "  {0:<15}: {1}".format(fld, diffs[fld])
+            print("  {0:<15}: {1}".format(fld, diffs[fld]))
     print
 
 def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict, zenity=False):
@@ -624,7 +624,7 @@ def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict, zenity=False):
     cfgID = newConfig(pmgr, cfgDict, cfgDict["name"])
 
     if not cfgID: 
-        print "Failed to create cfg for {0}".format(cfgName)
+        print("Failed to create cfg for {0}".format(cfgName))
         if zenity: system("zenity --error --text='Error: Failed to create new config'")
         return status
 
@@ -643,28 +643,28 @@ def getMostRecentObj(hutches, SN, objType, verbose, zenity=False):
         pmgr = getPmgr(objType, hutch, verbose)
         if not pmgr: continue
 
-        if verbose: print "Checking pmgr SNs for this motor"
+        if verbose: print("Checking pmgr SNs for this motor")
         objID = getObjWithSN(pmgr, SN, verbose)
         if not objID:
-            print "Serial number {0} not found in {1} pmgr".format(SN,hutch.upper())
+            print("Serial number {0} not found in {1} pmgr".format(SN,hutch.upper()))
             continue
         time_Updated = pmgr.cfgs[pmgr.objs[objID]['config']]['dt_updated']
         if verbose: 
-            print "Motor found"
-            print "Last motor update done on {0}".format(time_Updated)
+            print("Motor found")
+            print("Last motor update done on {0}".format(time_Updated))
         objs[time_Updated] = [objID, hutch]
 
     # Make sure there is at least one obj with the corresponding SN
     if len(objs) == 0:
-        print "Failed: Serial number {0} not found in pmgr".format(SN)
+        print("Failed: Serial number {0} not found in pmgr".format(SN))
         if zenity: system("zenity --error --text='Error: Motor not in pmgr'")
         return None, None
 
     # Use the most recent obj and the corresponding pmgr instance
     mostRecent = max(objs.keys())
     objID = objs[mostRecent][0]
-    print "Using most recent obj saved on {0} from {1} pmgr".format(mostRecent, 
-                                                                    objs[mostRecent][1])
+    print("Using most recent obj saved on {0} from {1} pmgr".format(mostRecent, 
+                                                                    objs[mostRecent][1]))
     pmgr = getPmgr(objType, objs[mostRecent][1], verbose)
     
     return objID, pmgr
@@ -692,7 +692,7 @@ def timing(f):
         time1 = time.time()
         ret = f(*args)
         time2 = time.time()
-        print "{0} function took {1:0.3f} s".format(f.func_name, time2-time1)
+        print("{0} function took {1:0.3f} s".format(f.func_name, time2-time1))
         return ret
     return wrap
 
@@ -714,8 +714,8 @@ def pvConfig(pmgr, PV):
             if "enum" in fieldDict:
                 choices = fieldDict["enum"]
                 if val >= len(choices):
-                    print "WARNING: index mismatch in field {0}.".format(field) 
-                    print "An ioc has been updated without updating the Parameter Manager!"
+                    print("WARNING: index mismatch in field {0}.".format(field) )
+                    print("An ioc has been updated without updating the Parameter Manager!")
                     val = len(choices) - 1
                 val = fieldDict["enum"][val]
             cfgDict[field] = val
@@ -768,11 +768,11 @@ def setConfig(pmgr, PV, config):
     """ Sets the config name config to the object associated with PV """
     obj = objFromPV(pmgr, PV)
     if not obj:
-        print "Error connecting to PV {0}".format(PV)
+        print("Error connecting to PV {0}".format(PV))
         return False
     cfg = cfgFromName(pmgr, config)
     if not cfg:
-        print "No configuration found for name {0}".format(config)
+        print("No configuration found for name {0}".format(config))
         return False
     return setObjCfg(pmgr, obj, cfg)
 
@@ -829,7 +829,7 @@ def changeConfig(pmgr, cfgName, **kwargs):
     for field, value in kwargs.items():
         ftry = findValidCfgField(pmgr, field)
         if ftry is None:
-            print "{0} is not a valid field.".format(field)
+            print("{0} is not a valid field.".format(field))
         else:
             cfgd[ftry] = value
             nChange += 1
@@ -879,7 +879,7 @@ def getHutch(pmgr):
     try:
         return pmgr.hutch
     except AttributeError:
-        print "getHutch: Error, pmgr likely does not exist!"
+        print("getHutch: Error, pmgr likely does not exist!")
         exit()
 
 def getObjPV(pmgr, objID):
@@ -889,7 +889,7 @@ def getObjPV(pmgr, objID):
     try:
         return pmgr.objs[objID]["rec_base"]
     except AttributeError:
-        print "getObjPV: Error with pmgr and/or objID, one or both may not exist!"
+        print("getObjPV: Error with pmgr and/or objID, one or both may not exist!")
         exit()
 
 def listCfgFields(pmgr):
@@ -1039,7 +1039,7 @@ def transaction(pmgr, method, *args):
         errors = pmgr.end_transaction()
         if errors:
             for e in errors:
-                print e
+                print(e)
             output = "error"
         pmgr.updateTables()
         return output

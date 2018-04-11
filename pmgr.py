@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
 from psp.options import Options
 from pmgr_ui import Ui_MainWindow
@@ -16,18 +16,18 @@ import utils
 
 ######################################################################
 
-class authdialog(QtGui.QDialog):
+class authdialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-      QtGui.QWidget.__init__(self, parent)
+      QtWidgets.QWidget.__init__(self, parent)
       self.ui = auth_ui.Ui_Dialog()
       self.ui.setupUi(self)
 
 ######################################################################
 
-class GraphicUserInterface(QtGui.QMainWindow):
+class GraphicUserInterface(QtWidgets.QMainWindow):
 
     def __init__(self):
-        QtGui.QMainWindow.__init__(self)
+        QtWidgets.QMainWindow.__init__(self)
 
         self.authdialog = authdialog(self)
         self.utimer = QtCore.QTimer()
@@ -45,15 +45,15 @@ class GraphicUserInterface(QtGui.QMainWindow):
 
         ui.objectTable.verticalHeader().hide()
         ui.objectTable.setCornerButtonEnabled(False)
-        ui.objectTable.horizontalHeader().setMovable(True)
+        ui.objectTable.horizontalHeader().setSectionsMovable(True)
 
         ui.configTable.verticalHeader().hide()
         ui.configTable.setCornerButtonEnabled(False)
-        ui.configTable.horizontalHeader().setMovable(True)
+        ui.configTable.horizontalHeader().setSectionsMovable(True)
 
         ui.groupTable.verticalHeader().hide()
         ui.groupTable.setCornerButtonEnabled(False)
-        ui.groupTable.horizontalHeader().setMovable(False)
+        ui.groupTable.horizontalHeader().setSectionsMovable(False)
 
         ui.groupWidget.close()
 
@@ -108,12 +108,12 @@ class GraphicUserInterface(QtGui.QMainWindow):
 
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
         settings.beginGroup(param.params.table)
-        self.restoreGeometry(settings.value("geometry").toByteArray())
-        self.restoreState(settings.value("windowState").toByteArray())
-        ui.configTable.restoreHeaderState(settings.value("cfgcol/default").toByteArray())
-        ui.objectTable.restoreHeaderState(settings.value("objcol/default").toByteArray())
-        ui.groupTable.restoreHeaderState(settings.value("grpcol/default").toByteArray())
-        param.params.objmodel.setObjSel(str(settings.value("objsel").toByteArray()))
+        self.restoreGeometry(settings.value("geometry"))
+        self.restoreState(settings.value("windowState"))
+        ui.configTable.restoreHeaderState(settings.value("cfgcol/default"))
+        ui.objectTable.restoreHeaderState(settings.value("objcol/default"))
+        ui.groupTable.restoreHeaderState(settings.value("grpcol/default"))
+        param.params.objmodel.setObjSel(str(settings.value("objsel")))
 
         # MCB - This is so if we have too many rows/columns in the save file,
         # we get rid of them.  Is this just a problem as we develop the group model
@@ -136,29 +136,25 @@ class GraphicUserInterface(QtGui.QMainWindow):
         ui.groupTable.colmgr = "%s/grpcol" % param.params.table
 
         if param.params.debug:
-            self.connect(ui.debugButton,     QtCore.SIGNAL("clicked()"), param.params.grpmodel.doDebug)
+            ui.debugButton.clicked.connect(param.params.grpmodel.doDebug)
         else:
             ui.debugButton.hide()
-        self.connect(ui.saveButton,      QtCore.SIGNAL("clicked()"), param.params.objmodel.commitall)
-        self.connect(ui.revertButton,    QtCore.SIGNAL("clicked()"), param.params.objmodel.revertall)
+        ui.saveButton.clicked.connect(param.params.objmodel.commitall)
+        ui.revertButton.clicked.connect(param.params.objmodel.revertall)
         if param.params.applyOK:
-            self.connect(ui.applyButton, QtCore.SIGNAL("clicked()"), param.params.objmodel.applyall)
+            ui.applyButton.clicked.connect(param.params.objmodel.applyall)
         else:
             ui.applyButton.hide()
-        self.connect(ui.actionAuto,      QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
-        self.connect(ui.actionProtected, QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
-        self.connect(ui.actionManual,    QtCore.SIGNAL("triggered()"), param.params.objmodel.doShow)
-        self.connect(ui.actionTrack,     QtCore.SIGNAL("triggered()"), param.params.objmodel.doTrack)
-        self.connect(ui.actionAuth, QtCore.SIGNAL("triggered()"), self.doAuthenticate)
-        self.connect(ui.actionExit, QtCore.SIGNAL("triggered()"), self.doExit)
-        self.connect(self.utimer, QtCore.SIGNAL("timeout()"), self.unauthenticate)
-        self.connect(ui.objectTable.selectionModel(),
-                     QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
-                     param.params.objmodel.selectionChanged)
+        ui.actionAuto.triggered.connect(param.params.objmodel.doShow)
+        ui.actionProtected.triggered.connect(param.params.objmodel.doShow)
+        ui.actionManual.triggered.connect(param.params.objmodel.doShow)
+        ui.actionTrack.triggered.connect(param.params.objmodel.doTrack)
+        ui.actionAuth.triggered.connect(self.doAuthenticate)
+        ui.actionExit.triggered.connect(self.doExit)
+        self.utimer.timeout.connect(self.unauthenticate)
+        ui.objectTable.selectionModel().selectionChanged.connect(param.params.objmodel.selectionChanged)
         # MCB - Sigh. I should just make FreezeTableView actually work.
-        self.connect(ui.objectTable.cTV.selectionModel(),
-                     QtCore.SIGNAL("selectionChanged(QItemSelection,QItemSelection)"),
-                     param.params.objmodel.selectionChanged)
+        ui.objectTable.cTV.selectionModel().selectionChanged.connect(param.params.objmodel.selectionChanged)
 
     def closeEvent(self, event):
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
@@ -169,7 +165,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         settings.setValue("objcol/default", param.params.ui.objectTable.saveHeaderState())
         settings.setValue("grpcol/default", param.params.ui.groupTable.saveHeaderState())
         settings.setValue("objsel", param.params.objmodel.getObjSel())
-        QtGui.QMainWindow.closeEvent(self, event)
+        QtWidgets.QMainWindow.closeEvent(self, event)
 
     def doExit(self):
         self.close()
@@ -187,8 +183,8 @@ class GraphicUserInterface(QtGui.QMainWindow):
             self.utimer.start(10 * 60000) # Ten minutes!
             return True
         else:
-            QtGui.QMessageBox.critical(None, "Error", "Invalid Password",
-                                       QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(None, "Error", "Invalid Password",
+                                       QtWidgets.QMessageBox.Ok)
             return False
 
     def doAuthenticate(self):
@@ -196,7 +192,7 @@ class GraphicUserInterface(QtGui.QMainWindow):
         user = str(self.authdialog.ui.nameEdit.text())
         password = str(self.authdialog.ui.passEdit.text())
         self.authdialog.ui.passEdit.setText("")
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             if not self.authenticate_user(user, password):
                 self.unauthenticate()
 
@@ -205,15 +201,15 @@ class GraphicUserInterface(QtGui.QMainWindow):
         self.authenticate_user()
         
 if __name__ == '__main__':
-    QtGui.QApplication.setGraphicsSystem("raster")
+    #MCB QtWidgets.QApplication.setGraphicsSystem("raster")
     param.params = param.param_structure()
-    app = QtGui.QApplication([''])
+    app = QtWidgets.QApplication([''])
   
     # Options( [mandatory list, optional list, switches list] )
     options = Options(['hutch', 'type'], [], ['debug', 'applyenable'])
     try:
         options.parse()
-    except Exception, msg:
+    except Exception as msg:
         options.usage(str(msg))
         sys.exit()
 
