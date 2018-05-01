@@ -218,6 +218,7 @@ class pmgrobj(object):
         self.lastcfg = datetime.datetime(1900,1,1,0,0,1)
         self.lastobj = datetime.datetime(1900,1,1,0,0,1)
         self.lastgrp = datetime.datetime(1900,1,1,0,0,1)
+        self.hutchlist = self.getHutchList()
         self.checkForUpdate()
         self.updateTables()
 
@@ -345,6 +346,20 @@ class pmgrobj(object):
         setset.sort()
         self.setflds = [setflds[i] for i in setset]
         self.con.commit()
+
+    def getHutchList(self):
+        l = []
+        try:
+            self.cur.execute("select * from %s_update" % (self.table))
+            for d in self.cur.fetchall():
+                n = d['tbl_name']
+                if n[-4:] != '_grp' and n != 'config':
+                    l.append(n)
+            self.con.commit()
+            l.sort()
+        except:
+            pass
+        return l
 
     def checkForUpdate(self):
         if self.in_trans:
@@ -534,6 +549,12 @@ class pmgrobj(object):
         try:
             v = e['mutex']
             cmd += ", mutex = %s"
+            vlist.append(v)
+        except:
+            pass
+        try:
+            v = e['owner']
+            cmd += ", owner = %s"
             vlist.append(v)
         except:
             pass

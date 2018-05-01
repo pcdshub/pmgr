@@ -95,6 +95,7 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         param.params.colusedialog    = dialogs.colusedialog(self)
         param.params.deriveddialog   = dialogs.deriveddialog(self)
         param.params.confirmdialog   = dialogs.confirmdialog(self)
+        param.params.chowndialog     = dialogs.chowndialog(self)
 
         param.params.db.objchange.connect(param.params.objmodel.objchange)
         param.params.db.cfgchange.connect(param.params.objmodel.cfgchange)

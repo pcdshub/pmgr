@@ -60,6 +60,15 @@ class db(QtCore.QObject):
         except:
             return param.params.pobj.cfgs[id]['name']
 
+    def getCfgId(self, name):
+        for k, v in self.nameedits.items():
+            if v == name:
+                return k
+        for k, v in param.params.pobj.cfgs.items():
+            if v['name'] == name:
+                return v['id']
+        return None
+
     def setCfgNames(self, l):
         for o in l:
             c = o['config']

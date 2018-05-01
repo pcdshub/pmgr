@@ -5,6 +5,7 @@ import colsave_ui
 import errordialog_ui
 import deriveddialog_ui
 import confirmdialog_ui
+import chown_ui
 
 class cfgdialog(QtWidgets.QDialog):
     def __init__(self, model, parent=None):
@@ -84,3 +85,23 @@ class deriveddialog(QtWidgets.QDialog):
         # MCB - This is an ugly hack.  I should figure out how to do it properly.
         QtCore.QTimer.singleShot(100, self.fixSize)
         return QtWidgets.QDialog.exec_(self)
+
+class chowndialog(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        QtWidgets.QDialog.__init__(self, parent)
+        self.ui = chown_ui.Ui_Dialog()
+        self.ui.setupUi(self)
+
+    def exec_(self, cfg, hutch, hutchlist):
+        self.ui.mainLabel.setText("Current owner of %s is %s." % (cfg, hutch.upper()))
+        self.ui.comboBox.clear()
+        for i in hutchlist:
+            if i != hutch:
+                self.ui.comboBox.addItem(i.upper())
+        code = QtWidgets.QDialog.exec_(self)
+        if code == QtWidgets.QDialog.Accepted:
+            try:
+                self.result = self.ui.comboBox.currentText().lower()
+            except:
+                return QtWidgets.QDialog.Rejected  # No selection made!
+        return code

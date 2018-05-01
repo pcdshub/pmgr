@@ -7,3 +7,4 @@ pyuic5 -o colchoose_ui.py colchoose.ui
 pyuic5 -o errordialog_ui.py errordialog.ui
 pyuic5 -o deriveddialog_ui.py deriveddialog.ui
 pyuic5 -o confirmdialog_ui.py confirmdialog.ui
+pyuic5 -o chown_ui.py chown.ui

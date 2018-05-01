@@ -592,6 +592,8 @@ class CfgModel(QtGui.QStandardItemModel):
                        lambda t, i: self.ownTest(i) and not self.checkStatus(i, 'D'))
         menu.addAction("Undelete config", self.undeletecfg,
                        lambda t, i: self.checkStatus(i, 'D'))
+        menu.addAction("Change owner", self.chowncfg,
+                       lambda t, i: self.ownTest(i) and not self.checkStatus(i, 'D'))
         menu.addAction("Commit this config", self.commitone,
                        lambda t, i: self.checkStatus(i, 'DMN'))
         menu.addAction("Revert this config", self.revertone,
@@ -940,7 +942,7 @@ class CfgModel(QtGui.QStandardItemModel):
                     param.params.db.addCfgmap(idx, newid)
             else:
                 ee = {}
-                for fld in ['name', 'config', 'mutex']:
+                for fld in ['name', 'config', 'mutex', 'owner']:
                     try:
                         ee[fld] = e[fld]
                     except:
@@ -1103,6 +1105,41 @@ class CfgModel(QtGui.QStandardItemModel):
         self.status[idx] = self.status[idx].replace("D", "")
         statidx = self.index(index.row(), self.statcol)
         self.dataChanged.emit(statidx, statidx)
+
+    def chowncfg(self, table, index):
+        (idx, f) = self.index2db(index)
+        if self.tree[idx]['children'] != []:
+            QtWidgets.QMessageBox.critical(None, "Error",
+                                           "Cannot give away configuration with children!",
+                                           QtWidgets.QMessageBox.Ok)
+            return
+        d = self.getCfg(idx)
+        if idx >= 0:
+            if param.params.chowndialog.exec_(d['name'], 
+                                              param.params.pobj.hutch,
+                                              param.params.pobj.hutchlist) != QtWidgets.QDialog.Accepted:
+                return
+            newowner = param.params.chowndialog.result
+            try:
+                e = self.edits[idx]
+            except:
+                e = {}
+            e['owner'] = newowner
+            e['cfgname'] = newowner.upper()
+            e['config'] = param.params.db.getCfgId(e['cfgname'])
+            d['_color']['owner'] = param.params.red
+            d['_color']['cfgname'] = param.params.red
+            self.edits[idx] = e
+            try:
+                v = self.status[idx].index("M")
+            except:
+                self.status[idx] = "".join(sorted("M" + self.status[idx]))
+                statidx = self.index(index.row(), self.statcol)
+                self.dataChanged.emit(statidx, statidx)
+            cfgidx = self.index(index.row(), self.cfgcol)
+            self.dataChanged.emit(cfgidx, cfgidx)
+            self.buildtree()
+            self.setCurIdx(idx)
 
     def chparent(self, table, index):
         (idx, f) = self.index2db(index)
