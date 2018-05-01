@@ -57,12 +57,16 @@ class CfgModel(QtGui.QStandardItemModel):
             self.setHorizontalHeaderItem(c, i)
         self.is_expanded = {}
         self.createStatus()
+        self.hutchid = -1
         self.buildtree()
+        param.params.ui.treeWidget.expandItem(self.tree[0]['item']) # Expand DEFAULT.
         try:
-            param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
+            param.params.ui.treeWidget.setCurrentItem(self.tree[self.hutchid]['item'])
+            self.curidx = self.hutchid
         except:
             self.setCurIdx(0)
-        param.params.ui.treeWidget.expandItem(self.tree[self.curidx]['item'])
+        if self.curidx != 0:
+            param.params.ui.treeWidget.expandItem(self.tree[self.curidx]['item'])
 
     def createStatus(self):
         for d in param.params.pobj.cfgs.values():
@@ -176,6 +180,7 @@ class CfgModel(QtGui.QStandardItemModel):
         r = list(self.root)  # Make a copy!
         t = self.tree
         d = []
+        hutch = param.params.pobj.hutch.upper()
         for id in r:
             if id in d:
                 continue
@@ -188,6 +193,8 @@ class CfgModel(QtGui.QStandardItemModel):
                 parent = t[id]['link']
             item.id = id
             item.setText(0, t[id]['name'])
+            if t[id]['name'] == hutch:
+                self.hutchid = id
             t[id][fld] = item
             if parent != None:
                 t[parent][fld].addChild(item)
