@@ -219,6 +219,10 @@ if __name__ == '__main__':
     param.params.debug = False if options.debug == None else True
     param.params.applyOK = False if options.applyenable == None else True
     gui = GraphicUserInterface()
+    param.params.setTable(options.type)  # Sigh, do this again to fix dropdown.
+    # MCB - We need a better way of doing this.
+    if options.type == "ims_motor":
+        param.params.setCatEnum(["Beamline", "Dumb", "Smart"]) # Displayed names.
     try:
         gui.show()
         retval = app.exec_()

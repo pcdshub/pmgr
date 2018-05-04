@@ -71,9 +71,6 @@ class param_structure(object):
 
     def setTable(self, v):
         self.table = v
-        # MCB - We need a better way of doing this.
-        if v == "ims_motor":
-            self.setCatEnum(["Protected", "User Dumb", "User Smart"])     # Displayed names.
             
     def setHutch(self, v):
         self.hutch = v
