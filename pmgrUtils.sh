@@ -1,9 +1,11 @@
 #! /bin/bash
 
 # Set up env
-export PSPKG_ROOT=/reg/g/pcds/pkg_mgr
-export PSPKG_RELEASE=controls-0.1.0
-source $PSPKG_ROOT/etc/set_env.sh
+unset PYTHONPATH
+unset LD_LIBRARY_PATH
+source /reg/g/pcds/pyps/conda/py36/etc/profile.d/conda.sh
+VER="pcds-1.0.0"
+conda activate "${VER}"
 
 # Check if this is amo or sxr
 if [[ "${2:0:3}" == "SXR" ]] || [[ "${2:0:3}" == "AMO" ]]; then
