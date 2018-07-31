@@ -203,7 +203,8 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         self.utimer.stop()
         self.authenticate_user()
         
-if __name__ == '__main__':
+
+def main():
     #MCB QtWidgets.QApplication.setGraphicsSystem("raster")
     param.params = param.param_structure()
     app = QtWidgets.QApplication([''])
@@ -231,3 +232,7 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         app.exit(1)
     sys.exit(retval)
+
+
+if __name__ == '__main__':
+    main()

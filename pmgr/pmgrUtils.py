@@ -481,7 +481,7 @@ def parsePVArguments(PVArguments):
 ##                                   Main                                     ##
 ################################################################################
 
-if __name__ == "__main__":
+def main():
     # Parse docopt variables
     arguments = docopt(__doc__)
     # print arguments
@@ -637,3 +637,6 @@ apply\n".format(PV))
                     saveConfig(PV, hutch, pmgr, SN, verbose, zenity, 
                                rename=rename)
                     continue
+
+if __name__ == "__main__":
+    main()
