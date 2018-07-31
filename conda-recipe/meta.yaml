@@ -29,6 +29,7 @@ test:
     - pmgr
   commands:
     - pmgr --help
+    - pmgrUtils.sh --help
 
 about:
   home: https://github.com/pcdshub/pmgr
