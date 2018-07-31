@@ -3,13 +3,15 @@
 # A bizarre combination of code from IocManager, the parent/child IOC compilation process, and
 # ParameterManager.
 #
+import fcntl, re, sys, ast, os, operator
+from io import StringIO
 
 from psp.options import Options
 from psp.Pv import Pv
-from pmgrobj import pmgrobj
 import pyca
-import fcntl, re, sys, ast, os, operator
-from io import StringIO
+
+from .pmgrobj import pmgrobj
+
 
 CONFIG_FILE    = "/reg/g/pcds/pyps/config/%s/iocmanager.cfg"
 EPICS_TOP      = "/reg/g/pcds/package/epics/"

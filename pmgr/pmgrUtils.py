@@ -68,8 +68,6 @@ to the list of hutches there should enable pmgrUtils support for that hutch (so
 long as it is already in the pmgr).
 """
 
-import utilsPlus as utlp
-import psp.Pv as pv
 import argparse
 from sys import argv
 from pprint import pprint
@@ -77,6 +75,10 @@ from os import system
 from docopt import docopt
 from sys import exit
 from difflib import get_close_matches
+
+import psp.Pv as pv
+
+from . import utilsPlus as utlp
 
 allHutches = set(["sxr", "amo", "xpp", "cxi", "xcs", "mfx", "mec", "det"])
 

@@ -1,11 +1,13 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-import param
-import utils
-import colmgr
-import datetime
-import utils
-import pyca
 from functools import reduce
+import datetime
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+import pyca
+
+from . import colmgr
+from . import param
+from . import utils
+
 
 try:
     QString = unicode

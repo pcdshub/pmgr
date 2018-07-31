@@ -2,17 +2,18 @@
 # pmgrUtils. It is a mishmash of functions compiled into one script so it is
 # to refer to it only when trying to understand specific funtions in pmgrUtils.
 
-import psp.Pv as pv
+from os import system
+from configparser import SafeConfigParser
 import logging
 import subprocess
 import os
 import string
 import datetime
-                 
+
 from pprint import pprint
-from pmgrobj import pmgrobj
-from os import system
-from configparser import SafeConfigParser
+import psp.Pv as pv
+
+from .pmgrobj import pmgrobj
 
 logger = logging.getLogger(__name__)
 
