@@ -23,6 +23,7 @@ requirements:
     - pyca >=3
     - pykerberos >=1.1.14
     - mysqlclient =1.3.12
+    - docopt
 
 test:
   imports:
