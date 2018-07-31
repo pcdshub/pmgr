@@ -1,11 +1,12 @@
 import time
 import datetime
 import re
-import utils
 
 import MySQLdb as mdb
 import _mysql_exceptions
 import pyca
+
+from . import utils
 
 ####################
 #
