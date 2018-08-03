@@ -1,11 +1,13 @@
+from . import cfgdialog_ui
+from . import coluse_ui
+from . import colsave_ui
+from . import errordialog_ui
+from . import deriveddialog_ui
+from . import confirmdialog_ui
+from . import chown_ui
+
 from PyQt5 import QtCore, QtGui, QtWidgets
-import cfgdialog_ui
-import coluse_ui
-import colsave_ui
-import errordialog_ui
-import deriveddialog_ui
-import confirmdialog_ui
-import chown_ui
+
 
 class cfgdialog(QtWidgets.QDialog):
     def __init__(self, model, parent=None):

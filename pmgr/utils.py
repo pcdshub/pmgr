@@ -1,9 +1,11 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
+import threading
+
+import kerberos
 from psp.Pv import Pv
 import pyca
-import threading
-import kerberos
-import param
+
+from . import param
 
 ######################################################################
        

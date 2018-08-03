@@ -1,0 +1,3 @@
+include versioneer.py
+include pmgr/_version.py
+include pmgr/pmgrUtils.cfg

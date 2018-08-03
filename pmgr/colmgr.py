@@ -1,7 +1,8 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-import utils
-import param
-import colchoose_ui
+
+from . import utils
+from . import param
+from . import colchoose_ui
 
 #
 # This is an attempt at a general purpose column manager for QTableViews.

@@ -68,8 +68,6 @@ to the list of hutches there should enable pmgrUtils support for that hutch (so
 long as it is already in the pmgr).
 """
 
-import utilsPlus as utlp
-import psp.Pv as pv
 import argparse
 from sys import argv
 from pprint import pprint
@@ -77,6 +75,10 @@ from os import system
 from docopt import docopt
 from sys import exit
 from difflib import get_close_matches
+
+import psp.Pv as pv
+
+from . import utilsPlus as utlp
 
 allHutches = set(["sxr", "amo", "xpp", "cxi", "xcs", "mfx", "mec", "det"])
 
@@ -479,7 +481,7 @@ def parsePVArguments(PVArguments):
 ##                                   Main                                     ##
 ################################################################################
 
-if __name__ == "__main__":
+def main():
     # Parse docopt variables
     arguments = docopt(__doc__)
     # print arguments
@@ -635,3 +637,6 @@ apply\n".format(PV))
                     saveConfig(PV, hutch, pmgr, SN, verbose, zenity, 
                                rename=rename)
                     continue
+
+if __name__ == "__main__":
+    main()

@@ -195,4 +195,4 @@ class Ui_MainWindow(object):
         self.actionExit.setText(_translate("MainWindow", "Exit"))
         self.actionAuth.setText(_translate("MainWindow", "Authenticate"))
 
-from FreezeTableView import FreezeTableView
+from pmgr.FreezeTableView import FreezeTableView

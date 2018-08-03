@@ -1,18 +1,20 @@
 #!/usr/bin/env python
-from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
-from psp.options import Options
-from pmgr_ui import Ui_MainWindow
-from ObjModel import ObjModel
-from CfgModel import CfgModel
-from GrpModel import GrpModel
-import dialogs
-import param
-from db import db
 import threading
-from MyDelegate import MyDelegate
-import auth_ui
-import utils
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+from psp.options import Options
+
+from .pmgr_ui import Ui_MainWindow
+from .ObjModel import ObjModel
+from .CfgModel import CfgModel
+from .GrpModel import GrpModel
+from .db import db
+from .MyDelegate import MyDelegate
+from . import dialogs
+from . import param
+from . import auth_ui
+from . import utils
 
 ######################################################################
 
@@ -201,7 +203,8 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         self.utimer.stop()
         self.authenticate_user()
         
-if __name__ == '__main__':
+
+def main():
     #MCB QtWidgets.QApplication.setGraphicsSystem("raster")
     param.params = param.param_structure()
     app = QtWidgets.QApplication([''])
@@ -229,3 +232,7 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         app.exit(1)
     sys.exit(retval)
+
+
+if __name__ == '__main__':
+    main()

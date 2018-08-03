@@ -1,9 +1,12 @@
-from PyQt5 import QtCore
 import threading
 import time
-import dialogs
-import param
-from pmgrobj import pmgrobj
+
+from PyQt5 import QtCore
+
+from .pmgrobj import pmgrobj
+from . import dialogs
+from . import param
+
 
 class dbPoll(threading.Thread):
     

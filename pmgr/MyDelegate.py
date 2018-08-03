@@ -3,7 +3,8 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import re
 import numpy as np
-import param
+
+from . import param
 
 #########################################################################
 #
