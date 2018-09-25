@@ -80,7 +80,7 @@ import psp.Pv as pv
 
 from . import utilsPlus as utlp
 
-allHutches = set(["sxr", "amo", "xpp", "cxi", "xcs", "mfx", "mec", "det"])
+allHutches = set(["sxr", "amo", "xpp", "cxi", "xcs", "mfx", "mec", "det", "usr"])
 
 def saveConfig(PV, hutch, pmgr, SN, verbose, zenity, dumb=False, 
                 dumb_cfg=None, dumb_confirm=True, rename=True):
