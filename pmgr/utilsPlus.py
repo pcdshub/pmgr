@@ -1045,3 +1045,33 @@ def transaction(pmgr, method, *args):
         pmgr.updateTables()
         return output
 
+def cfg_diff(hutch1, cfg1, hutch2, cfg2):
+    """
+    Compares two configurations in pmgr database and outputs their
+    differences
+
+    Parameters
+    ----------
+    hutch1 : str
+        The hutch in which cfg1 lives
+
+    cfg1 : str
+        The first configuration to compare, must live in hutch1
+
+    hutch2 : str
+        The hutch in which cfg2 lives
+
+    cfg2 : str
+        The second configuration to compare, must live in hutch2
+    """
+    # First create pmgr objects for hucth1 and hutch2
+    pmgr_obj1 = pmgrobj('ims_motor', hutch1.lower())
+    pmgr_obj2 = pmgrobj('ims_motor', hutch2.lower())
+    # Get config dict for cfg1 and cfg2
+    cfg1_dict = nameConfig(pmgr_obj1, cfg1)
+    cfg2_dict = nameConfig(pmgr_obj2, cfg2)
+    for field in cfg1_dict.keys():
+        if cfg1_dict[field] != cfg2_dict[field]:
+            print('%s: %s: %s' % (hutch1, field, cfg1_dict[field]))
+            print('%s: %s: %s' % (hutch2, field, cfg2_dict[field]))
+            print('')
