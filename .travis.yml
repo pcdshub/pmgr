@@ -36,7 +36,7 @@ script:
   # We're actually *only* testing the conda build here.
   # This should be moved to the install section
   # and automated tests should be added below... eventually.
-  - conda build conda-recipe --output-folder bld-dir
+  - conda build conda-recipe --python $TRAVIS_PYTHON_VERSION --output-folder bld-dir
 
 after_success:
   - |
