@@ -1,6 +1,15 @@
 language: python
 sudo: false
 
+services:
+    - xvfb
+
+addons:
+    apt:
+      packages:
+        - herbstluftwm
+        - libxkbcommon-x11-0
+
 env:
   global:
     - OFFICIAL_REPO="pcdshub/pmgr"
@@ -27,6 +36,11 @@ install:
   - conda config --append channels conda-forge
   # Useful for debugging any issues with conda
   - conda info -a
+
+before_script:
+  # Run windows manager
+  - "herbstluftwm &"
+  - sleep 1
 
 script:
   # We're actually *only* testing the conda build here.
