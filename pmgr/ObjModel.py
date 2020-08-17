@@ -125,7 +125,7 @@ class ObjModel(QtGui.QStandardItemModel):
             role != QtCore.Qt.ToolTipRole):
             return QtGui.QStandardItemModel.data(self, index, role)
         if not index.isValid():
-            return QtCore.QVariant()
+            return None
         (idx, f) = self.index2db(index)
         if role == QtCore.Qt.ToolTipRole:
             if f == 'status':
@@ -147,14 +147,14 @@ class ObjModel(QtGui.QStandardItemModel):
             v += "\nActual Value: %s" % str(va)
             if ve != None:
                 v += "\nEdited Value: %s" % str(ve)
-            return QtCore.QVariant(v)
+            return v
         if f == "status":
             if role == QtCore.Qt.ForegroundRole:
-                return QtCore.QVariant(param.params.black)
+                return param.params.black
             elif role == QtCore.Qt.BackgroundRole:
-                return QtCore.QVariant(param.params.white)
+                return param.params.white
             else:
-                return QtCore.QVariant(self.getStatus(idx))
+                return self.getStatus(idx)
         try:
             v = self.getObj(idx)[f]  # Actual value
         except:
@@ -178,34 +178,34 @@ class ObjModel(QtGui.QStandardItemModel):
             if f in self.cfld or param.params.pobj.fldmap[f]['obj']:
                 # An object value!  Let "derived" win!
                 if v2 == None:
-                    return QtCore.QVariant(param.params.almond)    # A derived value.
+                    return param.params.almond    # A derived value.
                 elif v == None:
-                    return QtCore.QVariant(param.params.gray)      # Not connected.
+                    return param.params.gray      # Not connected.
                 elif v == "" and v2 != "":
-                    return QtCore.QVariant(param.params.ltblue)    # Actually empty, but there is a configured value.
+                    return param.params.ltblue    # Actually empty, but there is a configured value.
                 else:
-                    return QtCore.QVariant(param.params.white)    # An ordinary cell.
+                    return param.params.white    # An ordinary cell.
             else:
                 # A configuration value!  Let "not connected" win!
                 if v == None:
-                    return QtCore.QVariant(param.params.gray)      # Not connected.
+                    return param.params.gray      # Not connected.
                 elif v == "" and v2 != "":
-                    return QtCore.QVariant(param.params.ltblue)    # Actually empty, but there is a configured value.
+                    return param.params.ltblue    # Actually empty, but there is a configured value.
                 elif v2 == None:
-                    return QtCore.QVariant(param.params.almond)    # A derived value.
+                    return param.params.almond    # A derived value.
                 else:
-                    return QtCore.QVariant(param.params.ltgray)     # An ordinary cell.
+                    return param.params.ltgray     # An ordinary cell.
         elif role == QtCore.Qt.ForegroundRole:
             try:
                 v = self.edits[idx][f]
-                return QtCore.QVariant(param.params.red)
+                return param.params.red
             except:
                 pass
             if v2 == None or param.equal(v, v2):
-                return QtCore.QVariant(param.params.black)
+                return param.params.black
             else:
-                return QtCore.QVariant(param.params.blue)
-            return QtCore.QVariant()
+                return param.params.blue
+            return None
         elif role == QtCore.Qt.DisplayRole:
             try:
                 v = self.edits[idx][f]
@@ -220,7 +220,7 @@ class ObjModel(QtGui.QStandardItemModel):
         # DisplayRole or EditRole fall through... v has our value!
         if f == 'category':
             v = param.params.catenum2[param.params.catenum.index(v)]
-        return QtCore.QVariant(v)
+        return v
 
     def setValue(self, idx, f, v):
         try:
@@ -494,6 +494,10 @@ class ObjModel(QtGui.QStandardItemModel):
                 return True
         return False
 
+    def savedObj(self, index):
+        (idx, f) = self.index2db(index)
+        return idx >= 0
+
     def haveObjPVDiff(self, index):
         db = param.params.pobj
         try:
@@ -542,14 +546,20 @@ class ObjModel(QtGui.QStandardItemModel):
                        self.checkStatus(index, 'D'))
         menu.addAction("Change configuration", self.chparent,
                        lambda table, index: self.rowmap[index.row()] != 0 and index.column() == self.cfgcol)
-        menu.addAction("Set from PV", self.setFromPV,
+        menu.addAction("Set field from PV", self.setFromPV,
                        lambda table, index: index.row() >= 0 and
                        self.rowmap[index.row()] != 0 and self.haveObjPVDiff(index))
-        menu.addAction("Set all from PV", self.setAllFromPV,
+        menu.addAction("Set object fields from PV", self.setAllFromPV,
                        lambda table, index: index.row() >= 0 and
                        self.rowmap[index.row()] != 0 and self.haveObjPVDiff(index.row()))
         menu.addAction("Create configuration from object", self.createcfg,
                        lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0)
+        menu.addAction("Set configuration from PV", self.modifycfg,
+                       lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0)
+        menu.addAction("Set configuration and object fields from PV", self.modifycfgobj,
+                       lambda table, index: index.row() >= 0 and
+                       self.rowmap[index.row()] != 0 and self.savedObj(index) and
+                       self.haveObjPVDiff(index.row()))
         menu.addAction("Commit this object", self.commitone,
                        lambda table, index: index.row() >= 0 and self.rowmap[index.row()] != 0 and
                        self.checkStatus(index, 'DMN'))
@@ -574,9 +584,9 @@ class ObjModel(QtGui.QStandardItemModel):
     def setFromPV(self, table, index):
         (idx, f) = self.index2db(index)
         if idx >= 0:
-            self.setData(index, QtCore.QVariant(param.params.pobj.objs[idx][f]))
+            self.setData(index, param.params.pobj.objs[idx][f])
         else:
-            self.setData(index, QtCore.QVariant(self.objs[idx][f]))
+            self.setData(index, self.objs[idx][f])
 
     def setAllFromPV(self, table, index):
         db = param.params.pobj
@@ -593,7 +603,7 @@ class ObjModel(QtGui.QStandardItemModel):
                 va = self.objs[idx][f]
                 vc = self.objs[idx]['_val'][f]
             if vc != None:
-                self.setData(self.index(index.row(), c), QtCore.QVariant(va))
+                self.setData(self.index(index.row(), c), va)
         
     def create(self, table, index):
         idx = self.nextid;
@@ -618,6 +628,16 @@ class ObjModel(QtGui.QStandardItemModel):
         lastsort = self.lastsort
         self.lastsort = (None, None)
         self.sort(lastsort[0], lastsort[1])
+
+    def modifycfg(self, table, index):
+        (idx, f) = self.index2db(index)
+        o = self.getObj(idx)
+        param.params.cfgmodel.modifycfgfromobj(o)
+
+    # do modifycfg and setFromPV!
+    def modifycfgobj(self, table, index):
+        self.setAllFromPV(table, index)
+        self.modifycfg(table, index)
 
     def createcfg(self, table, index):
         (idx, f) = self.index2db(index)
@@ -747,11 +767,8 @@ class ObjModel(QtGui.QStandardItemModel):
     def revertall(self):
         self.layoutAboutToBeChanged.emit()
         for idx in self.edits.keys():
-            try:
-                del self.edits[idx]
-            except:
-                pass
             self.status[idx] = self.status[idx].replace("M", "")
+        self.edits = {}
         self.layoutChanged.emit()
         param.params.cfgmodel.revertall()
         param.params.grpmodel.revertall()
@@ -888,16 +905,17 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             self.edits = {}
             self.objs = {}
+            snew = {}
             for k in self.status.keys():
                 if k < 0:
-                    del self.status[k]
                     del self.istatus[k]
                 else:
                     if 'C' in self.status[k]:
-                        self.status[k] = "C"
+                        snew[k] = "C"
                     else:
-                        self.status[k] = ""
+                        snew[k] = ""
                     self.statchange(k)
+            self.status = snew
             self.rowmap = list(param.params.pobj.objs.keys())
         self.adjustSize()
 
