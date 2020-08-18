@@ -69,6 +69,8 @@ def createAlias(name):
 #     mutex_sets
 #         - A list of lists of field names in each mutual exclusion set.
 #           (One of the fields in each list must be unset.)
+#     mutex_flds
+#         - A flat list of all of the field names in the mutex_sets.
 #     fldmap
 #         - A dictionary mapping field names to information dictionaries.
 #     setflds
@@ -245,6 +247,7 @@ class pmgrobj(object):
         nullok = {}
         unique = {}
         mutex_sets = []
+        mutex_flds = []
         for i in range(16):
             mutex_sets.append([])
         for (f, t, nl, k) in locfld:
@@ -279,10 +282,12 @@ class pmgrobj(object):
                 for i in range(16):
                     if v & (1 << i) != 0:
                         mutex_sets[i].append(f)
+                        mutex_flds.append(f)
             if setorder[f] & self.AUTO_CONFIG != 0:
                 self.autoconfig = f
         # We're assuming the bits are used from LSB to MSB, no gaps!
         self.mutex_sets = [l for l in mutex_sets if l != []]
+        self.mutex_flds = mutex_flds
         for d in result:
             f = d['db_field_name']
             mutex[f] = []
@@ -484,7 +489,8 @@ class pmgrobj(object):
 #
 ####################
 
-    def defaultNamefunc(self, idx):
+    @staticmethod
+    def defaultNamefunc(idx):
         return "#" + str(idx)
 
     def configDelete(self, idx, namefunc=defaultNamefunc):

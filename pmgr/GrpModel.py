@@ -100,21 +100,21 @@ class GrpModel(QtGui.QStandardItemModel):
         if (not role in self.roles):
             return QtGui.QStandardItemModel.data(self, index, role)
         if not index.isValid():
-            return QtCore.QVariant()
+            return None
         (id, seq, f) = self.index2isf(index)
         if role == QtCore.Qt.ForegroundRole:
             if id < 0:
-                return QtCore.QVariant(param.params.blue)
+                return param.params.blue
             try:
                 v = self.edits[id][seq][f]
-                return QtCore.QVariant(param.params.red)
+                return param.params.red
             except:
-                return QtCore.QVariant(param.params.black)
+                return param.params.black
         if role == QtCore.Qt.BackgroundRole:
             if f == 'port':
-                return QtCore.QVariant(param.params.white)
+                return param.params.white
             else:
-                return QtCore.QVariant(param.params.almond)
+                return param.params.almond
         if role == QtCore.Qt.ToolTipRole:
             # We'll make this smarter later!
             return QtGui.QStandardItemModel.data(self, index, role)
@@ -122,13 +122,13 @@ class GrpModel(QtGui.QStandardItemModel):
             if f == 'name':
                 f = QtGui.QFont()
                 f.setBold(True)
-                return QtCore.QVariant(f)
+                return f
             else:
-                return QtCore.QVariant()
+                return None
         try:
             v = self.getGroup(index)[seq][f]
         except:
-            return QtCore.QVariant()
+            return None
         if role == QtCore.Qt.CheckStateRole:
             if f == 'active':
                 if v == 0:
@@ -136,9 +136,9 @@ class GrpModel(QtGui.QStandardItemModel):
                 else:
                     return QtCore.Qt.Checked
             else:
-                return QtCore.QVariant()
+                return None
         if f == 'active':
-            return QtCore.QVariant()
+            return None
         if f == 'config':
             v = param.params.db.getCfgName(v)
             if v == "DEFAULT":
@@ -147,7 +147,7 @@ class GrpModel(QtGui.QStandardItemModel):
             v = param.params.objmodel.getObjName(v)
             if v == "DEFAULT":
                 v = ""
-        return QtCore.QVariant(v)
+        return v
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and role != QtCore.Qt.CheckStateRole:
@@ -218,7 +218,7 @@ class GrpModel(QtGui.QStandardItemModel):
             if v == 0 and ov != 0:
                 # We're deleting an item!  Delete the port as well!
                 self.setData(self.index(index.row()+1, index.column()),
-                             QtCore.QVariant("DEFAULT"))
+                             "DEFAULT")
                 if seq + 1 == self.length[id]:
                     # We're deleting the last column of this group!
                     self.setLength(id, seq)
@@ -394,13 +394,13 @@ class GrpModel(QtGui.QStandardItemModel):
         return index.column() == self.length[self.getGroupId(index)] + self.coff           
         
     def deleteCfg(self, table, index):
-        self.setData(index, QtCore.QVariant(0))
+        self.setData(index, 0)
         
     def selectCfg(self, table, index):
         title = ("Select configuration #%d for group %s" %
                  (index.column() - self.coff + 1, self.getGroup(index)['global']['name']))
         if (param.params.cfgdialog.exec_(title) == QtWidgets.QDialog.Accepted):
-            self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
+            self.setData(index, param.params.cfgdialog.result)
 
     def commitOK(self, table, index):
         if not index.isValid():
