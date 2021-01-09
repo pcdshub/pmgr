@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+# This script is used to make standalone releases.  It does an install
+# of the repository in the current working directory into the directory
+# specified by $1.  It also creates a script "$1/pmgr" that sets up the
+# conda environment and runs the installed pmgr script.
+#
+unset PYTHONPATH
+unset LD_LIBRARY_PATH
+source /reg/g/pcds/pyps/conda/py36/etc/profile.d/conda.sh
+VER="pcds-1.0.0"
+conda activate "${VER}"
+mkdir --parents $1/lib/python3.6/site-packages/
+export PYTHONPATH=$1/lib/python3.6/site-packages/
+python setup.py install --prefix=$1
+cat >$1/pmgr <<END
+#!/bin/bash
+unset PYTHONPATH
+unset LD_LIBRARY_PATH
+source /reg/g/pcds/pyps/conda/py36/etc/profile.d/conda.sh
+conda activate "${VER}"
+export PYTHONPATH=$1/lib/python3.6/site-packages/
+$1/bin/pmgr \$*
+END
+chmod guo+x $1/pmgr
+

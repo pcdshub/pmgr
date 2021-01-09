@@ -107,4 +107,6 @@ def restorecol(table, index):
         d.ui.comboBox.addItem(x)
     if d.exec_() == QtWidgets.QDialog.Accepted:
         cfg = str(d.ui.comboBox.currentText())
-        table.restoreHeaderState(settings.value(cfg).toByteArray())
+        v = settings.value(cfg)
+        if v is not None:
+            table.restoreHeaderState(v.toByteArray())

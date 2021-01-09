@@ -111,12 +111,24 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
 
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
         settings.beginGroup(param.params.table)
-        self.restoreGeometry(settings.value("geometry"))
-        self.restoreState(settings.value("windowState"))
-        ui.configTable.restoreHeaderState(settings.value("cfgcol/default"))
-        ui.objectTable.restoreHeaderState(settings.value("objcol/default"))
-        ui.groupTable.restoreHeaderState(settings.value("grpcol/default"))
-        param.params.objmodel.setObjSel(str(settings.value("objsel")))
+        v = settings.value("geometry")
+        if v is not None:
+            self.restoreGeometry(v)
+        v = settings.value("windowState")
+        if v is not None:
+            self.restoreState(v)
+        v = settings.value("cfgcol/default")
+        if v is not None:
+            ui.configTable.restoreHeaderState(v)
+        v = settings.value("objcol/default")
+        if v is not None:
+            ui.objectTable.restoreHeaderState(v)
+        v = settings.value("grpcol/default")
+        if v is not None:
+            ui.groupTable.restoreHeaderState(v)
+        v = settings.value("objsel")
+        if v is not None:
+            param.params.objmodel.setObjSel(str(v))
 
         # MCB - This is so if we have too many rows/columns in the save file,
         # we get rid of them.  Is this just a problem as we develop the group model
