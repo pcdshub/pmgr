@@ -70,6 +70,10 @@ class CfgModel(QtGui.QStandardItemModel):
             self.setCurIdx(0)
         if self.curidx != 0:
             param.params.ui.treeWidget.expandItem(self.tree[self.curidx]['item'])
+        s = ""
+        for f in param.params.pobj.mutex_flds:
+            s += chr(param.params.pobj.fldmap[f]['colorder']+0x40)
+        self.mutex_flds = s
 
     def createStatus(self):
         for d in param.params.pobj.cfgs.values():
@@ -324,35 +328,35 @@ class CfgModel(QtGui.QStandardItemModel):
             role != QtCore.Qt.ToolTipRole):
             return QtGui.QStandardItemModel.data(self, index, role)
         if not index.isValid():
-            return QtCore.QVariant()
+            return None
         (idx, f) = self.index2db(index)
         if role == QtCore.Qt.ToolTipRole:
             # We'll make this smarter later!
             return QtGui.QStandardItemModel.data(self, index, role)
         if f == "status":
             if role == QtCore.Qt.BackgroundRole:
-                return QtCore.QVariant(param.params.white)
+                return param.params.white
             elif role == QtCore.Qt.ForegroundRole:
-                return QtCore.QVariant(param.params.black)
+                return param.params.black
             else:
-                return QtCore.QVariant(self.status[idx])
+                return self.status[idx]
         d = self.getCfg(idx)
         if role == QtCore.Qt.ForegroundRole:
             color = d['_color'][f]
-            return QtCore.QVariant(color)
+            return color
         elif role == QtCore.Qt.BackgroundRole:
             if f in self.cfld:
-                return QtCore.QVariant(param.params.white)
+                return param.params.white
             if chr(param.params.pobj.fldmap[f]['colorder']+0x40) in d['curmutex']:
-                return QtCore.QVariant(param.params.almond)
+                return param.params.almond
             else:
-                return QtCore.QVariant(param.params.white)
+                return param.params.white
         else:
             try:
                 v = self.edits[idx][f]
             except:
                 v = d[f]
-            return QtCore.QVariant(v)
+            return v
         
     def setData(self, index, v, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
@@ -1077,11 +1081,11 @@ class CfgModel(QtGui.QStandardItemModel):
             self.edits = {}
             self.editval = {}
             self.cfgs = {}
+            snew = {}
             for k in self.status.keys():
-                if k < 0:
-                    del self.status[k]
-                else:
-                    self.status[k] = ""
+                if k >= 0:
+                    snew[k] = ""
+            self.status = snew
         self.buildtree()
         try:
             param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]['item'])
@@ -1168,7 +1172,7 @@ class CfgModel(QtGui.QStandardItemModel):
                                            "Cannot change parent to self!",
                                            QtWidgets.QMessageBox.Ok)
                 return
-            self.setData(index, QtCore.QVariant(param.params.cfgdialog.result))
+            self.setData(index, param.params.cfgdialog.result)
             p = self.getCfg(param.params.cfgdialog.result)
             pcolor = p['_color']
             d = self.getCfg(idx)
@@ -1302,3 +1306,21 @@ class CfgModel(QtGui.QStandardItemModel):
             pass
         if old == self.curidx:
             self.setCurIdx(new)
+
+    def modifycfgfromobj(self, obj):
+        idx = obj['config']
+        cfg = self.getCfg(idx)
+        if obj['config'] not in self.path:
+            self.setCurIdx(idx)
+        r = self.path.index(idx)
+        for c in range(self.coff, self.colcnt):
+            f = param.params.pobj.cfgflds[c-self.coff]['fld']
+            o = param.params.pobj.cfgflds[c-self.coff]['colorder']
+            cc = chr(o+0x40)
+            if cc in self.mutex_flds and cc not in cfg['curmutex']:
+                continue
+            try:
+                if obj[f] != cfg[f]:
+                    self.setData(self.index(r, c), obj[f])
+            except:
+                pass

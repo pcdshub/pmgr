@@ -1,5 +1,14 @@
 version: ~> 1.0
 
+services:
+    - xvfb
+
+addons:
+    apt:
+      packages:
+        - herbstluftwm
+        - libxkbcommon-x11-0
+
 env:
   global:
     # The name of the conda package
@@ -27,7 +36,6 @@ dist: xenial
 
 stages:
   - build
-  - test
   - name: deploy
     if: (branch = master OR tag IS present) AND type != pull_request
 
