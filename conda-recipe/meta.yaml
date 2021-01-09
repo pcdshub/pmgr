@@ -9,16 +9,17 @@ source:
 
 build:
   number: 1
+  noarch: python
   script:
     python setup.py install --single-version-externally-managed --record=record.txt
 
 requirements:
   build:
-    - python {{PY_VER}}*,>=3.6
+    - python >=3.6
     - setuptools
 
   run:
-    - python {{PY_VER}}*,>=3.6
+    - python >=3.6
     - pyqt =5.6
     - pyca >=3
     - pykerberos >=1.1.14
