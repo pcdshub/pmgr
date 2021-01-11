@@ -3,7 +3,10 @@ import datetime
 import re
 
 import MySQLdb as mdb
-import _mysql_exceptions
+try:
+    import _mysql_exceptions
+except ImportError:
+    import MySQLdb._exceptions as _mysql_exceptions
 import pyca
 
 from . import utils
