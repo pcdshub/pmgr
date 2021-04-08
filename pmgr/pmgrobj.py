@@ -72,6 +72,9 @@ def createAlias(name):
 #     mutex_sets
 #         - A list of lists of field names in each mutual exclusion set.
 #           (One of the fields in each list must be unset.)
+#     mutex_obj
+#         - A list of booleans for each mutual exclusion set indicating if
+#           the set applies to an object (True) or a configuration (False).
 #     mutex_flds
 #         - A flat list of all of the field names in the mutex_sets.
 #     fldmap
@@ -216,7 +219,12 @@ class pmgrobj(object):
         self.errorlist = []
         self.autoconfig = None
         self.in_trans = False
-        self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols')
+        if False:
+            print("Using production server.")
+            self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols')
+        else:
+            print("Using development server.")
+            self.con = mdb.connect('psdbdev01', 'mctest', 'mctest', 'pscontrols')
         self.con.autocommit(False)
         self.cur = self.con.cursor(mdb.cursors.DictCursor)
         self.cur.execute("call init_pcds()")
@@ -285,7 +293,7 @@ class pmgrobj(object):
                 for i in range(16):
                     if v & (1 << i) != 0:
                         mutex_sets[i].append(f)
-                        mutex_flds.append(f)
+                mutex_flds.append(f)
             if setorder[f] & self.AUTO_CONFIG != 0:
                 self.autoconfig = f
         # We're assuming the bits are used from LSB to MSB, no gaps!
@@ -352,6 +360,14 @@ class pmgrobj(object):
         self.cfgflds = [d for d in self.objflds if d['obj'] == False]
         for i in range(len(self.cfgflds)):
             self.cfgflds[i]['cfgidx'] = i
+        # Set the type of each mutex_set and make sure it's consistent
+        self.mutex_obj = []
+        for l in self.mutex_sets:
+            self.mutex_obj.append(self.fldmap[l[0]]['obj'])
+            for m in l:
+                if self.fldmap[m]['obj'] != self.mutex_obj[-1]:
+                    print("Inconsistent mutex set %s!" % str(l))
+                    raise Exception()
         setset = list(setset)
         setset.sort()
         self.setflds = [setflds[i] for i in setset]
@@ -376,21 +392,24 @@ class pmgrobj(object):
             return 0      # Not now!
         try:
             v = 0
-            self.cur.execute("select * from %s_update where tbl_name = 'config' or tbl_name = '%s' or tbl_name = '%s'" %
-                            (self.table, self.hutch, self.hutch + "_grp"))
+            if self.hutch is None:
+                self.cur.execute("select * from %s_update" % self.table)
+            else:
+                self.cur.execute("select * from %s_update where tbl_name = 'config' or tbl_name = '%s' or tbl_name = '%s'" %
+                                 (self.table, self.hutch, self.hutch + "_grp"))
             for d in self.cur.fetchall():
                 if d['tbl_name'] == 'config':
-                    if d['dt_updated'] != self.lastcfg:
+                    if d['dt_updated'] > self.lastcfg:
                         self.lastcfg = d['dt_updated']
                         v = v | self.DB_CONFIG
-                elif d['tbl_name'] == self.hutch:
-                    if d['dt_updated'] != self.lastobj:
-                        self.lastobj = d['dt_updated']
-                        v = v | self.DB_OBJECT
-                else:
-                    if d['dt_updated'] != self.lastgrp:
+                elif d['tbl_name'][-4:] == "_grp":
+                    if d['dt_updated'] > self.lastgrp:
                         self.lastgrp = d['dt_updated']
                         v = v | self.DB_GROUP
+                else:
+                    if d['dt_updated'] > self.lastobj:
+                        self.lastobj = d['dt_updated']
+                        v = v | self.DB_OBJECT
             self.con.commit()
         except:
             pass
@@ -400,9 +419,15 @@ class pmgrobj(object):
         if kind == self.DB_CONFIG:
             ext = "_cfg"
         elif kind == self.DB_OBJECT:
-            ext = " where owner = '%s' or id = 0" % self.hutch
+            if self.hutch is None:
+                ext = ""
+            else:
+                ext = " where owner = '%s' or id = 0" % self.hutch
         elif kind == self.DB_GROUP:
-            ext = "_grp where owner = '%s'" % self.hutch
+            if self.hutch is None:
+                ext = "_grp"
+            else:
+                ext = "_grp where owner = '%s'" % self.hutch
         else: # self.DB_CFGGRP
             ext = "_cfg_grp"
         try:
@@ -444,7 +469,11 @@ class pmgrobj(object):
                     id = g['id']
                     self.groupids.append(id)
                     self.groups[id] = {}
-                    self.groups[id]['global'] = {'len' : 0, 'name' : g['name'], 'active': g['active']}
+                    try:
+                        self.groups[id]['global'] = {'len' : 0, 'name' : g['name'], 'active': g['active']}
+                    except:
+                        print(g)
+                        raise
                 for g in cfggrp:
                     id = g['group_id']
                     if id in self.groups.keys():
@@ -542,30 +571,39 @@ class pmgrobj(object):
             self.errorlist.append(e)
             return None
             
-    def configChange(self, idx, e):
-        cmd = "update %s_cfg set dt_updated = now()" % self.table
+    def configChange(self, idx, e, update=True):
+        cmd = "update %s_cfg set " % self.table
+        if update:
+            cmd += "dt_updated = now()"
+            sep = ", "
+        else:
+            sep = ""
         vlist = []
         try:
             v = e['name']
-            cmd += ", name = %s"
+            cmd += "%sname = %%s" % sep
+            sep = ", "
             vlist.append(v)
         except:
             pass
         try:
             v = e['config']
-            cmd += ", config = %s"
+            cmd += "%sconfig = %%s" % sep
+            sep = ", "
             vlist.append(v)
         except:
             pass
         try:
             v = e['mutex']
-            cmd += ", mutex = %s"
+            cmd += "%smutex = %%s" % sep
+            sep = ", "
             vlist.append(v)
         except:
             pass
         try:
             v = e['owner']
-            cmd += ", owner = %s"
+            cmd += "%sowner = %%s" % sep
+            sep = ", "
             vlist.append(v)
         except:
             pass
@@ -573,7 +611,8 @@ class pmgrobj(object):
             fld = f['fld']
             try:
                 v = e[fld]           # We have a new value!
-                cmd += ", %s = %%s" % fld
+                cmd += "%s%s = %%s" % (sep, fld)
+                sep = ", "
                 vlist.append(v)
             except:
                 pass                 # No change to this field!
@@ -631,42 +670,53 @@ class pmgrobj(object):
             self.errorlist.append(e)
             return None
 
-    def objectChange(self, idx, e):
-        cmd = "update %s set dt_updated = now()" % self.table
+    def objectChange(self, idx, e, update=True):
+        cmd = "update %s set " % self.table
+        if update:
+            cmd += "dt_updated = now()"
+            sep = ", "
+        else:
+            sep = ""
         vlist = []
         try:
             v = e['name']
-            cmd += ", name = %s"
+            cmd += "%sname = %%s" % sep
+            sep = ", "
             vlist.append(v)
         except:
             pass
         try:
             v = e['config']
-            cmd += ", config = %s"
+            cmd += "%sconfig = %%s" % sep
+            sep = ", "
             vlist.append(v)
         except:
             pass
         try:
             v = e['rec_base']
-            cmd += ", rec_base = %s"
+            cmd += "%srec_base = %%s" % sep
+            sep = ", "
             vlist.append(v)
         except:
             pass
         try:
             v = e['category']
-            cmd += ", category = %s"
+            cmd += "%scategory = %%s" % sep
+            sep = ", "
             vlist.append(v)
         except:
             pass
         try:
             v = e['mutex']
-            cmd += ", mutex = %s"
+            cmd += "%smutex = %%s" % sep
+            sep = ", "
             vlist.append(v)
         except:
             pass
         try:
             v = e['comment']
-            cmd += ", comment = %s"
+            cmd += "%scomment = %%s" % sep
+            sep = ", "
             vlist.append(v)
         except:
             pass
@@ -678,7 +728,8 @@ class pmgrobj(object):
                 v = e[fld]           # We have a new value!
             except:
                 continue
-            cmd += ", %s = %%s" % fld
+            cmd += "%s%s = %%s" % (sep, fld)
+            sep = ", "
             vlist.append(v)
         cmd += ' where id = %s'
         vlist.append(idx)
@@ -837,7 +888,9 @@ class pmgrobj(object):
             pmutex = vals['curmutex']
             mutex = ""                               # Build the mutex from the set and inherited values.
             for i in range(len(self.mutex_sets)):
-                if v[i] != ' ':
+                if self.mutex_obj[i]:
+                    mutex += ' '
+                elif v[i] != ' ':
                     mutex += v[i]
                 else:
                     mutex += pmutex[i]
