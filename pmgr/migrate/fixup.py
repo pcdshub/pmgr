@@ -70,7 +70,7 @@ def main():
         if full['curmutex'] != full['mutex']:
             e['mutex'] = full['curmutex']
         if e != {}:
-            p.configChange(i, e)
+            p.configChange(i, e, False)
     print("")
     for i in p.objs.keys():
         cm = list(p.objs[i]['mutex'])
@@ -109,7 +109,7 @@ def main():
         if p.objs[i]['category'] == 'Auto':
             e['category'] = 'Manual'
         if e != {}:
-            p.objectChange(i, e)
+            p.objectChange(i, e, False)
     print("")
     p.con.commit()
 
