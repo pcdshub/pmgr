@@ -12,4 +12,3 @@ psdev because of the --host=psdb argument...
 (USER MODE)
 
 > mysql --host=psdb --user=pscontrols --password=pcds pscontrols
-
