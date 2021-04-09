@@ -3,3 +3,6 @@ drop table ims_motor_cfg_grp;
 drop table ims_motor_grp_log;
 drop table ims_motor_grp;
 delete from ims_motor_update where tbl_name like "%_grp%";
+drop trigger if exists ims_motor_grp_ins;
+drop trigger if exists ims_motor_grp_del;
+drop trigger if exists ims_motor_grp_upd;
