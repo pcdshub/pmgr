@@ -33,7 +33,6 @@ class dbPoll(threading.Thread):
 class db(QtCore.QObject):
     cfgchange     = QtCore.pyqtSignal()
     objchange     = QtCore.pyqtSignal()
-    grpchange     = QtCore.pyqtSignal()
     readsig       = QtCore.pyqtSignal(int)
 
     def __init__(self):
@@ -89,18 +88,16 @@ class db(QtCore.QObject):
         if (mask & param.params.pobj.DB_CONFIG) != 0:
             self.setCfgNames(param.params.pobj.cfgs.values())
         if (mask & param.params.pobj.DB_OBJECT) != 0:
-            for o in param.params.pobj.objs.values():             # ObjModel will update this, so save the originals!
-                save = {}
-                save.update(o)
-                o['_val'] = save
+            # ObjModel keeps actual (PV) values in this dictionary, so
+            # we keep the configured values in a subdictionary.
+            for o in param.params.pobj.objs.values():
+                o['_cfg'] = dict(o)
             self.setCfgNames(param.params.pobj.objs.values())
         if not nosig:
             if (mask & param.params.pobj.DB_CONFIG) != 0:
                 self.cfgchange.emit()
             if (mask & param.params.pobj.DB_OBJECT) != 0:
                 self.objchange.emit()
-            if (mask & param.params.pobj.DB_GROUP) != 0:
-                self.grpchange.emit()
 
     def start_transaction(self):
         if not param.params.pobj.start_transaction():
@@ -163,8 +160,6 @@ class db(QtCore.QObject):
     def applyMaps(self):
         self.applyCfgMap(param.params.cfgmodel)
         self.applyCfgMap(param.params.objmodel)
-        self.applyCfgMap(param.params.grpmodel)
-        self.applyObjMap(param.params.grpmodel)
 
     def cfgIsValid(self, id):
         return id >= 0 or id in self.cfgmap.keys()

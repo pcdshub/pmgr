@@ -49,7 +49,6 @@ class param_structure(object):
         self.ui = None
         self.objmodel = None
         self.cfgmodel = None
-        self.grpmodel = None
         self.db = None
         self.pobj = None
 
@@ -60,14 +59,13 @@ class param_structure(object):
         self.MANUAL    = 1
         self.AUTO      = 2
         self.catenum   = ["Protected", "Manual", "Auto"]    # Database names.
-        self.setCatEnum(["Protected", "Manual", "Auto"])    # Displayed names.
+        self.setCatEnum(["Protected", "Manual"])    # Displayed names.
 
     def setCatEnum(self, l):
         self.catenum2 = l
         if self.ui != None:
             self.ui.actionProtected.setText("Show " + l[0])
             self.ui.actionManual.setText("Show " + l[1])
-            self.ui.actionAuto.setText("Show " + l[2])
 
     def setTable(self, v):
         self.table = v

@@ -91,13 +91,6 @@ def createAlias(name):
 #         - An object ID to object dictionary mapping.  The keys are a 
 #           few boilerplate keys (id, config, owner, etc.) and the
 #           object-only fields (the objflds with the 'obj' key value True).
-#     groupids
-#         - A list of group IDs.
-#     groups
-#         - A group ID to group information dictionary mapping.  The group
-#           information dictionary keys are either integers (which map to
-#           a dictionary giving a config and port for that group element)
-#           or "global" (which maps to a dictionary with keys "name" and "len".)
 #
 # The field information dictionaries have the following keys:
 #     fld
@@ -139,7 +132,7 @@ def createAlias(name):
 #
 # Exported methods:
 #     checkForUpdate()
-#         - Returns a mask of DB_CONFIG, DB_OBJECT, and DB_GROUP indicating
+#         - Returns a mask of DB_CONFIG and DB_OBJECT indicating
 #           which tables (if any) are out of date.
 #     updateTables(mask=DB_ALL)
 #         - Read in the specified tables.
@@ -165,27 +158,8 @@ def createAlias(name):
 #     objectChange(idx, e)
 #         - Change an existing object.  e is a field -> value dictionary for the
 #           changes.
-#     groupDelete(idx)
-#         - Delete an existing configuration group.
-#     groupInsert(d)
-#         - Insert a new configuration group.  d is a dictionary which maps from
-#           integers (group element indices) to a dictionary with config/port indices.
-#     groupUpdate(idx, d)
-#         - Change an existing configuration group. d is the same as the groupInsert
-#           dictionary.
 #     countInstance(cfglist)
 #         - Return a count of objects that depend on one of the listed configurations.
-#     getAutoCfg(d)
-#         - Given an object dictionary, find and return the most recently used
-#           configuration that has the autoconfig field set to a matching value.
-#           First look in this hutch, then in any hutch.  If none is found, return
-#           an empty dictionary.
-#     getConfig(idx)
-#         - Expand the configuration to deal with parentage.  cfgs[idx] could have
-#           many "None" values which are inherited, and this routine will fill them
-#           out and set the "_haveval" key to a dictionary indicating which fields
-#           have values set by the configuration itself (True) and which are inherited
-#           (False).
 #     applyConfig(idx)
 #         - Given an object ID, apply its current configuration to it.
 #     applyAllConfigs()
@@ -194,9 +168,7 @@ def createAlias(name):
 class pmgrobj(object):
     DB_CONFIG = 1
     DB_OBJECT = 2
-    DB_GROUP  = 4
-    DB_CFGGRP = 8
-    DB_ALL    = 7
+    DB_ALL    = 3
 
     ORDER_MASK    = 0x0003ff
     SETMUTEX_MASK = 0x000200
@@ -214,8 +186,6 @@ class pmgrobj(object):
         self.debug = debug
         self.cfgs = None
         self.objs = None
-        self.groupids = []
-        self.groups = {}
         self.errorlist = []
         self.autoconfig = None
         self.in_trans = False
@@ -232,7 +202,6 @@ class pmgrobj(object):
         self.dbgid = 42
         self.lastcfg = datetime.datetime(1900,1,1,0,0,1)
         self.lastobj = datetime.datetime(1900,1,1,0,0,1)
-        self.lastgrp = datetime.datetime(1900,1,1,0,0,1)
         self.hutchlist = self.getHutchList()
         self.checkForUpdate()
         self.updateTables()
@@ -379,7 +348,7 @@ class pmgrobj(object):
             self.cur.execute("select * from %s_update" % (self.table))
             for d in self.cur.fetchall():
                 n = d['tbl_name']
-                if n[-4:] != '_grp' and n != 'config':
+                if n != 'config':
                     l.append(n)
             self.con.commit()
             l.sort()
@@ -395,17 +364,13 @@ class pmgrobj(object):
             if self.hutch is None:
                 self.cur.execute("select * from %s_update" % self.table)
             else:
-                self.cur.execute("select * from %s_update where tbl_name = 'config' or tbl_name = '%s' or tbl_name = '%s'" %
-                                 (self.table, self.hutch, self.hutch + "_grp"))
+                self.cur.execute("select * from %s_update where tbl_name = 'config' or tbl_name = '%s'" %
+                                 (self.table, self.hutch))
             for d in self.cur.fetchall():
                 if d['tbl_name'] == 'config':
                     if d['dt_updated'] > self.lastcfg:
                         self.lastcfg = d['dt_updated']
                         v = v | self.DB_CONFIG
-                elif d['tbl_name'][-4:] == "_grp":
-                    if d['dt_updated'] > self.lastgrp:
-                        self.lastgrp = d['dt_updated']
-                        v = v | self.DB_GROUP
                 else:
                     if d['dt_updated'] > self.lastobj:
                         self.lastobj = d['dt_updated']
@@ -418,18 +383,11 @@ class pmgrobj(object):
     def readDB(self, kind):
         if kind == self.DB_CONFIG:
             ext = "_cfg"
-        elif kind == self.DB_OBJECT:
+        else: # self.DB_OBJECT
             if self.hutch is None:
                 ext = ""
             else:
                 ext = " where owner = '%s' or id = 0" % self.hutch
-        elif kind == self.DB_GROUP:
-            if self.hutch is None:
-                ext = "_grp"
-            else:
-                ext = "_grp where owner = '%s'" % self.hutch
-        else: # self.DB_CFGGRP
-            ext = "_cfg_grp"
         try:
             self.cur.execute("select * from %s%s" % (self.table, ext))
             return list(self.cur.fetchall())
@@ -457,30 +415,6 @@ class pmgrobj(object):
                 for o in objs:
                     objmap[o['id']] = o
                 self.objs = objmap
-        if (mask & self.DB_GROUP) != 0:
-            grps = self.readDB(self.DB_GROUP)
-            cfggrp = self.readDB(self.DB_CFGGRP)
-            if grps == []:
-                mask &= ~self.DB_GROUP
-            else:
-                self.groupids   = []
-                self.groups     = {}
-                for g in grps:
-                    id = g['id']
-                    self.groupids.append(id)
-                    self.groups[id] = {}
-                    try:
-                        self.groups[id]['global'] = {'len' : 0, 'name' : g['name'], 'active': g['active']}
-                    except:
-                        print(g)
-                        raise
-                for g in cfggrp:
-                    id = g['group_id']
-                    if id in self.groups.keys():
-                        self.groups[id][g['dispseq']] = {'config': g['config_id'],
-                                                         'port': g['port_id']}
-                        sz = self.groups[id]['global']['len'] + 1
-                        self.groups[id]['global']['len'] = sz
         return mask
 
     def start_transaction(self):
@@ -538,11 +472,9 @@ class pmgrobj(object):
  
     def configInsert(self, d):
         cmd = "insert %s_cfg (name, config, owner, mutex, dt_updated" % self.table
-        vals = d['_val']
         for f in self.cfgflds:
             fld = f['fld']
-            if vals[fld]:
-                cmd += ", " + fld
+            cmd += ", " + fld
         cmd += ") values (%s, %s, %s, %s, now()"
         vlist = [d['name']]
         vlist.append(d['config'])
@@ -550,9 +482,8 @@ class pmgrobj(object):
         vlist.append(d['mutex'])
         for f in self.cfgflds:
             fld = f['fld']
-            if vals[fld]:
-                cmd += ", %s"
-                vlist.append(d[fld])
+            cmd += ", %s"
+            vlist.append(d[fld])
         cmd += ')'
         if self.debug:
             print(cmd % tuple(vlist))
@@ -741,83 +672,6 @@ class pmgrobj(object):
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
 
-    def groupClear(self, id):
-        if self.debug:
-            print("delete from %s_cfg_grp where group_id = %d" % (self.table, id))
-            return True
-        try:
-            self.cur.execute("delete from %s_cfg_grp where group_id = %%s" % self.table, (id, ))
-            return True
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-            return False
-
-    def groupDelete(self, id):
-        if not self.groupClear(id):
-            return False
-        if self.debug:
-            print("delete from %s_grp where id = %d" % (self.table, id))
-            return True
-        try:
-            self.cur.execute("delete from %s_grp where id = %%s" % self.table, (id, ))
-            return True
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-            return False
-
-    def groupInsert(self, g):
-        if self.debug:
-            print("insert %s_grp (name, owner, active, dt_created, dt_updated) values (%s, %s, 0, now(), now())" % \
-                  (self.table, g['global']['name'], self.hutch))
-            print("select last_insert_id()")
-            id = self.dbgid
-            self.dbgid += 1
-        else:
-            try:
-                self.cur.execute("insert %s_grp (name, owner, active, dt_created, dt_updated) values (%%s, %%s, 0, now(), now())" \
-                                 % self.table, (g['global']['name'], self.hutch))
-                self.cur.execute("select last_insert_id()")
-                id = list(self.cur.fetchone().values())[0]
-            except _mysql_exceptions.Error as e:
-                self.errorlist.append(e)
-                return False
-        self.groupUpdate(id, g)
-
-    def groupUpdate(self, id, g):
-        if not self.groupClear(id):
-            return False
-        keys = g.keys()
-        keys.remove('global')
-        keys.sort()
-        seq = 0
-        for k in keys:
-            if g[k]['config'] != 0:
-                try:
-                    cmd = "insert %s_cfg_grp (group_id, config_id, port_id, dispseq)" % self.table
-                    cmd += "values (%s, %s, %s, %s)"
-                    try:
-                        port = str(g[k]['port'])
-                    except:
-                        port = "0"
-                    if self.debug:
-                        print(cmd % (str(id), str(g[k]['config']), port, str(seq)))
-                    else:
-                        self.cur.execute(cmd, (id, g[k]['config'], port, seq))
-                    seq += 1
-                except _mysql_exceptions.Error as e:
-                    self.errorlist.append(e)
-                    return False
-        try:
-            cmd = "update %s_grp set active = %%s, name = %%s, dt_updated = now() where id = %%s" % self.table
-            if self.debug:
-                print(cmd % (g['global']['active'], id))
-            else:
-                self.cur.execute(cmd, (g['global']['active'], g['global']['name'], id))
-            return True
-        except _mysql_exceptions.Error as e:
-            self.errorlist.append(e)
-            return False
-
     def countInstance(self, chg):
         if len(chg) == 0:
             return 0
@@ -832,91 +686,10 @@ class pmgrobj(object):
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
 
-    def getAutoCfg(self, d):
-        f = self.autoconfig
-        v = d[f]
-        cmd = "select max(seq) from %s_log where %s = %%s and owner = %%s and action != 'delete' group by id" % \
-              (self.table, f)
-        if self.debug:
-            print(cmd % (v, self.hutch))
-        try:
-            if self.cur.execute(cmd, (v, self.hutch)) != 1:
-                # Couldn't find it in our hutch, look in any!
-                cmd = "select max(seq) from %s_log where %s = %%s and action != 'delete' group by id" % \
-                      (self.table, f)
-                if self.debug:
-                    print(cmd % (v))
-                self.cur.execute(cmd, (v))
-            seq = list(self.cur.fetchone().values())[0]
-            cmd = "select * from %s_log where seq = %%s" % (self.table)
-            if self.debug:
-                print("debug?")
-                print(cmd % seq)
-            self.cur.execute(cmd, seq)
-            r = self.cur.fetchone()
-            try:
-                del r[f]
-            except:
-                pass
-            for f in self.unwanted:
-                try:
-                    del r[f]
-                except:
-                    pass
-            try:
-                # See the comment in ObjModel.setValue.  This is just bizarreness.
-                r['cfgname'] = r['config']
-                del r['config']
-            except:
-                pass
-            return r
-        except _mysql_exceptions.Error as err:
-            print(err)
-            return {}
-
-    def getConfig(self, idx, loop=[]):
-        if idx == None or idx in loop:
-            return {}
-        d = {}
-        d.update(self.cfgs[idx])
-        haveval = {}
-        v = d['mutex']
-        if d['config'] != None:
-            lp = list(loop)
-            lp.append(idx)
-            vals = self.getConfig(d['config'], lp)   # Get the parent configuration
-            pmutex = vals['curmutex']
-            mutex = ""                               # Build the mutex from the set and inherited values.
-            for i in range(len(self.mutex_sets)):
-                if self.mutex_obj[i]:
-                    mutex += ' '
-                elif v[i] != ' ':
-                    mutex += v[i]
-                else:
-                    mutex += pmutex[i]
-            d['curmutex'] = mutex
-        else:
-            d['curmutex'] = v
-        for (k, v) in d.items():
-            if k[:3] != 'PV_' and k[:4] != 'FLD_':
-                continue
-            if v == None:
-                # This key might have a value because it is the unset element of a mutex set!
-                haveval[k] = chr(self.fldmap[k]['colorder']+0x40) in d['curmutex']
-            else:
-                haveval[k] = True
-            if not haveval[k]:
-                try:
-                    d[k] = vals[k]     # Try to get the parent value.
-                except:
-                    d[k] = None
-        d['_haveval'] = haveval
-        return d
-
     def applyConfig(self, idx):
         vals = {}
         vals.update(self.objs[idx])
-        vals.update(self.getConfig(vals['config']))
+        vals.update(self.cfgs[vals['config']])
         base = vals['rec_base']
         if base == "":
             return

@@ -437,7 +437,7 @@ def Diff(PV, hutch, pmgr, SN, verbose):
         return
     
     # Get pmgr configurations
-    cfgPmgr = pmgr.getConfig(cfgID)
+    cfgPmgr = pmgr.cfgs[cfgID]
     objPmgr = pmgr.objs[objID]
     # Print the diffs between the live and pmgr configs
     # Fix this so that it prints something sensible
