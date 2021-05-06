@@ -142,6 +142,11 @@ class ObjModel(QtGui.QStandardItemModel):
             if f == 'status':
                 return QtGui.QStandardItemModel.data(self, index, role)
             try:
+                if param.params.pobj.fldmap[f]['readonly']:
+                    return QtGui.QStandardItemModel.data(self, index, role)
+            except:
+                pass
+            try:
                 ve = self.edits[idx][f]     # Edited value
                 if ve == None:
                     ve = "None"
@@ -172,13 +177,15 @@ class ObjModel(QtGui.QStandardItemModel):
             v = None
         v2 = self.getCfg(idx, f) # Configured value
         if f[:4] == 'FLD_' or f[:3] == 'PV_':
-            if v == None or v2 == None or param.equal(v, v2):
+            if (v == None or v2 == None or param.equal(v, v2) or 
+                param.params.pobj.fldmap[f]['readonly']):
                 try:
                     self.istatus[idx].remove(f) # If we don't have a value (either
                                                 # the PV isn't connected, or is is a
                                                 # derived value in the configuration),
                                                 # or the PV is equal to the configuration,
-                                                # we're not inconsistent.
+                                                # we're not inconsistent.  (Readonly PVs
+                                                # are never inconsistent!)
                 except:
                     pass
             else:
@@ -210,6 +217,11 @@ class ObjModel(QtGui.QStandardItemModel):
             try:
                 v = self.edits[idx][f]
                 return param.params.red
+            except:
+                pass
+            try:
+                if param.params.pobj.fldmap[f]['readonly']:
+                    return param.params.black
             except:
                 pass
             if v2 == None or param.equal(v, v2):
@@ -469,15 +481,27 @@ class ObjModel(QtGui.QStandardItemModel):
     def pv_handler(self, pv, e):
         if e is None:
             pv.obj[pv.fld] = pv.value
-            idx = param.params.pobj.fldmap[pv.fld]['objidx']
+            change = False
+            v2 = self.getCfg(pv.obj['id'], pv.fld) # Configured value
+            if v2 == None or param.equal(pv.value, v2):
+                if pv.fld in self.istatus[pv.obj['id']]:
+                    self.istatus[pv.obj['id']].remove(pv.fld)
+                    change = True
+            else:
+                if pv.fld not in self.istatus[pv.obj['id']]:
+                    self.istatus[pv.obj['id']].add(pv.fld)
+                    change = True
             try:
+                idx = param.params.pobj.fldmap[pv.fld]['objidx']
                 pv.obj['connstat'][idx] = True
                 if reduce(lambda a,b: a and b, pv.obj['connstat']):
                     del pv.obj['connstat']
                     self.status[pv.obj['id']] = "".join(sorted("C" + self.status[pv.obj['id']]))
-                    self.statchange(pv.obj['id'])
+                    change = True
             except:
                 pass
+            if change:
+                self.statchange(pv.obj['id'])
             try:
                 index = self.index(self.rowmap.index(pv.obj['id']), idx + self.coff)
                 v = self.data(index) # Just to force a status change!
@@ -784,7 +808,10 @@ class ObjModel(QtGui.QStandardItemModel):
         pvd = self.pvdict[idx]
         for s in param.params.pobj.setflds:
             for f in s:
-                if param.params.pobj.fldmap[f]['writezero']:
+                fm = param.params.pobj.fldmap[f]
+                if fm['readonly']:
+                    continue
+                if fm['writezero']:
                     try:
                         v = d[f]             # PV value
                     except:
@@ -796,9 +823,9 @@ class ObjModel(QtGui.QStandardItemModel):
                     #     2a. It's a change, or
                     #     2b. It's a "must write" value.
                     #
-                    if v2 != None and (not param.equal(v, v2) or param.params.pobj.fldmap[f]['mustwrite']):
+                    if v2 != None and (not param.equal(v, v2) or fm['mustwrite']):
                         try:
-                            z = param.params.pobj.fldmap[f]['enum'][0]
+                            z = fm['enum'][0]
                         except:
                             z = 0
                         try:
@@ -811,12 +838,15 @@ class ObjModel(QtGui.QStandardItemModel):
                             pass
             pyca.flush_io()
             for f in s:
+                fm = param.params.pobj.fldmap[f]
+                if fm['readonly']:
+                    continue
                 try:
                     v = d[f]             # PV value
                 except:
                     continue
                 v2 = self.getCfg(idx, f) # Configured value
-                if v2 != None and (not param.equal(v, v2) or param.params.pobj.fldmap[f]['mustwrite']):
+                if v2 != None and (not param.equal(v, v2) or fm['mustwrite']):
                     try:
                         pv = pvd[f]
                         if param.params.debug:
@@ -988,7 +1018,8 @@ class ObjModel(QtGui.QStandardItemModel):
                 if idx != 0 and not f in self.fixflds:
                     flags = flags | QtCore.Qt.ItemIsEditable
             else:
-                if idx != 0 and param.params.pobj.objflds[col-self.coff]['obj']:
+                if (idx != 0 and param.params.pobj.objflds[col-self.coff]['obj'] and
+                    not param.params.pobj.objflds[col-self.coff]['readonly']):
                     flags = flags | QtCore.Qt.ItemIsEditable
         return flags
 

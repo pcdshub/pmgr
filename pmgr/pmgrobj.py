@@ -698,7 +698,7 @@ class pmgrobj(object):
             # Write zeros.
             # 
             for f in s:
-                if vals[f] == None or self.fldmap[f]['readonly']:
+                if self.fldmap[f]['readonly'] or vals[f] == None:
                     continue
                 if self.fldmap[f]['writezero']:
                     try:

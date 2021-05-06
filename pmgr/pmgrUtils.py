@@ -324,9 +324,7 @@ def importConfigs(hutch, pmgr, path, update = False, verbose = False):
         allNames = utlp.allCfgNames(pmgr)
         cfgDict = utlp.getImportFieldDict(old_cfg_paths[motor])
         objDict = utlp.getImportFieldDict(old_cfg_paths[motor])
-        if "MFI" in objDict["FLD_PN"]:
-            dumb = True
-        else: dumb = False 
+        dumb = True
         pmgr.updateTables()
         name = None
         if cfgDict["FLD_DESC"]:

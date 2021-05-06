@@ -68,12 +68,7 @@ def getObjVals(pmgr, PV, rename=True):
     return objDict
 
 def newObject(pmgr, objDict,typeStr=None, parent=None, owner=None):
-
-    if "MFI" in objDict["FLD_PN"] or "MDI" in objDict["FLD_PN"]:
-        category = "Manual"
-    else:
-        category = "Protected"
-
+    category = "Manual"
     objectFields = listObjFields(pmgr)
 
     # Pmgr doesn't handle missing fields well
@@ -408,10 +403,7 @@ def getImportFieldDict(cfgPath):
     if "FLD_DESC" not in cfgDict.keys():
         cfgDict["FLD_DESC"] = None
             
-    if "MFI" in cfgDict["FLD_PN"] or  "MDI" in cfgDict["FLD_PN"]:
-        cfgDict["category"] = "Manual"
-    else:
-        cfgDict["category"] = "Protected"
+    cfgDict["category"] = "Manual"
 
     return cfgDict
 

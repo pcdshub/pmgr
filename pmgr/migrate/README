@@ -10,3 +10,5 @@ The script does the following:
     - Fixes the numerous issues in the "mutex" field.
     - Sets all "Auto" entries to "Manual".
     - Deletes the group tables and group entries in the update table.
+    - Gets rid of the PN and SN fields.
+    - Fixes some set order issues.
