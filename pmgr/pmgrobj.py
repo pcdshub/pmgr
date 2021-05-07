@@ -164,6 +164,11 @@ def createAlias(name):
 #         - Given an object ID, apply its current configuration to it.
 #     applyAllConfigs()
 #         - Apply the current configuration to all objects.
+#     matchConfigs(pattern, substr=False, ci=False)
+#         - Return a list of configuration names that match the pattern, which may include
+#           "*" to denote any string and "." to match any character. If ci is True, the 
+#           match is case insensitive.  If substr is False, then the pattern must match
+#           the entire string, otherwise it can match any substring.
 
 class pmgrobj(object):
     DB_CONFIG = 1
@@ -731,3 +736,12 @@ class pmgrobj(object):
     def applyAllConfigs(self):
         for i in self.objs.keys():
             self.applyConfig(i)
+
+    def matchConfigs(self, pattern, substr=True, ci=True, anyhutch=False):
+        p = pattern.replace("_","\_").replace("%","\%").replace("*", "%").replace(".", "_")
+        if substr:
+            p = "%"+p+"%"
+        self.cur.execute("select name from %s_cfg where name %slike '%s'%s" %
+                         (self.table, "collate latin1_general_ci " if ci else "", p,
+                          "" if anyhutch else ' and owner = "%s"' % self.hutch))
+        return [d['name'] for d in self.cur.fetchall()]
