@@ -7,8 +7,6 @@ CREATE TABLE `ims_motor_cfg` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(15) NOT NULL UNIQUE,
   `config` int(11),
-  `security` varchar(30),
-  `owner` varchar(10),
   `dt_updated` datetime NOT NULL,
   `mutex` varchar(16),
   `FLD_ACCL` double,
@@ -68,9 +66,9 @@ CREATE TABLE `ims_motor_cfg` (
 --
 
 INSERT INTO `ims_motor_cfg` VALUES 
-(-1, 'DEFAULT', NULL, NULL, NULL, '2014-11-19 15:50:18', 'XY  ', 1, 1, 0, 1, 'Pos', 0, 'Disable', 'NO', 'mm', 512, NULL, 'MINOR', 1, 'Variable', 200, 1, 0, 0, 5, 'Pos', 1, 500, 'N/A', 'NoDecel, CanHome', 'Normal', NULL, 0, 0.001, 5, 5, 0.0001, 3, 1, 0.1, 200, 'Stop On Stall', 2, 51200, 'MINOR', 0.1, 'DEFAULT', 
+(-1, 'DEFAULT', NULL, '2014-11-19 15:50:18', 'XY  ', 1, 1, 0, 1, 'Pos', 0, 'Disable', 'NO', 'mm', 512, NULL, 'MINOR', 1, 'Variable', 200, 1, 0, 0, 5, 'Pos', 1, 500, 'N/A', 'NoDecel, CanHome', 'Normal', NULL, 0, 0.001, 5, 5, 0.0001, 3, 1, 0.1, 200, 'Stop On Stall', 2, 51200, 'MINOR', 0.1, 'DEFAULT', 
 1, 'Not Used', 'Not Used', 'Not Used', 'Not Used', '+', '-'), 
-(1, 'Slit', 0, NULL, 'tst', '2014-12-11 16:44:44', 'XY  ', 0.1, 0.1, 0, 1, 'Neg', 0, 'Enable', 'NO', 'mm', 1000, NULL, 'MINOR', 1, 'Frozen', 200, 1, 5, 5, 5, 'Neg', 2.5, 500, 'E Mark', 'NoDecel, CanHome', 'Normal', NULL, 100, 0.01, 50, 50, 0.0005, 3, 2.5, 0.25, 1000, 'Stop On Stall', 2.5, 51200, 'MINOR', 1, 'slit', 0.4, 'Not Used', 'Not Used', 'Not Used', 'Not Used', '', '');
+(1, 'Slit', 0, '2014-12-11 16:44:44', 'XY  ', 0.1, 0.1, 0, 1, 'Neg', 0, 'Enable', 'NO', 'mm', 1000, NULL, 'MINOR', 1, 'Frozen', 200, 1, 5, 5, 5, 'Neg', 2.5, 500, 'E Mark', 'NoDecel, CanHome', 'Normal', NULL, 100, 0.01, 50, 50, 0.0005, 3, 2.5, 0.25, 1000, 'Stop On Stall', 2.5, 51200, 'MINOR', 1, 'slit', 0.4, 'Not Used', 'Not Used', 'Not Used', 'Not Used', '', '');
 
 /* Sigh. id = 0 in the file does an auto-increment, so we set it to -1 and fix it here. */
 update ims_motor_cfg set id = 0 where id = -1;

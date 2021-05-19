@@ -214,11 +214,9 @@ class pmgrobj(object):
     def readFormat(self):
         self.cur.execute("describe %s" % self.table)
         locfld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
-        locfld = locfld[10:]   # Skip the standard fields!
 
         self.cur.execute("describe %s_cfg" % self.table)
         fld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
-        fld = fld[7:]         # Skip the standard fields!
 
         self.cur.execute("select * from %s_name_map" % self.table)
         result = self.cur.fetchall()
@@ -236,21 +234,23 @@ class pmgrobj(object):
         for i in range(16):
             mutex_sets.append([])
         for (f, t, nl, k) in locfld:
-            alias[f] = createAlias(f)
-            colorder[f] = 1000
-            setorder[f] = 0
-            mutex[f] = 0
-            tooltip[f] = ''
-            nullok[f] = ((nl == 'YES') or (t != str))
-            unique[f] = k == "UNI"
+            if f[0].isupper():
+                alias[f] = createAlias(f)
+                colorder[f] = 1000
+                setorder[f] = 0
+                mutex[f] = 0
+                tooltip[f] = ''
+                nullok[f] = ((nl == 'YES') or (t != str))
+                unique[f] = k == "UNI"
         for (f, t, nl, k) in fld:
-            alias[f] = createAlias(f)
-            colorder[f] = 1000
-            setorder[f] = 0
-            mutex[f] = 0
-            tooltip[f] = ''
-            nullok[f] = ((nl == 'YES') or (t != str))
-            unique[f] = k == "UNI"
+            if f[0].isupper():
+                alias[f] = createAlias(f)
+                colorder[f] = 1000
+                setorder[f] = 0
+                mutex[f] = 0
+                tooltip[f] = ''
+                nullok[f] = ((nl == 'YES') or (t != str))
+                unique[f] = k == "UNI"
 
         for d in result:
             f = d['db_field_name']
@@ -286,45 +286,47 @@ class pmgrobj(object):
         setflds = {}
         setset = set([])
         for (f, t, nl, k) in locfld:
-            n = fixName(f)
-            so = setorder[f] & self.ORDER_MASK
-            setset.add(so)
-            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
-                 'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
-                 'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
-                 'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
-                 'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
-                 'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
-                 'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': True}
-            try:
-                setflds[so].append(f)
-            except:
-                setflds[so] = [f]
-            try:
-                d['enum'] = enum[f]
-            except:
-                pass 
-            self.objflds.append(d)
+            if f[0].isupper():
+                n = fixName(f)
+                so = setorder[f] & self.ORDER_MASK
+                setset.add(so)
+                d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
+                     'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
+                     'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
+                     'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
+                     'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
+                     'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
+                     'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': True}
+                try:
+                    setflds[so].append(f)
+                except:
+                    setflds[so] = [f]
+                try:
+                    d['enum'] = enum[f]
+                except:
+                    pass 
+                self.objflds.append(d)
         for (f, t, nl, k) in fld:
-            n = fixName(f)
-            so = setorder[f] & self.ORDER_MASK
-            setset.add(so)
-            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
-                 'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
-                 'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
-                 'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
-                 'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
-                 'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
-                 'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': False}
-            try:
-                setflds[so].append(f)
-            except:
-                setflds[so] = [f]
-            try:
-                d['enum'] = enum[f]
-            except:
-                pass
-            self.objflds.append(d)
+            if f[0].isupper():
+                n = fixName(f)
+                so = setorder[f] & self.ORDER_MASK
+                setset.add(so)
+                d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
+                     'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
+                     'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
+                     'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
+                     'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
+                     'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
+                     'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': False}
+                try:
+                    setflds[so].append(f)
+                except:
+                    setflds[so] = [f]
+                try:
+                    d['enum'] = enum[f]
+                except:
+                    pass
+                self.objflds.append(d)
         self.objflds.sort(key=lambda d: d['colorder'])   # New regime: col_order is manditory and unique!
         self.fldmap = {}
         for i in range(len(self.objflds)):

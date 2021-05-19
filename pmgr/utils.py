@@ -176,11 +176,10 @@ def fixName(l, idx, name):
             pass
 
 #
-# Determine if the current user has the authority to modify a record
-# with the given owner (hutch) and security string.
+# Determine if the current user has the authority to modify a record.
 #
-def permission(owner, security):
-    return owner == param.params.hutch and param.params.user in param.params.auth_users
+def permission():
+    return param.params.user in param.params.auth_users
 
 #
 # Check if the user/password pair is valid.  This is actually not terribly secure (the KDC can

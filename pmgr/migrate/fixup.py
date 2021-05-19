@@ -31,6 +31,7 @@ def main():
     p = pmgrobj('ims_motor', None)
     #p.debug = True
     for i in p.cfgs.keys():
+        print(i)
         full = p.getConfig(i)
         e = {}
         for f in full['_haveval'].keys():

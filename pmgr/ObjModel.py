@@ -18,19 +18,18 @@ except NameError:
 class ObjModel(QtGui.QStandardItemModel):
     layoutAboutToBeChanged = QtCore.pyqtSignal()
     layoutChanged = QtCore.pyqtSignal()
-    cname   = ["Status", "Name", "Config", "PV Base", "Owner", "Config Mode", "Comment"]
-    cfld    = ["status", "name", "cfgname", "rec_base", "owner", "category", "comment"]
+    cname   = ["Status", "PV Base", "Config", "Owner", "Config Mode", "Comment"]
+    cfld    = ["status", "rec_base", "cfgname", "owner", "category", "comment"]
     ctips   = ["C = All PVs Connected\nD = Deleted\nM = Modified\nN = New\nX = Inconsistent",
-               "Object Name", "Configuration Name", "PV Base Name", "Owner", None, None]
+               "PV Base Name", "Configuration Name", "Owner", None, None]
     coff    = len(cname)
     statcol = 0
-    namecol = 1
+    pvcol   = 1
     cfgcol  = 2
-    pvcol   = 3
-    owncol  = 4
-    catcol  = 5
-    comcol  = 6
-    mutable = 2  # The first non-frozen column
+    owncol  = 3
+    catcol  = 4
+    comcol  = 5
+    mutable = 3  # The first non-frozen column
     fixflds = ["status", "cfgname", "owner"]
     
     def __init__(self):
@@ -644,7 +643,7 @@ class ObjModel(QtGui.QStandardItemModel):
         d = dict(param.params.pobj.objs[0])
         del d['_cfg']
         del d['connstat']
-        dd = {'id': idx, 'config': 0, 'owner': param.params.hutch, 'name': "NewObject%d" % idx,
+        dd = {'id': idx, 'config': 0, 'owner': param.params.hutch, 
               'rec_base': "", 'dt_created': now, 'dt_updated': now, 'category': 'Manual',
               'cfgname': param.params.db.getCfgName(0) }
         d.update(dd)
@@ -723,14 +722,14 @@ class ObjModel(QtGui.QStandardItemModel):
     def commit(self, idx):
         d = self.getObj(idx)
         try:
-            name = self.edits[idx]['name']
+            name = self.edits[idx]['rec_base']
         except:
-            name = d['name']
-        if not utils.permission(d['owner'], None):
+            name = d['rec_base']
+        if not utils.permission():
             param.params.pobj.transaction_error("Not Authorized to Change %s!" % name)
             return
-        if name[0:10] == "NewObject-":
-            param.params.pobj.transaction_error("Object cannot be named %s!" % name)
+        if name[0:10] == "":
+            param.params.pobj.transaction_error("PV Base cannot be null!")
             return
         if 'D' in self.status[idx]:
             param.params.pobj.objectDelete(idx)
@@ -751,8 +750,8 @@ class ObjModel(QtGui.QStandardItemModel):
                 pass
             s = self.checkSetMutex(d, e)
             if s != []:
-                param.params.pobj.transaction_error("Object %s does not have unique values for %s!" %
-                                                  (name, str(s)))
+                param.params.pobj.transaction_error("Object %s does not have unique values for %s!" % 
+                                                    (name, str(s)))
                 return
             if 'N' in self.status[idx]:
                 newidx = param.params.pobj.objectInsert(param.params.db.doMap(self.getObj(idx)['_cfg']))
@@ -899,7 +898,7 @@ class ObjModel(QtGui.QStandardItemModel):
     def applyall(self):
         if not self.commitall():
             return
-        if not utils.permission(param.params.hutch, None):
+        if not utils.permission():
             QtWidgets.QMessageBox.critical(None, "Error", "Not authorized to apply changes!",
                                        QtWidgets.QMessageBox.Ok)
             return
@@ -975,7 +974,7 @@ class ObjModel(QtGui.QStandardItemModel):
     def chparent(self, table, index):
         (idx, f) = self.index2db(index)
         d = self.getObj(idx)
-        if (param.params.cfgdialog.exec_("Select new configuration for %s" % d['name'], d['config']) ==
+        if (param.params.cfgdialog.exec_("Select new configuration for %s" % d['rec_base'], d['config']) ==
             QtWidgets.QDialog.Accepted):
             self.setCfg(idx, param.params.cfgdialog.result)
 
@@ -1092,9 +1091,9 @@ class ObjModel(QtGui.QStandardItemModel):
 
     def getObjName(self, idx):
         try:
-            return self.edits[idx]['name']
+            return self.edits[idx]['rec_base']
         except:
-            return self.getObj(idx)['name']
+            return self.getObj(idx)['rec_base']
 
     def getObjList(self, types=None):
         if types == None:

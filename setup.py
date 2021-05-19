@@ -9,6 +9,8 @@ setup(name='pmgr',
       packages=find_packages(),
       include_package_data=True,
       description=('Parameter Manager for LCLS Device Configurations'),
-      entry_points={'console_scripts': ['pmgr = pmgr.pmgr:main', 'fixup = pmgr.migrate.fixup:main',
+      entry_points={'console_scripts': ['pmgr = pmgr.pmgr:main',
+	                                'fixup = pmgr.migrate.fixup:main',
+                                        'fixup2 = pmgr.migrate.fixup2:main',
                                         'pmgrUtils.sh = pmgr.pmgrUtils:main']}
       )

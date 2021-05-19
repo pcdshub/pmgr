@@ -20,16 +20,15 @@ class CfgModel(QtGui.QStandardItemModel):
     
     layoutAboutToBeChanged = QtCore.pyqtSignal()
     layoutChanged = QtCore.pyqtSignal()
-    cname   = ["Status", "Name", "Parent", "Owner"]
-    cfld    = ["status", "name", "cfgname", "owner"]
-    ctips   = ["D = Deleted\nM = Modified\nN = New", "Configuration Name", "Parent Configuration", "Owner"]
+    cname   = ["Status", "Name", "Parent"]
+    cfld    = ["status", "name", "cfgname"]
+    ctips   = ["D = Deleted\nM = Modified\nN = New", "Configuration Name", "Parent Configuration"]
     coff    = len(cname)
     statcol = 0
     namecol = 1
     cfgcol  = 2
-    owncol  = 3
     mutable = 2   # The first non-frozen column
-    fixflds = ["status", "cfgname", "owner"]
+    fixflds = ["status", "cfgname"]
     
     def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
@@ -257,7 +256,6 @@ class CfgModel(QtGui.QStandardItemModel):
             for (k, v) in d.items():
                 if k[:3] != 'PV_' and k[:4] != 'FLD_' and not k in self.cfld:
                     continue
-                # MCB k != owner?
                 if v == None and chr(param.params.pobj.fldmap[k]['colorder']+0x40) in d['curmutex']:
                     color[k] = param.params.almond
                 elif k in e:
@@ -469,22 +467,18 @@ class CfgModel(QtGui.QStandardItemModel):
                 return True
         return False
 
-    def ownTest(self, index):
-        idx = self.path[index.row()]
-        return idx < 0 or param.params.pobj.cfgs[idx]['owner'] == param.params.hutch
-        
     def setupContextMenus(self, table):
         menu = utils.MyContextMenu()
         menu.addAction("Create new child", self.createnew)
         menu.addAction("Clone existing", self.clone)
         menu.addAction("Change parent", self.chparent,
-                       lambda t, i: self.ownTest(i) and i.column() == self.cfgcol)
+                       lambda t, i: i.column() == self.cfgcol)
         menu.addAction("Delete config", self.deletecfg,
-                       lambda t, i: self.ownTest(i) and not self.checkStatus(i, 'D'))
+                       lambda t, i: not self.checkStatus(i, 'D'))
         menu.addAction("Undelete config", self.undeletecfg,
                        lambda t, i: self.checkStatus(i, 'D'))
         menu.addAction("Change owner", self.chowncfg,
-                       lambda t, i: self.ownTest(i) and not self.checkStatus(i, 'D'))
+                       lambda t, i: not self.checkStatus(i, 'D'))
         menu.addAction("Commit this config", self.commitone,
                        lambda t, i: self.checkStatus(i, 'DMN'))
         menu.addAction("Revert this config", self.revertone,
@@ -507,8 +501,8 @@ class CfgModel(QtGui.QStandardItemModel):
         self.nextid -= 1
         now = datetime.datetime.now()
         d = {'name': "NewConfig%d" % id, 'config': parent,
-             'cfgname': param.params.db.getCfgName(parent), 'id': id, 'owner': param.params.hutch,
-             'security': None, 'dt_created': now, 'dt_updated': now}
+             'cfgname': param.params.db.getCfgName(parent), 'id': id, 
+             'dt_created': now, 'dt_updated': now}
         self.status[id] = "N"
         param.params.db.setCfgName(id, d['name'])
         color = {}
@@ -599,7 +593,7 @@ class CfgModel(QtGui.QStandardItemModel):
             name = self.edits[idx]['name']
         except:
             name = d['name']
-        if not utils.permission(d['owner'], d['security']):
+        if not utils.permission():
             param.params.pobj.transaction_error("Not Authorized to Change %s!" % name)
             return True
         if name[0:10] == "NewConfig-":

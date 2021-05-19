@@ -12,3 +12,9 @@ The script does the following:
     - Deletes the group tables and group entries in the update table.
     - Gets rid of the PN and SN fields.
     - Fixes some set order issues.
+--------------------------------------------
+Sequence of events:
+    - Run sql.script.
+    - Run fixup.py.
+    - Run fixup2.py.
+    - Run sql.script2.
