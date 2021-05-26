@@ -398,7 +398,7 @@ class ObjModel(QtGui.QStandardItemModel):
             self.rowmap = sorted(self.rowmap, key=lambda idx: self.sortkey(idx, Ncol))
             if order == QtCore.Qt.DescendingOrder:
                 self.rowmap.reverse()
-            self.layoutChanged.emit()
+        self.layoutChanged.emit()
 
     def objchange(self):
         self.createStatus()

@@ -84,13 +84,13 @@ def createAlias(name):
 #           same setorder, with the entire list sorted by setorder.
 #     cfgs
 #         - A configuration ID to configuration dictionary mapping.
-#           The keys are a few boilerplate keys (id, config, owner, etc.)
+#           The keys are a few boilerplate keys (id, config, etc.)
 #           and the configuration fields.  Note that due to inheritance
 #           and mutual exclusion, many of these fields could be "None".
 #     objs
 #         - An object ID to object dictionary mapping.  The keys are a 
-#           few boilerplate keys (id, config, owner, etc.) and the
-#           object-only fields (the objflds with the 'obj' key value True).
+#           few boilerplate keys (id, config, etc.) and the object-only
+#           fields (the objflds with the 'obj' key value True).
 #
 # The field information dictionaries have the following keys:
 #     fld
@@ -164,6 +164,12 @@ def createAlias(name):
 #         - Given an object ID, apply its current configuration to it.
 #     applyAllConfigs()
 #         - Apply the current configuration to all objects.
+#     diffConfig(idx, cfgidx=None)
+#         - Given an object ID and an optional configuration ID, return a dictionary from field
+#           to (Actual_Value, Config_Value) that describes the difference between the configuration
+#           and the PV settings.
+#     getActualConfig(idx)
+#         - Given an object ID, return a dictionary from configuration field to actual values.
 #     matchConfigs(pattern, substr=False, ci=False)
 #         - Return a list of configuration names that match the pattern, which may include
 #           "*" to denote any string and "." to match any character. If ci is True, the 
@@ -394,7 +400,7 @@ class pmgrobj(object):
             if self.hutch is None:
                 ext = ""
             else:
-                ext = " where owner = '%s' or id = 0" % self.hutch
+                ext = " where owner = '%s'" % self.hutch
         try:
             self.cur.execute("select * from %s%s" % (self.table, ext))
             return list(self.cur.fetchall())
@@ -449,7 +455,11 @@ class pmgrobj(object):
         self.in_trans = False
         el = []
         for e in self.errorlist:
-            (n, m) = e.args
+            if len(e.args) == 1:
+                n = e.args[0]
+                m = ""
+            else:
+                (n, m) = e.args
             if n != 0:
                 el.append("Error %d: %s\n" % (n, m))
             else:
@@ -478,14 +488,13 @@ class pmgrobj(object):
             self.errorlist.append(e)
  
     def configInsert(self, d):
-        cmd = "insert %s_cfg (name, config, owner, mutex, dt_updated" % self.table
+        cmd = "insert %s_cfg (name, config, mutex, dt_updated" % self.table
         for f in self.cfgflds:
             fld = f['fld']
             cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, %s, now()"
+        cmd += ") values (%s, %s, %s, now()"
         vlist = [d['name']]
         vlist.append(d['config'])
-        vlist.append(self.hutch)
         vlist.append(d['mutex'])
         for f in self.cfgflds:
             fld = f['fld']
@@ -534,13 +543,6 @@ class pmgrobj(object):
         try:
             v = e['mutex']
             cmd += "%smutex = %%s" % sep
-            sep = ", "
-            vlist.append(v)
-        except:
-            pass
-        try:
-            v = e['owner']
-            cmd += "%sowner = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
@@ -698,8 +700,6 @@ class pmgrobj(object):
         vals.update(self.objs[idx])
         vals.update(self.cfgs[vals['config']])
         base = vals['rec_base']
-        if base == "":
-            return
         for s in self.setflds:
             #
             # Write zeros.
@@ -735,15 +735,51 @@ class pmgrobj(object):
                 except:
                     pass
 
+    def diffConfig(self, idx, cfgidx=None):
+        vals = {}
+        vals.update(self.objs[idx])
+        if cfgidx is None:
+            cfgidx = vals['config']
+        vals.update(self.cfgs[cfgidx])
+        base = vals['rec_base']
+        d = {}
+        for s in self.setflds:
+            for f in s:
+                if vals[f] == None or self.fldmap[f]['readonly']:
+                    continue
+                n = base + self.fldmap[f]['pv']
+                try:
+                    z = self.fldmap[f]['enum'][0]
+                    haveenum = True
+                except:
+                    haveenum = False
+                v = utils.caget(n, enum=haveenum)
+                if v != vals[f]:
+                    d[f] = (v, vals[f])
+        return d
+
+    def getActualConfig(self, idx):
+        base = self.objs[idx]['rec_base']
+        d = {}
+        for f in self.cfgflds:
+            n = base + f['pv']
+            try:
+                z = f['enum'][0]
+                haveenum = True
+            except:
+                haveenum = False
+            v = utils.caget(n, enum=haveenum)
+            d[f['fld']] = v
+        return d
+
     def applyAllConfigs(self):
         for i in self.objs.keys():
             self.applyConfig(i)
 
-    def matchConfigs(self, pattern, substr=True, ci=True, anyhutch=False):
+    def matchConfigs(self, pattern, substr=True, ci=True):
         p = pattern.replace("_","\_").replace("%","\%").replace("*", "%").replace(".", "_")
         if substr:
             p = "%"+p+"%"
-        self.cur.execute("select name from %s_cfg where name %slike '%s'%s" %
-                         (self.table, "collate latin1_general_ci " if ci else "", p,
-                          "" if anyhutch else ' and owner = "%s"' % self.hutch))
+        self.cur.execute("select name from %s_cfg where name %slike '%s'" %
+                         (self.table, "collate latin1_general_ci " if ci else "", p))
         return [d['name'] for d in self.cur.fetchall()]

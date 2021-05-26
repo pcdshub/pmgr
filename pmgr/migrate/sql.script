@@ -12,23 +12,3 @@ update ims_motor_name_map set set_order = 2 where db_field_name = "FLD_BS";
 update ims_motor_name_map set set_order = 2 where db_field_name = "FLD_HS";
 update ims_motor_name_map set set_order = 2 where db_field_name = "FLD_S";
 update ims_motor set FLD_PN = "", FLD_SN = "";
-alter table ims_motor
-    drop column FLD_DESC, drop column FLD_PORT,  drop column FLD_DHLM, 
-    drop column FLD_HLM,  drop column FLD_HOMD,  drop column FLD_LLM, 
-    drop column FLD_OFF,  drop column FLD_DLLM,  drop column name;
-alter table ims_motor_log
-    drop column FLD_DESC, drop column FLD_PORT,  drop column FLD_DHLM, 
-    drop column FLD_HLM,  drop column FLD_HOMD,  drop column FLD_LLM, 
-    drop column FLD_OFF,  drop column FLD_DLLM,  drop column name;
-alter table ims_motor_cfg drop column owner, drop column security;
-alter table ims_motor_cfg_log drop column owner, drop column security;
-delete from ims_motor where rec_base = "Unknown";
-delete from ims_motor where rec_base = "";
-delete from ims_motor_name_map where db_field_name = "FLD_DESC";
-delete from ims_motor_name_map where db_field_name = "FLD_PORT";
-delete from ims_motor_name_map where db_field_name = "FLD_DHLM";
-delete from ims_motor_name_map where db_field_name = "FLD_HLM";
-delete from ims_motor_name_map where db_field_name = "FLD_HOMD";
-delete from ims_motor_name_map where db_field_name = "FLD_LLM";
-delete from ims_motor_name_map where db_field_name = "FLD_OFF";
-delete from ims_motor_name_map where db_field_name = "FLD_DLLM";

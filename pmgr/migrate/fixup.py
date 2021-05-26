@@ -29,9 +29,9 @@ def assign_mutex(p, cfg, m, full, cm):
 
 def main():
     p = pmgrobj('ims_motor', None)
-    #p.debug = True
+    # Fixup the mutex field in configurations, and build out the configuration with
+    # no inheritance.
     for i in p.cfgs.keys():
-        print(i)
         full = p.getConfig(i)
         e = {}
         for f in full['_haveval'].keys():
@@ -72,7 +72,7 @@ def main():
             e['mutex'] = full['curmutex']
         if e != {}:
             p.configChange(i, e, False)
-    print("")
+    # Fixup the mutex field in objects.
     for i in p.objs.keys():
         cm = list(p.objs[i]['mutex'])
         e = {}
@@ -111,7 +111,18 @@ def main():
             e['category'] = 'Manual'
         if e != {}:
             p.objectChange(i, e, False)
-    print("")
+    # Make sure all objects have a base PV, and all base PVs are unique.
+    # Delete duplicates arbitrarily.
+    rdict={}
+    for (k, v) in p.objs.items():
+        try:
+            rdict[v['rec_base']].append(v['id'])
+        except:
+            rdict[v['rec_base']] = [v['id']]
+    for (k, v) in rdict.items():
+        if len(v) > 1:
+            for i in v[1:]:
+                p.objectDelete(i)
     p.con.commit()
 
 if __name__ == '__main__':

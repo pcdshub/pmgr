@@ -54,7 +54,6 @@ CREATE TABLE `ims_motor_cfg_log` (
   `FLD_SREV` int(10) unsigned,
   `FLD_STSV` varchar(26),
   `FLD_TWV` double,
-  `FLD_TYPE` varchar(40),
   `FLD_UREV` double,
   `FLD_S1` varchar(26),
   `FLD_S2` varchar(26),

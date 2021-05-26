@@ -15,6 +15,7 @@ class dbPoll(threading.Thread):
         self.sig = sig
         self.interval = interval
         self.daemon = True
+        self.armed = True
 
     def run(self):
         last = 0
@@ -22,12 +23,13 @@ class dbPoll(threading.Thread):
             now = time.time()
             looptime = now - last
             if looptime < self.interval:
-                time.sleep(self.interval + 1 - looptime)
+                time.sleep(self.interval - looptime)
                 last = time.time()
             else:
                 last = now
             v = param.params.pobj.checkForUpdate()
-            if v != 0:
+            if v != 0 and self.armed:
+                self.armed = False
                 self.sig.emit(v)
 
 class db(QtCore.QObject):
@@ -40,9 +42,10 @@ class db(QtCore.QObject):
         self.nameedits = {}
         self.errordialog = dialogs.errordialog()
         param.params.pobj = pmgrobj(param.params.table, param.params.hutch, param.params.debug)
+        self.poll = None
         self.readTables()
         self.readsig.connect(self.readTables)
-        self.poll = dbPoll(self.readsig, 30)
+        self.poll = dbPoll(self.readsig, 5)
         self.poll.start()
         self.cfgmap = {}
         self.objmap = {}
@@ -98,6 +101,8 @@ class db(QtCore.QObject):
                 self.cfgchange.emit()
             if (mask & param.params.pobj.DB_OBJECT) != 0:
                 self.objchange.emit()
+        if self.poll is not None:
+            self.poll.armed = True
 
     def start_transaction(self):
         if not param.params.pobj.start_transaction():

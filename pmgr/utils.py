@@ -80,10 +80,15 @@ def caput(pvname,value,timeout=1.0,**kw):
     except pyca.caexc as e:
         print('channel access exception: %s' %(e))
 
-def caget(pvname,timeout=1.0):
+def caget(pvname,timeout=1.0,**kw):
     try:
         pv = Pv(pvname)
         pv.connect(timeout)
+        try:
+            if kw['enum']:
+                pv.set_string_enum(True)
+        except:
+            pass
         pv.get(ctrl=False, timeout=timeout)
         v = pv.value
         pv.disconnect()

@@ -1,8 +1,19 @@
-The first version of the parameter manager had three concepts that were 
+TL;DR - To convert the first version of the parameter manager database to the
+current version, run the following from the top directory:
+    cat pmgr/migrate/sql.script |\
+        mysql --host=psdb --user=pscontrols --password=pcds --database=pscontrols'
+    install/bin/fixup
+    cat pmgr/migrate/sql.script2 |\
+        mysql --host=psdb --user=pscontrols --password=pcds --database=pscontrols'
+
+----------------------------------------------------
+
+The first version of the parameter manager had several concepts that were 
 ultimately found lacking:
     1. Inheritance of configuration values.
     2. Configuration groups.
     3. Autoconfiguration by serial number lookup.
+    4. Unique TYPE reflecting the configuration name.
 
 The code in this directory is aimed at purging the database of these.
 The script does the following:
@@ -10,11 +21,5 @@ The script does the following:
     - Fixes the numerous issues in the "mutex" field.
     - Sets all "Auto" entries to "Manual".
     - Deletes the group tables and group entries in the update table.
-    - Gets rid of the PN and SN fields.
+    - Gets rid of the PN, SN, and TYPE fields.
     - Fixes some set order issues.
---------------------------------------------
-Sequence of events:
-    - Run sql.script.
-    - Run fixup.py.
-    - Run fixup2.py.
-    - Run sql.script2.
