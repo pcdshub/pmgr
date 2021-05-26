@@ -12,4 +12,3 @@ update ims_motor_name_map set set_order = 2 where db_field_name = "FLD_BS";
 update ims_motor_name_map set set_order = 2 where db_field_name = "FLD_HS";
 update ims_motor_name_map set set_order = 2 where db_field_name = "FLD_S";
 update ims_motor set FLD_PN = "", FLD_SN = "";
-

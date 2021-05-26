@@ -754,8 +754,16 @@ class pmgrobj(object):
                 except:
                     haveenum = False
                 v = utils.caget(n, enum=haveenum)
-                if v != vals[f]:
-                    d[f] = (v, vals[f])
+                if type(v) == float:
+                    if v == 0.0:
+                        if abs(v - vals[f]) > 0.00000001:
+                            d[f] = (v, vals[f])
+                    else:
+                        if abs((v - vals[f])/v) > 0.00000001:
+                            d[f] = (v, vals[f])
+                else:
+                    if v != vals[f]:
+                        d[f] = (v, vals[f])
         return d
 
     def getActualConfig(self, idx):
