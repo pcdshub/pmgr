@@ -22,3 +22,4 @@ delete from ims_motor_name_map where db_field_name = "FLD_OFF";
 delete from ims_motor_name_map where db_field_name = "FLD_DLLM";
 delete from ims_motor_name_map where db_field_name = "FLD_TYPE";
 alter table ims_motor add unique(rec_base);
+
