@@ -1075,7 +1075,7 @@ class pmgrobj(object):
             A list of configuration names matching the pattern.
         """
         p = pattern.replace("\.", "\DOT").replace("\*", "\SPLAT")
-        p = p.replace("_","\_").replace("%","\%").
+        p = p.replace("_","\_").replace("%","\%")
         p = p.replace("*", "%").replace(".", "_")
         p = p.replace("\DOT", ".").replace("\SPLAT", "*")
         if substr:
