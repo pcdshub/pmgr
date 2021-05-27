@@ -15,6 +15,18 @@ except NameError:
     QString = str
 
 class CfgModel(QtGui.QStandardItemModel):
+    """
+    This is the Model (from the Model-View-Controller paradigm) supporting
+    the configuration table.  This is a 2D table: rows are configurations,
+    and columns are configuration values.
+
+    The heart of this is two routines:
+        data(index, role) takes a QModelIndex and a Qt.DisplayRole and returns
+        the value corresponding to that location in the table.
+
+        setData(index, value, role) takes a QModelIndex and a new value, and
+        stores that value into the table for the specified role.
+    """
     newname = QtCore.pyqtSignal(int, 'QString')
     cfgChanged = QtCore.pyqtSignal(int, 'QString')
     
@@ -228,14 +240,17 @@ class CfgModel(QtGui.QStandardItemModel):
         except:
             return None
 
-    #
-    # getCfg(idx) - Get the configuration dictionary for this index.  Negative
-    #               indices haven't been committed and are in self.cfgs, positive
-    #               indices are in the real database.  This routine also creates
-    #               a "_color" dictionary that gives the modification status of
-    #               each field.
-    #
     def getCfg(self, idx):
+        """
+        Get the configuration dictionary for this index.
+
+        Negative indices have not been committed yet and are locally 
+        stored in self.cfgs.  Positive indices are in the database and
+        are kept in the pmgrobj.
+
+        This routine also creates a "_color" dictionary that gives the
+        modification status of each field.
+        """
         if idx == None:
             return {}
         if idx >= 0:

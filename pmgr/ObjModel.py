@@ -16,6 +16,18 @@ except NameError:
     QString = str
 
 class ObjModel(QtGui.QStandardItemModel):
+    """
+    This is the Model (from the Model-View-Controller paradigm) supporting
+    the object table.  This is a 2D table: rows are configurations, and
+    columns are object values.
+
+    The heart of this is two routines:
+        data(index, role) takes a QModelIndex and a Qt.DisplayRole and returns
+        the value corresponding to that location in the table.
+
+        setData(index, value, role) takes a QModelIndex and a new value, and
+        stores that value into the table for the specified role.
+    """
     layoutAboutToBeChanged = QtCore.pyqtSignal()
     layoutChanged = QtCore.pyqtSignal()
     cname   = ["Status", "PV Base", "Config", "Owner", "Config Mode", "Comment"]
@@ -92,24 +104,63 @@ class ObjModel(QtGui.QStandardItemModel):
         else:
             return (self.rowmap[index.row()], param.params.pobj.objflds[c-self.coff]['fld'])
 
-    #
-    # getObj(idx) - Get the object dictionary for this index.  Negative indices aren't
-    #               committed and found in self.objs, otherwise we look in the real database.
-    #
     def getObj(self, idx):
+        """
+        Get the object dictionary for this index.  Negative indices
+        aren't committed and found in self.objs, otherwise we look in
+        the real database.
+
+        Parameters
+        ----------
+        idx : int
+            An object identifier.
+
+        Returns
+        -------
+        odict : dict
+            A field name to value mapping dictionary for the object.
+        """
         if idx >= 0:
             return param.params.pobj.objs[idx]
         else:
             return self.objs[idx]
 
     #
-    # getCfg(idx, field, GetEdit=True) - Get the value of the field for a particular index.
+    # getCfg(idx, field, GetEdit=True) - 
     #     This retrieves both configuration fields and object fields.  If it's a configuration
     #     field, we always return the most recent edited value of the *edited* config field
     #     for this object.  If it's an object field, we return an edit if GetEdit is true,
     #     otherwise the configured value.
     #
     def getCfg(self, idx, f, GetEdit=True):
+        """
+        Get the value of the field for a particular index.
+
+        Object fields and configuration fields are handled slightly
+        differently.
+
+        If it's a configuration field, return the most recent edit if 
+        one exists, otherwise return the configured value.
+
+        If it's an object field, return the most recent edit if GetEdit
+        is True, otherwise return the configured value.
+
+        Parameters
+        ----------
+        idx : int
+            An object identifier.
+
+        f : str
+            A field name.
+
+        GetEdit : boolean
+            If True, get the edit of an object field.
+
+        Returns
+        -------
+        value : any
+            The field value.
+        """
         if GetEdit:
             try:
                 return self.edits[idx][f]
@@ -244,9 +295,6 @@ class ObjModel(QtGui.QStandardItemModel):
             v = param.params.catenum2[param.params.catenum.index(v)]
         return v
 
-    #
-    # setValue(idx, field, value) - Set the value of the field in the given index.
-    #
     def setValue(self, idx, f, v):
         try:
             d = self.edits[idx]
@@ -424,6 +472,21 @@ class ObjModel(QtGui.QStandardItemModel):
     # find the PV when we apply.
     #
     def connectPVs(self, idx):
+        """
+        Connect all of the PVs for the given index, and build a pv
+        dictionary.  The dictionary has two mappings: field to PV and
+        pv name to PV.  We use the second to find PVs we are already 
+        connected to, and we use the first to find the PV when we apply.
+
+        Parameters
+        ----------
+        idx : int
+            An object identifier.
+
+        Returns
+        -------
+        Nothing.
+        """
         try:
             oldpvdict = self.pvdict[idx]
         except:
@@ -716,10 +779,19 @@ class ObjModel(QtGui.QStandardItemModel):
                         vlist.append(v)
         return []
 
-    #
-    # Try to commit a change.  We assume we are in a transaction already.
-    #
     def commit(self, idx):
+        """
+        Try to commit a change.  We assume we are in a transaction already.
+
+        Parameters
+        ----------
+        idx : int
+            An object identifier.
+
+        Returns
+        -------
+        Nothing.
+        """
         d = self.getObj(idx)
         try:
             name = self.edits[idx]['rec_base']

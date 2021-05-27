@@ -17,8 +17,21 @@ from . import utils
 #
 ####################
 
-# Map MySQL types to python types in a quick and dirty manner.
 def m2pType(name):
+    """
+    Map MySQL types to python types.
+
+    Parameters
+    ----------
+    name : str
+        A MySQL type name.
+
+    Returns
+    -------
+    kind : type
+        A python type corresponding to name, or None if a corresponding
+        type cannot be determined.
+    """
     if name[:7] == 'varchar' or name[:8] == 'datetime':
         return str
     if name[:3] == 'int' or name[:8] == 'smallint' or name[:7] == 'tinyint':
@@ -28,8 +41,24 @@ def m2pType(name):
     print("Unknown type %s" % name)
     return None
 
-# Map MySQL field names to PV extensions.
 def fixName(name):
+    """
+    Map MySQL field names to PV suffixes.
+
+    Parameters
+    ----------
+    name : str
+        A MySQL field.  It is assumed that this is begins either "FLD_"
+        (if this should be a field of the base PV) or "PV_" (if this is
+        an extension of the base PV).
+
+    Returns
+    -------
+    suffix : str
+        A suffix to be appended to the base PV name.  "FLD_" will be replaced
+        with ".", and "PV_" will be replaced with ":".  Single "_" in the name
+        will become ":" and double "_" will become single "_".
+    """
     name = re.sub("::", "_", re.sub("_", ":", name))
     if name[:3] == "PV:":
         return name[2:]
@@ -37,8 +66,20 @@ def fixName(name):
         c = name.rindex(':')
         return name[3:c] + '.' + name[c+1:]
 
-# Map MySQL field names to the descriptive part of the name.
 def createAlias(name):
+    """
+    Map MySQL field names to the descriptive part of the name.
+
+    name : str
+        A MySQL field.  It is assumed that this is begins either "FLD_"
+        (if this should be a field of the base PV) or "PV_" (if this is
+        an extension of the base PV).
+
+    Returns
+    -------
+    desc : str
+        Remove the prefix "FLD_" or "PV_" from name and replace "__" with "_".
+    """
     name = re.sub("__", "_", name)
     if name[:3] == "PV_":
         return name[3:]
@@ -130,51 +171,6 @@ def createAlias(name):
 #     readonly
 #         - Is this field is readonly?
 #
-# Exported methods:
-#     checkForUpdate()
-#         - Returns a mask of DB_CONFIG and DB_OBJECT indicating
-#           which tables (if any) are out of date.
-#     updateTables(mask=DB_ALL)
-#         - Read in the specified tables.
-#     start_transaction()
-#         - Begin to make DB changes.
-#     transaction_error(msg)
-#         - Generate an error message for the DB change.
-#     end_transaction()
-#         - Commit or rollback the current transaction.  Return a list of
-#           error strings, so an empty list indicates a successful commit.
-#     configDelete(idx, namefunc=None)
-#         - Delete a configuration.  (namefunc is an idx -> name mapping function).
-#     configInsert(d)
-#         - Insert a new configuration.  Returns the new configuration ID or None
-#           if it fails.
-#     configChange(idx, e)
-#         - Change an existing configuration.  e is a field -> value dictionary for
-#           the changes.
-#     objectDelete(idx)
-#         - Delete an existing object.
-#     objectInsert(d)
-#         - Insert a new object.  Returns the new object ID or None if it fails.
-#     objectChange(idx, e)
-#         - Change an existing object.  e is a field -> value dictionary for the
-#           changes.
-#     countInstance(cfglist)
-#         - Return a count of objects that depend on one of the listed configurations.
-#     applyConfig(idx)
-#         - Given an object ID, apply its current configuration to it.
-#     applyAllConfigs()
-#         - Apply the current configuration to all objects.
-#     diffConfig(idx, cfgidx=None)
-#         - Given an object ID and an optional configuration ID, return a dictionary from field
-#           to (Actual_Value, Config_Value) that describes the difference between the configuration
-#           and the PV settings.
-#     getActualConfig(idx)
-#         - Given an object ID, return a dictionary from configuration field to actual values.
-#     matchConfigs(pattern, substr=False, ci=False)
-#         - Return a list of configuration names that match the pattern, which may include
-#           "*" to denote any string and "." to match any character. If ci is True, the 
-#           match is case insensitive.  If substr is False, then the pattern must match
-#           the entire string, otherwise it can match any substring.
 
 class pmgrobj(object):
     DB_CONFIG = 1
@@ -218,6 +214,17 @@ class pmgrobj(object):
         self.updateTables()
 
     def readFormat(self):
+        """
+        Retrieve the table formats from the database.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        Nothing.
+        """
         self.cur.execute("describe %s" % self.table)
         locfld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
 
@@ -356,6 +363,18 @@ class pmgrobj(object):
         self.con.commit()
 
     def getHutchList(self):
+        """
+        Retieve the current list of supported hutches from the database.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        hlist : list
+            A list of strings, one for each supported hutch.
+        """
         l = []
         try:
             self.cur.execute("select * from %s_update" % (self.table))
@@ -370,6 +389,19 @@ class pmgrobj(object):
         return l
 
     def checkForUpdate(self):
+        """
+        Check the database for updates.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        mask : int
+            A bit mask of DB_CONFIG and DB_OBJECT indicating which tables
+            (if any) are out of date.
+        """
         if self.in_trans:
             return 0      # Not now!
         try:
@@ -394,6 +426,19 @@ class pmgrobj(object):
         return v
 
     def readDB(self, kind):
+        """
+        Read in a complete database table.
+
+        Parameters
+        ----------
+        kind : int
+            Which table to read, either DB_CONFIG or DB_OBJECT.
+
+        Returns
+        -------
+        dlist : list
+            A list of dictionaries containing the entire database.
+        """
         if kind == self.DB_CONFIG:
             ext = "_cfg"
         else: # self.DB_OBJECT
@@ -408,6 +453,15 @@ class pmgrobj(object):
             return []
 
     def updateTables(self, mask=DB_ALL):
+        """
+        Update the specified tables from the database.
+
+        Parameters
+        ----------
+        mask : int
+            A bit mask of DB_CONFIG and DB_OBJECT indicating which tables
+            should be read.  (Defaults to all tables.)
+        """
         if self.in_trans:                    # This shouldn't happen.  But let's be paranoid.
             return
         if (mask & self.DB_CONFIG) != 0:
@@ -431,14 +485,52 @@ class pmgrobj(object):
         return mask
 
     def start_transaction(self):
+        """
+        Prepare to make changes to the database.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        Nothing
+        """
         self.in_trans = True
         self.errorlist = []
         return True
 
     def transaction_error(self, msg):
+        """
+        Indicate an error during a database transaction.
+
+        Parameters
+        ----------
+        msg : str
+            An error string.
+
+        Returns
+        -------
+        None
+        """
         self.errorlist.append(_mysql_exceptions.Error(0, msg))
 
     def end_transaction(self):
+        """
+        Attempt to commit the transaction, or roll it back if there is
+        an issue.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        elist : list
+            A list of strings containing the error messages accumulated
+            during the transaction.  If the transaction succeeded, this is
+            an empty list.
+        """
         didcommit = False
         if self.errorlist == []:
             try:
@@ -477,6 +569,26 @@ class pmgrobj(object):
         return "#" + str(idx)
 
     def configDelete(self, idx, namefunc=defaultNamefunc):
+        """
+        Delete a configuration from the database.  Assumes inside a 
+        transaction, but does not commit the change.
+
+        Parameters
+        ----------
+        idx : int
+            A database ID for the configuration to be deleted.
+
+        namefunc : int -> str
+            A function to provide human-readable names for the database ID.
+            (A useful function is not really defined here.)
+
+        Returns
+        -------
+        Nothing
+
+        If the deletion fails, errors are appended to the transaction 
+        errorlist.
+        """
         try:
             if self.cur.execute("select id from %s where config = %%s" % self.table, (idx,)) != 0:
                 self.errorlist.append(
@@ -488,6 +600,21 @@ class pmgrobj(object):
             self.errorlist.append(e)
  
     def configInsert(self, d):
+        """
+        Insert a new configuration into the database, assuming inside 
+        a transaction.
+
+        Parameters
+        ----------
+        d : dict
+            A dictionary containing values for database fields.
+
+        Returns
+        -------
+        id : int
+            A new configuration ID, or None if this fails. Adds to
+            transaction errorlist on failure.
+        """
         cmd = "insert %s_cfg (name, config, mutex, dt_updated" % self.table
         for f in self.cfgflds:
             fld = f['fld']
@@ -519,6 +646,26 @@ class pmgrobj(object):
             return None
             
     def configChange(self, idx, e, update=True):
+        """
+        Modify a configuration in the database.
+
+        Parameters
+        ----------
+        idx : int
+            An id for a configuration entry in the database.
+
+        e : dict
+            A dictionary containing updated values for some of the 
+            database fields.
+
+        update : boolean
+            If True, update the timestamp on the entry.  (Defaults to 
+            True.)
+
+        Returns
+        -------
+        Nothing.  Adds to transaction errorlist on failure.
+        """
         cmd = "update %s_cfg set " % self.table
         if update:
             cmd += "dt_updated = now()"
@@ -567,12 +714,42 @@ class pmgrobj(object):
             self.errorlist.append(err)
 
     def objectDelete(self, idx):
+        """
+        Delete an object from the database.  Assumes inside a 
+        transaction, but does not commit the change.
+
+        Parameters
+        ----------
+        idx : int
+            A database ID for the object to be deleted.
+
+        Returns
+        -------
+        Nothing
+
+        If the deletion fails, errors are appended to the transaction 
+        errorlist.
+        """
         try:
             self.cur.execute("delete from %s where id = %%s" % self.table, (idx,))
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
 
     def objectInsert(self, d):
+        """
+        Insert a new object into the database, assuming inside a transaction.
+
+        Parameters
+        ----------
+        d : dict
+            A dictionary containing values for database fields.
+
+        Returns
+        -------
+        id : int
+            A new object ID, or None if this fails. Adds to transaction
+            errorlist on failure.
+        """
         cmd = "insert %s (name, config, owner, rec_base, category, mutex, dt_created, dt_updated, comment" % self.table
         for f in self.objflds:
             if f['obj'] == False:
@@ -611,6 +788,26 @@ class pmgrobj(object):
             return None
 
     def objectChange(self, idx, e, update=True):
+        """
+        Modify an object in the database.
+
+        Parameters
+        ----------
+        idx : int
+            An id for a configuration entry in the database.
+
+        e : dict
+            A dictionary containing updated values for some of the 
+            database fields.
+
+        update : boolean
+            If True, update the timestamp on the entry.  (Defaults to 
+            True.)
+
+        Returns
+        -------
+        Nothing.  Adds to transaction errorlist on failure.
+        """
         cmd = "update %s set " % self.table
         if update:
             cmd += "dt_updated = now()"
@@ -681,12 +878,26 @@ class pmgrobj(object):
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
 
-    def countInstance(self, chg):
-        if len(chg) == 0:
+    def countInstance(self, clist):
+        """
+        Count the number of objects that use one of the listed configurations.
+
+        Parameters
+        ----------
+        clist : list
+            A list of configuration IDs.
+
+        Returns
+        -------
+        cnt : int
+            The number of objects in the database using one of the listed
+            configurations.
+        """
+        if len(clist) == 0:
             return 0
         cmd = "select count(*) from %s where " % self.table
         p = ""
-        for v in chg:
+        for v in clist:
             cmd += "%sconfig = %d" % (p, v)
             p = " or "
         try:
@@ -696,6 +907,18 @@ class pmgrobj(object):
             self.errorlist.append(err)
 
     def applyConfig(self, idx):
+        """
+        Apply the configuration of the specified object.
+
+        Parameters
+        ----------
+        idx : int
+            An object id.
+
+        Returns
+        -------
+        Nothing.
+        """
         vals = {}
         vals.update(self.objs[idx])
         vals.update(self.cfgs[vals['config']])
@@ -735,7 +958,41 @@ class pmgrobj(object):
                 except:
                     pass
 
+    def applyAllConfigs(self):
+        """
+        Apply the current configuration to all objects in the database.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        Nothing.
+        """
+        for i in self.objs.keys():
+            self.applyConfig(i)
+
     def diffConfig(self, idx, cfgidx=None):
+        """
+        Return the difference between the actual values of an object
+        and configured values.
+
+        Parameters
+        ----------
+        idx : int
+            An object id to find the differences for.
+
+        cfgidx : int
+            A configuration id to compare to.  If this is None, default
+            to the current configuration of the object.
+
+        Returns
+        -------
+        diff : dict
+            A dictionary mapping field names (str) to (actual, 
+            configuration) tuples for each difference.
+        """
         vals = {}
         vals.update(self.objs[idx])
         if cfgidx is None:
@@ -767,6 +1024,19 @@ class pmgrobj(object):
         return d
 
     def getActualConfig(self, idx):
+        """
+        Get the actual values of all of the configuration parameters of an object.
+
+        Parameters
+        ----------
+        idx : int
+            An object id.
+
+        Returns
+        -------
+        cdict : dict
+            A dictionary mapping field names (str) to values.
+        """
         base = self.objs[idx]['rec_base']
         d = {}
         for f in self.cfgflds:
@@ -780,12 +1050,34 @@ class pmgrobj(object):
             d[f['fld']] = v
         return d
 
-    def applyAllConfigs(self):
-        for i in self.objs.keys():
-            self.applyConfig(i)
-
     def matchConfigs(self, pattern, substr=True, ci=True):
-        p = pattern.replace("_","\_").replace("%","\%").replace("*", "%").replace(".", "_")
+        """
+        Search for configuration names in the database.
+
+        Parameters
+        ----------
+        pattern : str
+            The pattern to search for.  "." matches any character, "*" matches any string.
+            These special characters can be quoted using "\".
+
+        substr : boolean
+            If True, the pattern should match a substring of the
+            configuration name.  Otherwise, the pattern must match the
+            entire configuration name.  (Defaults to True.)
+
+        ci : boolean
+            If True, the match is case insensitive, otherwise it is case
+            sensitive.  (Defaults to True.)
+
+        Returns
+        -------
+        clist : list
+            A list of configuration names matching the pattern.
+        """
+        p = pattern.replace("\.", "\DOT").replace("\*", "\SPLAT")
+        p = p.replace("_","\_").replace("%","\%").
+        p = p.replace("*", "%").replace(".", "_")
+        p = p.replace("\DOT", ".").replace("\SPLAT", "*")
         if substr:
             p = "%"+p+"%"
         self.cur.execute("select name from %s_cfg where name %slike '%s'" %

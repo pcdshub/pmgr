@@ -2,7 +2,7 @@ TL;DR - To convert the first version of the parameter manager database to the
 current version, run the following from the top directory:
     cat pmgr/migrate/sql.script |\
         mysql --host=psdb --user=pscontrols --password=pcds --database=pscontrols'
-    install/bin/fixup
+    install/bin/pmgr-fixup
     cat pmgr/migrate/sql.script2 |\
         mysql --host=psdb --user=pscontrols --password=pcds --database=pscontrols'
 
