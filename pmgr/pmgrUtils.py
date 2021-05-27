@@ -1,6 +1,8 @@
 """Usage:
     pmgrUtils.py save [<PV>]... [--cfg=C] [--parent=P] [-z|--zenity] [--objtype=O] [--hutch=H]
-    pmgrUtils.py apply [<PV>]... [-z|--zenity] [--objtype=O] [--hutch=H]
+    pmgrUtils.py set [<PV>]... [--cfg=C] [-z|--zenity] [--objtype=O] [--hutch=H]
+    pmgrUtils.py get [<PV>]... [-z|--zenity] [--objtype=O] [--hutch=H]
+    pmgrUtils.py apply [<PV>]... [--cfg=C] [-z|--zenity] [--objtype=O] [--hutch=H]
     pmgrUtils.py diff [<PV>]...  [-z|--zenity] [--objtype=O] [--hutch=H]
     pmgrUtils.py find [<pattern>] [-s|--sensitive] [--objtype=O] [--hutch=H]
     pmgrUtils.py [-h | --help]
@@ -23,6 +25,8 @@ Arguments
 
 Commands:
     save           Save live motor configuration
+    set            Set the motor configuration
+    get            Get the motor configuration
     apply          Apply the saved motor configuration to live values
     diff           Prints differences between pmgr and live values
     find           Find the configurations matching the given pattern
@@ -159,8 +163,10 @@ def main():
         message(zenity, "error", 'No PV inputted.  Try --help')
 
     # Sanity check arguments.
-    if args['save'] and args['--cfg'] and len(motorPVs) > 1:
+    if args['save'] and cfg and len(motorPVs) > 1:
         message(zenity, "error", 'Save with --cfg must be for a single motor.')
+    if args["set"] and cfg is None:
+        message(zenity, "error", 'Set must specify a configuration!')
 
     # Loop through each of the motorPVs
     msg = ""
@@ -171,9 +177,23 @@ def main():
         m_DESC = pv.get(PV + ".DESC")
         print("Motor description: {0}".format(m_DESC))
 
+        if args["get"]:
+            try:
+                cfg = p.get_config(PV)
+                msg += "Configuration of %s is %s.\n" % (PV, cfg)
+            except Exception as e:
+                msg += exc_to_str("get configuration of", PV, e)
+                dialog = "error"
+        if args["set"]:
+            try:
+                p.set_config(PV, cfgname=cfg)
+                msg += "Configuration of %s successfully set to %s.\n" % (PV, cfg)
+            except Exception as e:
+                msg += exc_to_str("set configuration of", PV, e)
+                dialog = "error"
         if args["apply"]:
             try:
-                p.apply_config(PV)
+                p.apply_config(PV, cfgname=cfg)
                 msg += "Configuration of %s successfully applied.\n" % PV
             except Exception as e:
                 msg += exc_to_str("apply configuration to", PV, e)
