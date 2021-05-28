@@ -156,11 +156,11 @@ def main():
             message(zenity, "info", 'Possible matches for "%s":\n' % pattern + "\n".join(l))
         return 0;
 
-    # Parse the PV input into full PV names, exit if none inputted
+    # Parse the PV input into full PV names, exit if none input
     if len(PVarguments) > 0:
         motorPVs = parsePVArguments(PVarguments)
     else:
-        message(zenity, "error", 'No PV inputted.  Try --help')
+        message(zenity, "error", 'No PV input.  Try --help')
 
     # Sanity check arguments.
     if args['save'] and cfg and len(motorPVs) > 1:

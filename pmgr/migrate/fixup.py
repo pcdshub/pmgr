@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-from .pmgrobj import pmgrobj
+import pmgrobj
+
+#from pmgrobj import pmgrobj
 
 # Check the raw object for number of Nones:
 #     0         - Everything specified, take one at random
@@ -28,7 +30,7 @@ def assign_mutex(p, cfg, m, full, cm):
     return f
 
 def main():
-    p = pmgrobj('ims_motor', None)
+    p = pmgrobj.pmgrobj('ims_motor', None)
     # Fixup the mutex field in configurations, and build out the configuration with
     # no inheritance.
     for i in p.cfgs.keys():

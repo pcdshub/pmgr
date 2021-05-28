@@ -445,7 +445,7 @@ class pmgrobj(object):
             if self.hutch is None:
                 ext = ""
             else:
-                ext = " where owner = '%s'" % self.hutch
+                ext = " where owner = '%s' or id = 0" % self.hutch
         try:
             self.cur.execute("select * from %s%s" % (self.table, ext))
             return list(self.cur.fetchall())
@@ -750,15 +750,14 @@ class pmgrobj(object):
             A new object ID, or None if this fails. Adds to transaction
             errorlist on failure.
         """
-        cmd = "insert %s (name, config, owner, rec_base, category, mutex, dt_created, dt_updated, comment" % self.table
+        cmd = "insert %s (config, owner, rec_base, category, mutex, dt_created, dt_updated, comment" % self.table
         for f in self.objflds:
             if f['obj'] == False:
                 continue
             fld = f['fld']
             cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, %s, %s, %s, now(), now(), %s"
-        vlist = [d['name']]
-        vlist.append(d['config'])
+        cmd += ") values (%s, %s, %s, %s, %s, now(), now(), %s"
+        vlist = [d['config']]
         vlist.append(self.hutch)
         vlist.append(d['rec_base'])
         vlist.append(d['category'])
@@ -906,22 +905,29 @@ class pmgrobj(object):
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
 
-    def applyConfig(self, idx):
+    def applyConfig(self, idx, cfg=None):
         """
         Apply the configuration of the specified object.
 
         Parameters
         ----------
-        idx : int
-            An object id.
+        idx : int / str
+            An object id or base PV name.
+
+        cfg : int
+            A configuration id, if idx is just a base PV name.
 
         Returns
         -------
         Nothing.
         """
         vals = {}
-        vals.update(self.objs[idx])
-        vals.update(self.cfgs[vals['config']])
+        if type(idx) == int:
+            vals.update(self.objs[idx])
+            vals.update(self.cfgs[vals['config']])
+        else:
+            vals['rec_base'] = idx
+            vals.update(self.cfgs[cfg])
         base = vals['rec_base']
         for s in self.setflds:
             #
@@ -945,8 +951,11 @@ class pmgrobj(object):
             # Write values.
             #
             for f in s:
-                if vals[f] == None or self.fldmap[f]['readonly']:
-                    continue
+                try:
+                    if vals[f] == None or self.fldmap[f]['readonly']:
+                        continue
+                except:
+                    continue  # If we just passed in a base PV, we might not have every field!
                 try:
                     z = self.fldmap[f]['enum'][0]
                     haveenum = True

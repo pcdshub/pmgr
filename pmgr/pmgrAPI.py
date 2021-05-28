@@ -162,7 +162,15 @@ class pmgrAPI(object):
         Nothing.  Raises an exception if the application fails for any reason.
         """
         self.update_db()
-        o = self._search(self.pm.objs, 'rec_base', pv)
+        try:
+            # See if the object is in the database.
+            o = self._search(self.pm.objs, 'rec_base', pv)
+        except:
+            # It isn't.  So use the alternative form of applyConfig.
+            c = self._search(self.pm.cfgs, 'name', cfgname)
+            self.pm.applyConfig(pv, cfg=c['id'])
+            return
+        # The object is in the database!  Set its config, and apply!
         if cfgname is not None:
             self.set_config(pv, cfgname, o=o)
             self.update_db()

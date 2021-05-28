@@ -707,7 +707,7 @@ class ObjModel(QtGui.QStandardItemModel):
         del d['_cfg']
         del d['connstat']
         dd = {'id': idx, 'config': 0, 'owner': param.params.hutch, 
-              'rec_base': "", 'dt_created': now, 'dt_updated': now, 'category': 'Manual',
+              'rec_base': "DUMMY:"+str(-idx), 'dt_created': now, 'dt_updated': now, 'category': 'Manual',
               'cfgname': param.params.db.getCfgName(0) }
         d.update(dd)
         self.status[idx] = "N"
