@@ -30,7 +30,7 @@ test:
   imports:
     - pmgr
   commands:
-    - pmgr --help
+    - pmgrLauncher.sh --help
     - pmgrUtils.sh --help
 
 about:
