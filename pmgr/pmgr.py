@@ -189,10 +189,14 @@ def main():
     app = QtWidgets.QApplication([''])
   
     # Options( [mandatory list, optional list, switches list] )
-    options = Options(['hutch', 'type'], [], ['debug', 'applyenable'])
+    options = Options(['hutch', 'type'], [], ['debug', 'applyenable', 'dev', 'help'])
     try:
         options.parse()
     except Exception as msg:
+        options.usage(str(msg))
+        sys.exit()
+
+    if options.help is not None:
         options.usage(str(msg))
         sys.exit()
 
@@ -200,6 +204,7 @@ def main():
     param.params.setTable(options.type)
     param.params.debug = False if options.debug == None else True
     param.params.applyOK = False if options.applyenable == None else True
+    param.params.prod = True if options.dev is None else False
     gui = GraphicUserInterface()
     param.params.setTable(options.type)  # Sigh, do this again to fix dropdown.
     # MCB - We need a better way of doing this.

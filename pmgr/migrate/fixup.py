@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import pmgrobj
+import sys
+import ..options
 
 #from pmgrobj import pmgrobj
 
@@ -30,6 +32,7 @@ def assign_mutex(p, cfg, m, full, cm):
     return f
 
 def main():
+    sys.exit(0)
     p = pmgrobj.pmgrobj('ims_motor', None)
     # Fixup the mutex field in configurations, and build out the configuration with
     # no inheritance.
