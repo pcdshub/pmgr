@@ -44,7 +44,7 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.debugButton, 0, 3, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 990, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 990, 20))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -80,40 +80,22 @@ class Ui_MainWindow(object):
         self.configWidget.setObjectName("configWidget")
         self.configTable = FreezeTableView()
         self.configTable.setObjectName("configTable")
+        self.userLabel = QtWidgets.QLabel(self.configTable)
+        self.userLabel.setGeometry(QtCore.QRect(60, 220, 121, 16))
+        self.userLabel.setObjectName("userLabel")
         self.configWidget.setWidget(self.configTable)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(2), self.configWidget)
-        self.groupWidget = QtWidgets.QDockWidget(MainWindow)
-        self.groupWidget.setEnabled(True)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(6)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.groupWidget.sizePolicy().hasHeightForWidth())
-        self.groupWidget.setSizePolicy(sizePolicy)
-        self.groupWidget.setMinimumSize(QtCore.QSize(600, 116))
-        self.groupWidget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea|QtCore.Qt.RightDockWidgetArea)
-        self.groupWidget.setObjectName("groupWidget")
-        self.groupTable = FreezeTableView()
-        self.groupTable.setObjectName("groupTable")
-        self.userLabel = QtWidgets.QLabel(self.groupTable)
-        self.userLabel.setGeometry(QtCore.QRect(70, 50, 121, 16))
-        self.userLabel.setObjectName("userLabel")
-        self.groupWidget.setWidget(self.groupTable)
-        MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(2), self.groupWidget)
         self.actionObjects = QtWidgets.QAction(MainWindow)
         self.actionObjects.setObjectName("actionObjects")
         self.actionConfigurations = QtWidgets.QAction(MainWindow)
         self.actionConfigurations.setObjectName("actionConfigurations")
-        self.actionAuto = QtWidgets.QAction(MainWindow)
-        self.actionAuto.setCheckable(True)
-        self.actionAuto.setChecked(True)
-        self.actionAuto.setObjectName("actionAuto")
         self.actionManual = QtWidgets.QAction(MainWindow)
         self.actionManual.setCheckable(True)
         self.actionManual.setChecked(True)
         self.actionManual.setObjectName("actionManual")
         self.actionProtected = QtWidgets.QAction(MainWindow)
         self.actionProtected.setCheckable(True)
-        self.actionProtected.setChecked(True)
+        self.actionProtected.setChecked(False)
         self.actionProtected.setObjectName("actionProtected")
         self.actionTrack = QtWidgets.QAction(MainWindow)
         self.actionTrack.setCheckable(True)
@@ -124,7 +106,6 @@ class Ui_MainWindow(object):
         self.actionAuth.setObjectName("actionAuth")
         self.menuFile.addAction(self.actionAuth)
         self.menuFile.addAction(self.actionExit)
-        self.menuFilter.addAction(self.actionAuto)
         self.menuFilter.addAction(self.actionManual)
         self.menuFilter.addAction(self.actionProtected)
         self.menuFilter.addAction(self.actionTrack)
@@ -170,25 +151,11 @@ class Ui_MainWindow(object):
 "<tr>\n"
 "<td style=\"border: none;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Black   = Value is set in configuration.</p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" color:#0000ff;\">Blue</span>    = Value is inherited from unchanged parent configuration.</p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" color:#cc0066;\">Purple</span> = Value is inherited from changed parent configuration.</p>\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" color:#ff0000;\">Red</span>     = Value is unsaved change.</p></td></tr></table></body></html>"))
         self.configWidget.setWindowTitle(_translate("MainWindow", "Configurations"))
-        self.groupWidget.setToolTip(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Sans Serif\'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
-"<table border=\"0\" style=\"-qt-table-type: root; margin-top:4px; margin-bottom:4px; margin-left:4px; margin-right:4px;\">\n"
-"<tr>\n"
-"<td style=\"border: none;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Black = Value is set in database.</p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" color:#0000ff;\">Blue  </span>= Value is in a new group.</p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" color:#ff0000;\">Red   </span>= Value is unsaved change.</p></td></tr></table></body></html>"))
-        self.groupWidget.setWindowTitle(_translate("MainWindow", "Cfg Groups"))
         self.userLabel.setText(_translate("MainWindow", "User: Guest"))
         self.actionObjects.setText(_translate("MainWindow", "Objects"))
         self.actionConfigurations.setText(_translate("MainWindow", "Configurations"))
-        self.actionAuto.setText(_translate("MainWindow", "Show Auto"))
         self.actionManual.setText(_translate("MainWindow", "Show Manual"))
         self.actionProtected.setText(_translate("MainWindow", "Show Protected"))
         self.actionTrack.setText(_translate("MainWindow", "Track Object Config"))

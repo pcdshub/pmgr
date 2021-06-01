@@ -22,8 +22,6 @@ fldlist = { 'FLD_HLM',
             'FLD_HOMD',
             'FLD_LLM',
             'FLD_OFF',
-            'FLD_SN',
-            'FLD_PN',
             'FLD_DESC' };
 
 def caget(pvname,timeout=30.0):
@@ -570,15 +568,7 @@ def getMotorVals(pvbase):
 
 def makeMotor(ioc, pvbase, port, extra=""):
     d = getMotorVals(pvbase)
-    pn = d['FLD_PN']
-    if pn[0:3] == "MFI":
-        cat = "Manual"
-    elif pn[0:3] == "MDI" or pn[0:3] == "MLI":
-        cat = "Auto"
-    else:
-        if pn != "":
-            print("Unknown PN %s!" % pn)
-        cat = "Protected"
+    cat = "Manual"
     if extra != "":
         extra = " " + extra
     d.update({'name': pvbase,

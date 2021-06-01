@@ -1,0 +1,4 @@
+These scripts are very dependent on the serial number centric view of
+motors that existed in the first version of the parameter manager.
+We've also killed the TYPE field, which was sort of an ersatz
+configuration name.  For now, let's just migrate these here.

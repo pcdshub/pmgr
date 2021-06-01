@@ -93,7 +93,7 @@ class MyDelegate(QStyledItemDelegate):
 
     def setEditorData(self, editor, index):
         if editor.mydelegate:
-            value = index.model().data(index, Qt.EditRole).value()
+            value = index.model().data(index, Qt.EditRole)
             try:
                 idx = editor.enum.index(value)
                 editor.setCurrentIndex(idx)

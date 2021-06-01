@@ -9,29 +9,14 @@ except ImportError:
     import MySQLdb._exceptions as _mysql_exceptions
 import pyca
 
-from . import utils
-
 ####################
 #
 # Utility Functions
 #
 ####################
 
+# Map MySQL types to python types in a quick and dirty manner.
 def m2pType(name):
-    """
-    Map MySQL types to python types.
-
-    Parameters
-    ----------
-    name : str
-        A MySQL type name.
-
-    Returns
-    -------
-    kind : type
-        A python type corresponding to name, or None if a corresponding
-        type cannot be determined.
-    """
     if name[:7] == 'varchar' or name[:8] == 'datetime':
         return str
     if name[:3] == 'int' or name[:8] == 'smallint' or name[:7] == 'tinyint':
@@ -41,24 +26,8 @@ def m2pType(name):
     print("Unknown type %s" % name)
     return None
 
+# Map MySQL field names to PV extensions.
 def fixName(name):
-    """
-    Map MySQL field names to PV suffixes.
-
-    Parameters
-    ----------
-    name : str
-        A MySQL field.  It is assumed that this is begins either "FLD_"
-        (if this should be a field of the base PV) or "PV_" (if this is
-        an extension of the base PV).
-
-    Returns
-    -------
-    suffix : str
-        A suffix to be appended to the base PV name.  "FLD_" will be replaced
-        with ".", and "PV_" will be replaced with ":".  Single "_" in the name
-        will become ":" and double "_" will become single "_".
-    """
     name = re.sub("::", "_", re.sub("_", ":", name))
     if name[:3] == "PV:":
         return name[2:]
@@ -66,20 +35,8 @@ def fixName(name):
         c = name.rindex(':')
         return name[3:c] + '.' + name[c+1:]
 
+# Map MySQL field names to the descriptive part of the name.
 def createAlias(name):
-    """
-    Map MySQL field names to the descriptive part of the name.
-
-    name : str
-        A MySQL field.  It is assumed that this is begins either "FLD_"
-        (if this should be a field of the base PV) or "PV_" (if this is
-        an extension of the base PV).
-
-    Returns
-    -------
-    desc : str
-        Remove the prefix "FLD_" or "PV_" from name and replace "__" with "_".
-    """
     name = re.sub("__", "_", name)
     if name[:3] == "PV_":
         return name[3:]
@@ -125,13 +82,20 @@ def createAlias(name):
 #           same setorder, with the entire list sorted by setorder.
 #     cfgs
 #         - A configuration ID to configuration dictionary mapping.
-#           The keys are a few boilerplate keys (id, config, etc.)
+#           The keys are a few boilerplate keys (id, config, owner, etc.)
 #           and the configuration fields.  Note that due to inheritance
 #           and mutual exclusion, many of these fields could be "None".
 #     objs
 #         - An object ID to object dictionary mapping.  The keys are a 
-#           few boilerplate keys (id, config, etc.) and the object-only
-#           fields (the objflds with the 'obj' key value True).
+#           few boilerplate keys (id, config, owner, etc.) and the
+#           object-only fields (the objflds with the 'obj' key value True).
+#     groupids
+#         - A list of group IDs.
+#     groups
+#         - A group ID to group information dictionary mapping.  The group
+#           information dictionary keys are either integers (which map to
+#           a dictionary giving a config and port for that group element)
+#           or "global" (which maps to a dictionary with keys "name" and "len".)
 #
 # The field information dictionaries have the following keys:
 #     fld
@@ -171,11 +135,66 @@ def createAlias(name):
 #     readonly
 #         - Is this field is readonly?
 #
+# Exported methods:
+#     checkForUpdate()
+#         - Returns a mask of DB_CONFIG, DB_OBJECT, and DB_GROUP indicating
+#           which tables (if any) are out of date.
+#     updateTables(mask=DB_ALL)
+#         - Read in the specified tables.
+#     start_transaction()
+#         - Begin to make DB changes.
+#     transaction_error(msg)
+#         - Generate an error message for the DB change.
+#     end_transaction()
+#         - Commit or rollback the current transaction.  Return a list of
+#           error strings, so an empty list indicates a successful commit.
+#     configDelete(idx, namefunc=None)
+#         - Delete a configuration.  (namefunc is an idx -> name mapping function).
+#     configInsert(d)
+#         - Insert a new configuration.  Returns the new configuration ID or None
+#           if it fails.
+#     configChange(idx, e)
+#         - Change an existing configuration.  e is a field -> value dictionary for
+#           the changes.
+#     objectDelete(idx)
+#         - Delete an existing object.
+#     objectInsert(d)
+#         - Insert a new object.  Returns the new object ID or None if it fails.
+#     objectChange(idx, e)
+#         - Change an existing object.  e is a field -> value dictionary for the
+#           changes.
+#     groupDelete(idx)
+#         - Delete an existing configuration group.
+#     groupInsert(d)
+#         - Insert a new configuration group.  d is a dictionary which maps from
+#           integers (group element indices) to a dictionary with config/port indices.
+#     groupUpdate(idx, d)
+#         - Change an existing configuration group. d is the same as the groupInsert
+#           dictionary.
+#     countInstance(cfglist)
+#         - Return a count of objects that depend on one of the listed configurations.
+#     getAutoCfg(d)
+#         - Given an object dictionary, find and return the most recently used
+#           configuration that has the autoconfig field set to a matching value.
+#           First look in this hutch, then in any hutch.  If none is found, return
+#           an empty dictionary.
+#     getConfig(idx)
+#         - Expand the configuration to deal with parentage.  cfgs[idx] could have
+#           many "None" values which are inherited, and this routine will fill them
+#           out and set the "_haveval" key to a dictionary indicating which fields
+#           have values set by the configuration itself (True) and which are inherited
+#           (False).
+#     applyConfig(idx)
+#         - Given an object ID, apply its current configuration to it.
+#     applyAllConfigs()
+#         - Apply the current configuration to all objects.
 
 class pmgrobj(object):
     DB_CONFIG = 1
     DB_OBJECT = 2
-    DB_ALL    = 3
+    DB_GROUP  = 4
+    DB_CFGGRP = 8
+    DB_ALL    = 7
 
     ORDER_MASK    = 0x0003ff
     SETMUTEX_MASK = 0x000200
@@ -193,6 +212,8 @@ class pmgrobj(object):
         self.debug = debug
         self.cfgs = None
         self.objs = None
+        self.groupids = []
+        self.groups = {}
         self.errorlist = []
         self.autoconfig = None
         self.in_trans = False
@@ -209,27 +230,19 @@ class pmgrobj(object):
         self.dbgid = 42
         self.lastcfg = datetime.datetime(1900,1,1,0,0,1)
         self.lastobj = datetime.datetime(1900,1,1,0,0,1)
+        self.lastgrp = datetime.datetime(1900,1,1,0,0,1)
         self.hutchlist = self.getHutchList()
         self.checkForUpdate()
         self.updateTables()
 
     def readFormat(self):
-        """
-        Retrieve the table formats from the database.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        Nothing.
-        """
         self.cur.execute("describe %s" % self.table)
         locfld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
+        locfld = locfld[10:]   # Skip the standard fields!
 
         self.cur.execute("describe %s_cfg" % self.table)
         fld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
+        fld = fld[7:]         # Skip the standard fields!
 
         self.cur.execute("select * from %s_name_map" % self.table)
         result = self.cur.fetchall()
@@ -247,23 +260,21 @@ class pmgrobj(object):
         for i in range(16):
             mutex_sets.append([])
         for (f, t, nl, k) in locfld:
-            if f[0].isupper():
-                alias[f] = createAlias(f)
-                colorder[f] = 1000
-                setorder[f] = 0
-                mutex[f] = 0
-                tooltip[f] = ''
-                nullok[f] = ((nl == 'YES') or (t != str))
-                unique[f] = k == "UNI"
+            alias[f] = createAlias(f)
+            colorder[f] = 1000
+            setorder[f] = 0
+            mutex[f] = 0
+            tooltip[f] = ''
+            nullok[f] = ((nl == 'YES') or (t != str))
+            unique[f] = k == "UNI"
         for (f, t, nl, k) in fld:
-            if f[0].isupper():
-                alias[f] = createAlias(f)
-                colorder[f] = 1000
-                setorder[f] = 0
-                mutex[f] = 0
-                tooltip[f] = ''
-                nullok[f] = ((nl == 'YES') or (t != str))
-                unique[f] = k == "UNI"
+            alias[f] = createAlias(f)
+            colorder[f] = 1000
+            setorder[f] = 0
+            mutex[f] = 0
+            tooltip[f] = ''
+            nullok[f] = ((nl == 'YES') or (t != str))
+            unique[f] = k == "UNI"
 
         for d in result:
             f = d['db_field_name']
@@ -299,47 +310,45 @@ class pmgrobj(object):
         setflds = {}
         setset = set([])
         for (f, t, nl, k) in locfld:
-            if f[0].isupper():
-                n = fixName(f)
-                so = setorder[f] & self.ORDER_MASK
-                setset.add(so)
-                d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
-                     'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
-                     'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
-                     'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
-                     'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
-                     'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
-                     'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': True}
-                try:
-                    setflds[so].append(f)
-                except:
-                    setflds[so] = [f]
-                try:
-                    d['enum'] = enum[f]
-                except:
-                    pass 
-                self.objflds.append(d)
+            n = fixName(f)
+            so = setorder[f] & self.ORDER_MASK
+            setset.add(so)
+            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
+                 'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
+                 'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
+                 'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
+                 'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
+                 'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
+                 'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': True}
+            try:
+                setflds[so].append(f)
+            except:
+                setflds[so] = [f]
+            try:
+                d['enum'] = enum[f]
+            except:
+                pass 
+            self.objflds.append(d)
         for (f, t, nl, k) in fld:
-            if f[0].isupper():
-                n = fixName(f)
-                so = setorder[f] & self.ORDER_MASK
-                setset.add(so)
-                d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
-                     'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
-                     'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
-                     'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
-                     'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
-                     'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
-                     'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': False}
-                try:
-                    setflds[so].append(f)
-                except:
-                    setflds[so] = [f]
-                try:
-                    d['enum'] = enum[f]
-                except:
-                    pass
-                self.objflds.append(d)
+            n = fixName(f)
+            so = setorder[f] & self.ORDER_MASK
+            setset.add(so)
+            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
+                 'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
+                 'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
+                 'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
+                 'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
+                 'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
+                 'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': False}
+            try:
+                setflds[so].append(f)
+            except:
+                setflds[so] = [f]
+            try:
+                d['enum'] = enum[f]
+            except:
+                pass
+            self.objflds.append(d)
         self.objflds.sort(key=lambda d: d['colorder'])   # New regime: col_order is manditory and unique!
         self.fldmap = {}
         for i in range(len(self.objflds)):
@@ -363,24 +372,12 @@ class pmgrobj(object):
         self.con.commit()
 
     def getHutchList(self):
-        """
-        Retieve the current list of supported hutches from the database.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        hlist : list
-            A list of strings, one for each supported hutch.
-        """
         l = []
         try:
             self.cur.execute("select * from %s_update" % (self.table))
             for d in self.cur.fetchall():
                 n = d['tbl_name']
-                if n != 'config':
+                if n[-4:] != '_grp' and n != 'config':
                     l.append(n)
             self.con.commit()
             l.sort()
@@ -389,19 +386,6 @@ class pmgrobj(object):
         return l
 
     def checkForUpdate(self):
-        """
-        Check the database for updates.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        mask : int
-            A bit mask of DB_CONFIG and DB_OBJECT indicating which tables
-            (if any) are out of date.
-        """
         if self.in_trans:
             return 0      # Not now!
         try:
@@ -409,13 +393,17 @@ class pmgrobj(object):
             if self.hutch is None:
                 self.cur.execute("select * from %s_update" % self.table)
             else:
-                self.cur.execute("select * from %s_update where tbl_name = 'config' or tbl_name = '%s'" %
-                                 (self.table, self.hutch))
+                self.cur.execute("select * from %s_update where tbl_name = 'config' or tbl_name = '%s' or tbl_name = '%s'" %
+                                 (self.table, self.hutch, self.hutch + "_grp"))
             for d in self.cur.fetchall():
                 if d['tbl_name'] == 'config':
                     if d['dt_updated'] > self.lastcfg:
                         self.lastcfg = d['dt_updated']
                         v = v | self.DB_CONFIG
+                elif d['tbl_name'][-4:] == "_grp":
+                    if d['dt_updated'] > self.lastgrp:
+                        self.lastgrp = d['dt_updated']
+                        v = v | self.DB_GROUP
                 else:
                     if d['dt_updated'] > self.lastobj:
                         self.lastobj = d['dt_updated']
@@ -426,26 +414,20 @@ class pmgrobj(object):
         return v
 
     def readDB(self, kind):
-        """
-        Read in a complete database table.
-
-        Parameters
-        ----------
-        kind : int
-            Which table to read, either DB_CONFIG or DB_OBJECT.
-
-        Returns
-        -------
-        dlist : list
-            A list of dictionaries containing the entire database.
-        """
         if kind == self.DB_CONFIG:
             ext = "_cfg"
-        else: # self.DB_OBJECT
+        elif kind == self.DB_OBJECT:
             if self.hutch is None:
                 ext = ""
             else:
                 ext = " where owner = '%s' or id = 0" % self.hutch
+        elif kind == self.DB_GROUP:
+            if self.hutch is None:
+                ext = "_grp"
+            else:
+                ext = "_grp where owner = '%s'" % self.hutch
+        else: # self.DB_CFGGRP
+            ext = "_cfg_grp"
         try:
             self.cur.execute("select * from %s%s" % (self.table, ext))
             return list(self.cur.fetchall())
@@ -453,15 +435,6 @@ class pmgrobj(object):
             return []
 
     def updateTables(self, mask=DB_ALL):
-        """
-        Update the specified tables from the database.
-
-        Parameters
-        ----------
-        mask : int
-            A bit mask of DB_CONFIG and DB_OBJECT indicating which tables
-            should be read.  (Defaults to all tables.)
-        """
         if self.in_trans:                    # This shouldn't happen.  But let's be paranoid.
             return
         if (mask & self.DB_CONFIG) != 0:
@@ -482,55 +455,41 @@ class pmgrobj(object):
                 for o in objs:
                     objmap[o['id']] = o
                 self.objs = objmap
+        if (mask & self.DB_GROUP) != 0:
+            grps = self.readDB(self.DB_GROUP)
+            cfggrp = self.readDB(self.DB_CFGGRP)
+            if grps == []:
+                mask &= ~self.DB_GROUP
+            else:
+                self.groupids   = []
+                self.groups     = {}
+                for g in grps:
+                    id = g['id']
+                    self.groupids.append(id)
+                    self.groups[id] = {}
+                    try:
+                        self.groups[id]['global'] = {'len' : 0, 'name' : g['name'], 'active': g['active']}
+                    except:
+                        print(g)
+                        raise
+                for g in cfggrp:
+                    id = g['group_id']
+                    if id in self.groups.keys():
+                        self.groups[id][g['dispseq']] = {'config': g['config_id'],
+                                                         'port': g['port_id']}
+                        sz = self.groups[id]['global']['len'] + 1
+                        self.groups[id]['global']['len'] = sz
         return mask
 
     def start_transaction(self):
-        """
-        Prepare to make changes to the database.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        Nothing
-        """
         self.in_trans = True
         self.errorlist = []
         return True
 
     def transaction_error(self, msg):
-        """
-        Indicate an error during a database transaction.
-
-        Parameters
-        ----------
-        msg : str
-            An error string.
-
-        Returns
-        -------
-        None
-        """
         self.errorlist.append(_mysql_exceptions.Error(0, msg))
 
     def end_transaction(self):
-        """
-        Attempt to commit the transaction, or roll it back if there is
-        an issue.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        elist : list
-            A list of strings containing the error messages accumulated
-            during the transaction.  If the transaction succeeded, this is
-            an empty list.
-        """
         didcommit = False
         if self.errorlist == []:
             try:
@@ -547,11 +506,7 @@ class pmgrobj(object):
         self.in_trans = False
         el = []
         for e in self.errorlist:
-            if len(e.args) == 1:
-                n = e.args[0]
-                m = ""
-            else:
-                (n, m) = e.args
+            (n, m) = e.args
             if n != 0:
                 el.append("Error %d: %s\n" % (n, m))
             else:
@@ -569,26 +524,6 @@ class pmgrobj(object):
         return "#" + str(idx)
 
     def configDelete(self, idx, namefunc=defaultNamefunc):
-        """
-        Delete a configuration from the database.  Assumes inside a 
-        transaction, but does not commit the change.
-
-        Parameters
-        ----------
-        idx : int
-            A database ID for the configuration to be deleted.
-
-        namefunc : int -> str
-            A function to provide human-readable names for the database ID.
-            (A useful function is not really defined here.)
-
-        Returns
-        -------
-        Nothing
-
-        If the deletion fails, errors are appended to the transaction 
-        errorlist.
-        """
         try:
             if self.cur.execute("select id from %s where config = %%s" % self.table, (idx,)) != 0:
                 self.errorlist.append(
@@ -600,33 +535,22 @@ class pmgrobj(object):
             self.errorlist.append(e)
  
     def configInsert(self, d):
-        """
-        Insert a new configuration into the database, assuming inside 
-        a transaction.
-
-        Parameters
-        ----------
-        d : dict
-            A dictionary containing values for database fields.
-
-        Returns
-        -------
-        id : int
-            A new configuration ID, or None if this fails. Adds to
-            transaction errorlist on failure.
-        """
-        cmd = "insert %s_cfg (name, config, mutex, dt_updated" % self.table
+        cmd = "insert %s_cfg (name, config, owner, mutex, dt_updated" % self.table
+        vals = d['_val']
         for f in self.cfgflds:
             fld = f['fld']
-            cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, now()"
+            if vals[fld]:
+                cmd += ", " + fld
+        cmd += ") values (%s, %s, %s, %s, now()"
         vlist = [d['name']]
         vlist.append(d['config'])
+        vlist.append(self.hutch)
         vlist.append(d['mutex'])
         for f in self.cfgflds:
             fld = f['fld']
-            cmd += ", %s"
-            vlist.append(d[fld])
+            if vals[fld]:
+                cmd += ", %s"
+                vlist.append(d[fld])
         cmd += ')'
         if self.debug:
             print(cmd % tuple(vlist))
@@ -646,26 +570,6 @@ class pmgrobj(object):
             return None
             
     def configChange(self, idx, e, update=True):
-        """
-        Modify a configuration in the database.
-
-        Parameters
-        ----------
-        idx : int
-            An id for a configuration entry in the database.
-
-        e : dict
-            A dictionary containing updated values for some of the 
-            database fields.
-
-        update : boolean
-            If True, update the timestamp on the entry.  (Defaults to 
-            True.)
-
-        Returns
-        -------
-        Nothing.  Adds to transaction errorlist on failure.
-        """
         cmd = "update %s_cfg set " % self.table
         if update:
             cmd += "dt_updated = now()"
@@ -694,6 +598,13 @@ class pmgrobj(object):
             vlist.append(v)
         except:
             pass
+        try:
+            v = e['owner']
+            cmd += "%sowner = %%s" % sep
+            sep = ", "
+            vlist.append(v)
+        except:
+            pass
         for f in self.cfgflds:
             fld = f['fld']
             try:
@@ -714,50 +625,21 @@ class pmgrobj(object):
             self.errorlist.append(err)
 
     def objectDelete(self, idx):
-        """
-        Delete an object from the database.  Assumes inside a 
-        transaction, but does not commit the change.
-
-        Parameters
-        ----------
-        idx : int
-            A database ID for the object to be deleted.
-
-        Returns
-        -------
-        Nothing
-
-        If the deletion fails, errors are appended to the transaction 
-        errorlist.
-        """
         try:
             self.cur.execute("delete from %s where id = %%s" % self.table, (idx,))
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
 
     def objectInsert(self, d):
-        """
-        Insert a new object into the database, assuming inside a transaction.
-
-        Parameters
-        ----------
-        d : dict
-            A dictionary containing values for database fields.
-
-        Returns
-        -------
-        id : int
-            A new object ID, or None if this fails. Adds to transaction
-            errorlist on failure.
-        """
-        cmd = "insert %s (config, owner, rec_base, category, mutex, dt_created, dt_updated, comment" % self.table
+        cmd = "insert %s (name, config, owner, rec_base, category, mutex, dt_created, dt_updated, comment" % self.table
         for f in self.objflds:
             if f['obj'] == False:
                 continue
             fld = f['fld']
             cmd += ", " + fld
-        cmd += ") values (%s, %s, %s, %s, %s, now(), now(), %s"
-        vlist = [d['config']]
+        cmd += ") values (%s, %s, %s, %s, %s, %s, now(), now(), %s"
+        vlist = [d['name']]
+        vlist.append(d['config'])
         vlist.append(self.hutch)
         vlist.append(d['rec_base'])
         vlist.append(d['category'])
@@ -787,26 +669,6 @@ class pmgrobj(object):
             return None
 
     def objectChange(self, idx, e, update=True):
-        """
-        Modify an object in the database.
-
-        Parameters
-        ----------
-        idx : int
-            An id for a configuration entry in the database.
-
-        e : dict
-            A dictionary containing updated values for some of the 
-            database fields.
-
-        update : boolean
-            If True, update the timestamp on the entry.  (Defaults to 
-            True.)
-
-        Returns
-        -------
-        Nothing.  Adds to transaction errorlist on failure.
-        """
         cmd = "update %s set " % self.table
         if update:
             cmd += "dt_updated = now()"
@@ -877,26 +739,89 @@ class pmgrobj(object):
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
 
-    def countInstance(self, clist):
-        """
-        Count the number of objects that use one of the listed configurations.
+    def groupClear(self, id):
+        if self.debug:
+            print("delete from %s_cfg_grp where group_id = %d" % (self.table, id))
+            return True
+        try:
+            self.cur.execute("delete from %s_cfg_grp where group_id = %%s" % self.table, (id, ))
+            return True
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+            return False
 
-        Parameters
-        ----------
-        clist : list
-            A list of configuration IDs.
+    def groupDelete(self, id):
+        if not self.groupClear(id):
+            return False
+        if self.debug:
+            print("delete from %s_grp where id = %d" % (self.table, id))
+            return True
+        try:
+            self.cur.execute("delete from %s_grp where id = %%s" % self.table, (id, ))
+            return True
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+            return False
 
-        Returns
-        -------
-        cnt : int
-            The number of objects in the database using one of the listed
-            configurations.
-        """
-        if len(clist) == 0:
+    def groupInsert(self, g):
+        if self.debug:
+            print("insert %s_grp (name, owner, active, dt_created, dt_updated) values (%s, %s, 0, now(), now())" % \
+                  (self.table, g['global']['name'], self.hutch))
+            print("select last_insert_id()")
+            id = self.dbgid
+            self.dbgid += 1
+        else:
+            try:
+                self.cur.execute("insert %s_grp (name, owner, active, dt_created, dt_updated) values (%%s, %%s, 0, now(), now())" \
+                                 % self.table, (g['global']['name'], self.hutch))
+                self.cur.execute("select last_insert_id()")
+                id = list(self.cur.fetchone().values())[0]
+            except _mysql_exceptions.Error as e:
+                self.errorlist.append(e)
+                return False
+        self.groupUpdate(id, g)
+
+    def groupUpdate(self, id, g):
+        if not self.groupClear(id):
+            return False
+        keys = g.keys()
+        keys.remove('global')
+        keys.sort()
+        seq = 0
+        for k in keys:
+            if g[k]['config'] != 0:
+                try:
+                    cmd = "insert %s_cfg_grp (group_id, config_id, port_id, dispseq)" % self.table
+                    cmd += "values (%s, %s, %s, %s)"
+                    try:
+                        port = str(g[k]['port'])
+                    except:
+                        port = "0"
+                    if self.debug:
+                        print(cmd % (str(id), str(g[k]['config']), port, str(seq)))
+                    else:
+                        self.cur.execute(cmd, (id, g[k]['config'], port, seq))
+                    seq += 1
+                except _mysql_exceptions.Error as e:
+                    self.errorlist.append(e)
+                    return False
+        try:
+            cmd = "update %s_grp set active = %%s, name = %%s, dt_updated = now() where id = %%s" % self.table
+            if self.debug:
+                print(cmd % (g['global']['active'], id))
+            else:
+                self.cur.execute(cmd, (g['global']['active'], g['global']['name'], id))
+            return True
+        except _mysql_exceptions.Error as e:
+            self.errorlist.append(e)
+            return False
+
+    def countInstance(self, chg):
+        if len(chg) == 0:
             return 0
         cmd = "select count(*) from %s where " % self.table
         p = ""
-        for v in clist:
+        for v in chg:
             cmd += "%sconfig = %d" % (p, v)
             p = " or "
         try:
@@ -905,190 +830,83 @@ class pmgrobj(object):
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
 
-    def applyConfig(self, idx, cfg=None):
-        """
-        Apply the configuration of the specified object.
-
-        Parameters
-        ----------
-        idx : int / str
-            An object id or base PV name.
-
-        cfg : int
-            A configuration id, if idx is just a base PV name.
-
-        Returns
-        -------
-        Nothing.
-        """
-        vals = {}
-        if type(idx) == int:
-            vals.update(self.objs[idx])
-            vals.update(self.cfgs[vals['config']])
-        else:
-            vals['rec_base'] = idx
-            vals.update(self.cfgs[cfg])
-        base = vals['rec_base']
-        for s in self.setflds:
-            #
-            # Write zeros.
-            # 
-            for f in s:
-                if self.fldmap[f]['readonly'] or vals[f] == None:
-                    continue
-                if self.fldmap[f]['writezero']:
-                    try:
-                        z = self.fldmap[f]['enum'][0]
-                        haveenum = True
-                    except:
-                        z = 0
-                        haveenum = False
-                    try:
-                        utils.caput(base + self.fldmap[f]['pv'], z, enum=haveenum)
-                    except:
-                        pass
-            #
-            # Write values.
-            #
-            for f in s:
+    def getAutoCfg(self, d):
+        f = self.autoconfig
+        v = d[f]
+        cmd = "select max(seq) from %s_log where %s = %%s and owner = %%s and action != 'delete' group by id" % \
+              (self.table, f)
+        if self.debug:
+            print(cmd % (v, self.hutch))
+        try:
+            if self.cur.execute(cmd, (v, self.hutch)) != 1:
+                # Couldn't find it in our hutch, look in any!
+                cmd = "select max(seq) from %s_log where %s = %%s and action != 'delete' group by id" % \
+                      (self.table, f)
+                if self.debug:
+                    print(cmd % (v))
+                self.cur.execute(cmd, (v))
+            seq = list(self.cur.fetchone().values())[0]
+            cmd = "select * from %s_log where seq = %%s" % (self.table)
+            if self.debug:
+                print("debug?")
+                print(cmd % seq)
+            self.cur.execute(cmd, seq)
+            r = self.cur.fetchone()
+            try:
+                del r[f]
+            except:
+                pass
+            for f in self.unwanted:
                 try:
-                    if vals[f] == None or self.fldmap[f]['readonly']:
-                        continue
-                except:
-                    continue  # If we just passed in a base PV, we might not have every field!
-                try:
-                    z = self.fldmap[f]['enum'][0]
-                    haveenum = True
-                except:
-                    z = 0
-                    haveenum = False
-                try:
-                    utils.caput(base + self.fldmap[f]['pv'], vals[f], enum=haveenum)
+                    del r[f]
                 except:
                     pass
-
-    def applyAllConfigs(self):
-        """
-        Apply the current configuration to all objects in the database.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        Nothing.
-        """
-        for i in self.objs.keys():
-            self.applyConfig(i)
-
-    def diffConfig(self, idx, cfgidx=None):
-        """
-        Return the difference between the actual values of an object
-        and configured values.
-
-        Parameters
-        ----------
-        idx : int
-            An object id to find the differences for.
-
-        cfgidx : int
-            A configuration id to compare to.  If this is None, default
-            to the current configuration of the object.
-
-        Returns
-        -------
-        diff : dict
-            A dictionary mapping field names (str) to (actual, 
-            configuration) tuples for each difference.
-        """
-        vals = {}
-        vals.update(self.objs[idx])
-        if cfgidx is None:
-            cfgidx = vals['config']
-        vals.update(self.cfgs[cfgidx])
-        base = vals['rec_base']
-        d = {}
-        for s in self.setflds:
-            for f in s:
-                if vals[f] == None or self.fldmap[f]['readonly']:
-                    continue
-                n = base + self.fldmap[f]['pv']
-                try:
-                    z = self.fldmap[f]['enum'][0]
-                    haveenum = True
-                except:
-                    haveenum = False
-                v = utils.caget(n, enum=haveenum)
-                if type(v) == float:
-                    if v == 0.0:
-                        if abs(v - vals[f]) > 0.00000001:
-                            d[f] = (v, vals[f])
-                    else:
-                        if abs((v - vals[f])/v) > 0.00000001:
-                            d[f] = (v, vals[f])
-                else:
-                    if v != vals[f]:
-                        d[f] = (v, vals[f])
-        return d
-
-    def getActualConfig(self, idx):
-        """
-        Get the actual values of all of the configuration parameters of an object.
-
-        Parameters
-        ----------
-        idx : int
-            An object id.
-
-        Returns
-        -------
-        cdict : dict
-            A dictionary mapping field names (str) to values.
-        """
-        base = self.objs[idx]['rec_base']
-        d = {}
-        for f in self.cfgflds:
-            n = base + f['pv']
             try:
-                z = f['enum'][0]
-                haveenum = True
+                # See the comment in ObjModel.setValue.  This is just bizarreness.
+                r['cfgname'] = r['config']
+                del r['config']
             except:
-                haveenum = False
-            v = utils.caget(n, enum=haveenum)
-            d[f['fld']] = v
+                pass
+            return r
+        except _mysql_exceptions.Error as err:
+            print(err)
+            return {}
+
+    def getConfig(self, idx, loop=[]):
+        if idx == None or idx in loop:
+            return {}
+        d = {}
+        d.update(self.cfgs[idx])
+        haveval = {}
+        v = d['mutex']
+        if d['config'] != None:
+            lp = list(loop)
+            lp.append(idx)
+            vals = self.getConfig(d['config'], lp)   # Get the parent configuration
+            pmutex = vals['curmutex']
+            mutex = ""                               # Build the mutex from the set and inherited values.
+            for i in range(len(self.mutex_sets)):
+                if self.mutex_obj[i]:
+                    mutex += ' '
+                elif v[i] != ' ':
+                    mutex += v[i]
+                else:
+                    mutex += pmutex[i]
+            d['curmutex'] = mutex
+        else:
+            d['curmutex'] = v
+        for (k, v) in d.items():
+            if k[:3] != 'PV_' and k[:4] != 'FLD_':
+                continue
+            if v == None:
+                # This key might have a value because it is the unset element of a mutex set!
+                haveval[k] = chr(self.fldmap[k]['colorder']+0x40) in d['curmutex']
+            else:
+                haveval[k] = True
+            if not haveval[k]:
+                try:
+                    d[k] = vals[k]     # Try to get the parent value.
+                except:
+                    d[k] = None
+        d['_haveval'] = haveval
         return d
-
-    def matchConfigs(self, pattern, substr=True, ci=True):
-        """
-        Search for configuration names in the database.
-
-        Parameters
-        ----------
-        pattern : str
-            The pattern to search for.  "." matches any character, "*" matches any string.
-            These special characters can be quoted using "\".
-
-        substr : boolean
-            If True, the pattern should match a substring of the
-            configuration name.  Otherwise, the pattern must match the
-            entire configuration name.  (Defaults to True.)
-
-        ci : boolean
-            If True, the match is case insensitive, otherwise it is case
-            sensitive.  (Defaults to True.)
-
-        Returns
-        -------
-        clist : list
-            A list of configuration names matching the pattern.
-        """
-        p = pattern.replace("\.", "\DOT").replace("\*", "\SPLAT")
-        p = p.replace("_","\_").replace("%","\%")
-        p = p.replace("*", "%").replace(".", "_")
-        p = p.replace("\DOT", ".").replace("\SPLAT", "*")
-        if substr:
-            p = "%"+p+"%"
-        self.cur.execute("select name from %s_cfg where name %slike '%s'" %
-                         (self.table, "collate latin1_general_ci " if ci else "", p))
-        return [d['name'] for d in self.cur.fetchall()]

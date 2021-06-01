@@ -68,14 +68,7 @@ def getObjVals(pmgr, PV, rename=True):
     return objDict
 
 def newObject(pmgr, objDict,typeStr=None, parent=None, owner=None):
-
-    if "MFI" in objDict["FLD_PN"]:
-        category = "Manual"
-    elif "MDI" in objDict["FLD_PN"]:
-        category = "Auto"
-    else:
-        category = "Protected"
-
+    category = "Manual"
     objectFields = listObjFields(pmgr)
 
     # Pmgr doesn't handle missing fields well
@@ -106,16 +99,9 @@ def newObject(pmgr, objDict,typeStr=None, parent=None, owner=None):
 def objInsert(pmgr, objDict):
     """ Adds partial configuration dict obj to pmgr as a configuration. """
     if "mutex" not in objDict:
-        objDict["mutex"] = "XY  "
+        objDict["mutex"] = "  ab"    # MCB - NO NO NO!!!!  This is better than XY, but...
     if "rec_base" not in objDict:
         objDict["mutex"] = "Unknown PV"
-    objDict["_haveval"] = {} # We need this to appease configInsert
-    for field in objDict.keys():
-        if objDict[field] is None:
-            objDict["_haveval"][field] = False
-        else:
-            objDict["_haveval"][field] = True
-    objDict["_val"] = objDict["_haveval"] # Workaround for typo in pmgrobj.py
     result = None
 
     pmgr.updateTables()
@@ -417,12 +403,7 @@ def getImportFieldDict(cfgPath):
     if "FLD_DESC" not in cfgDict.keys():
         cfgDict["FLD_DESC"] = None
             
-    if "MFI" in cfgDict["FLD_PN"]:
-        cfgDict["category"] = "Manual"
-    elif "MDI" in cfgDict["FLD_PN"]:
-        cfgDict["category"] = "Auto"
-    else:
-        cfgDict["category"] = "Protected"
+    cfgDict["category"] = "Manual"
 
     return cfgDict
 
@@ -806,17 +787,6 @@ def hutchCfgNames(pmgr, hutch):
 def allCfgNames(pmgr):
     return setOfAllCfgVal(pmgr, "name")
 
-def getAuto(pmgr, PV, reInit):
-    go = checkCanAuto(pmgr, PV)
-    if not go:
-        return "Object is not auto-configurable."
-    if reInit:
-        fixSN(pmgr, PV)
-    d = autoCfg(pmgr, PV)
-    if not d:
-        return "No autoconfig found."
-    return d
-
 def setDesc(pmgr, PV, desc):
     objID = objFromPV(pmgr, PV)
     obj = pmgr.objs[objID]
@@ -848,14 +818,7 @@ def nextType(pmgr, typeStr):
 def cfgInsert(pmgr, cfg):
     """ Adds partial configuration dict cfg to pmgr as a configuration. """
     if "mutex" not in cfg:
-        cfg["mutex"] = "XY  "
-    cfg["_haveval"] = {} # We need this to appease configInsert
-    for field in cfg.keys():
-        if cfg[field] is None:
-            cfg["_haveval"][field] = False
-        else:
-            cfg["_haveval"][field] = True
-    cfg["_val"] = cfg["_haveval"] # Workaround for typo in pmgrobj.py
+        cfg["mutex"] = "XY  "    ### MCB - NONONONONO!!!!
     result = None
     result = transaction(pmgr, "configInsert", cfg)
     return result
@@ -955,24 +918,6 @@ def fixSN(pmgr, PV):
     SNPV.disconnect()
     d["FLD_SN"] = SN
     transaction(pmgr, "objectChange", objID, d)
-    
-def autoCfg(pmgr, PV):
-    objID = objFromPV(pmgr, PV)
-    pmgr.updateTables()
-    objDict = pmgr.objs[objID]
-    auto = transaction(pmgr, "getAutoCfg", objDict)
-    if auto:
-        cfgID = auto["cfgname"]
-    else:
-        return {}
-    return cfgVals(pmgr, cfgID)
-
-def checkCanAuto(pmgr, PV):
-    objID = objFromPV(pmgr, PV)
-    pmgr.updateTables()
-    obj = pmgr.objs[objID]
-    mode = obj["category"]
-    return mode == "Auto"
 
 def findValidCfgField(pmgr, field):
     flds = listCfgFields(pmgr)
@@ -997,9 +942,9 @@ def transaction_bool(pmgr, method, *args):
 
 def cfgVals(pmgr, idx):
     pmgr.updateTables()
-    d = pmgr.getConfig(idx)
+    d = {}
+    d.update(pmgr.cfgs[idx])
     del d["dt_updated"]
-    del d["_haveval"]
     return d
 
 def listFieldsWith(pmgr, property, value):

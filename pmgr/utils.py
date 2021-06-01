@@ -21,13 +21,97 @@ from . import param
 #           action(table, index) to perform the action.
 #
 class MyContextMenu(QtWidgets.QMenu):
+    """
+    Create a conditional context menu for a TableView or HeaderView
+
+    Constructor Parameters
+    ----------------------
+    isAct(table, index) : boolean
+        Determine if this menu should be active at the current location.
+
+        Parameters
+        ----------
+        table : TableView / HeaderView
+            The current view being pointed at.
+
+        index : QModelIndex / int
+            The current location in the view.
+
+        Returns
+        -------
+        active : boolean
+            Return True if the menu should be displayed.
+    """
     def __init__(self, isAct=None):
         QtWidgets.QMenu.__init__(self)
         self.isAct = isAct
         self.actions = []
         self.havecond = False
 
+    def addAction(self, name, action, cond=None):
+        """
+        Add a menu action to the menu.
+
+        Parameters
+        ----------
+        name : str
+            The name of the action to be added to the menu.
+
+        action : function
+            The function to be called when the menu item is selected.
+
+            Parameters
+            ----------
+            table : TableView / HeaderView
+                The view being pointed at.
+
+            index : QModelIndex / int
+                The location in the view being pointed at.
+
+            Returns
+            -------
+            Nothing.
+
+        cond : function 
+            A function that makes this menu item conditional.
+
+            Parameters
+            ----------
+            table : TableView / HeaderView
+                The view being pointed at.
+
+            index : QModelIndex / int
+                The location in the view being pointed at.
+
+            Returns
+            -------
+            active : boolean
+                True if this menu item should be active.
+        """
+        if cond != None:
+            self.havecond = True
+        self.actions.append((name, action, cond))
+        QtWidgets.QMenu.addAction(self, name)
+
     def isActive(self, table, index):
+        """
+        Determine if this menu should be active, and if so, rebuild it
+        if necessary.
+
+        Parameters
+        ----------
+        table : TableView / HeaderView
+            The current view being pointed at.
+
+        index : QModelIndex / int
+            The current location in the view.
+
+        Returns
+        -------
+        active : boolean
+            Return True if this menu should be displayed, rebuilding it
+            if necessary.
+        """
         if self.isAct == None or self.isAct(table, index):
             if self.havecond:
                 self.clear()
@@ -38,13 +122,24 @@ class MyContextMenu(QtWidgets.QMenu):
         else:
             return False
 
-    def addAction(self, name, action, cond=None):
-        if cond != None:
-            self.havecond = True
-        self.actions.append((name, action, cond))
-        QtWidgets.QMenu.addAction(self, name)
-
     def doMenu(self, table, pos, index):
+        """
+        Display the menu at the specified position.  If an action is 
+        selected, execute it.
+
+        table : TableView / HeaderView
+            The current view being pointed at.
+
+        pos : QPoint
+            The position where a context menu was requested.
+
+        index : QModelIndex / int
+            The current location in the view.
+
+        Returns
+        -------
+        Nothing
+        """
         if type(index) == int:
             gpos = table.horizontalHeader().viewport().mapToGlobal(pos)
         else:
@@ -80,10 +175,15 @@ def caput(pvname,value,timeout=1.0,**kw):
     except pyca.caexc as e:
         print('channel access exception: %s' %(e))
 
-def caget(pvname,timeout=1.0):
+def caget(pvname,timeout=1.0,**kw):
     try:
         pv = Pv(pvname)
         pv.connect(timeout)
+        try:
+            if kw['enum']:
+                pv.set_string_enum(True)
+        except:
+            pass
         pv.get(ctrl=False, timeout=timeout)
         v = pv.value
         pv.disconnect()
@@ -176,11 +276,10 @@ def fixName(l, idx, name):
             pass
 
 #
-# Determine if the current user has the authority to modify a record
-# with the given owner (hutch) and security string.
+# Determine if the current user has the authority to modify a record.
 #
-def permission(owner, security):
-    return owner == param.params.hutch and param.params.user in param.params.auth_users
+def permission():
+    return param.params.user in param.params.auth_users
 
 #
 # Check if the user/password pair is valid.  This is actually not terribly secure (the KDC can

@@ -26,12 +26,13 @@ requirements:
     - pykerberos >=1.1.14
     - mysqlclient =1.3.12|>=2.0.3
     - docopt
+    - pcdsutils
 
 test:
   imports:
     - pmgr
   commands:
-    - pmgr --help
+    - pmgrLauncher.sh --help
     - pmgrUtils.sh --help
 
 about:

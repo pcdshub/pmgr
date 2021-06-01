@@ -8,10 +8,10 @@
 unset PYTHONPATH
 unset LD_LIBRARY_PATH
 source /reg/g/pcds/pyps/conda/py36/etc/profile.d/conda.sh
-VER="pcds-1.0.0"
+VER="pcds-4.0.1"
 conda activate "${VER}"
-mkdir --parents $1/lib/python3.6/site-packages/
-export PYTHONPATH=$1/lib/python3.6/site-packages/
+mkdir --parents $1/lib/python3.8/site-packages/
+export PYTHONPATH=$1/lib/python3.8/site-packages/
 python setup.py install --prefix=$1
 cat >$1/pmgr <<END
 #!/bin/bash
@@ -19,8 +19,7 @@ unset PYTHONPATH
 unset LD_LIBRARY_PATH
 source /reg/g/pcds/pyps/conda/py36/etc/profile.d/conda.sh
 conda activate "${VER}"
-export PYTHONPATH=$1/lib/python3.6/site-packages/
-$1/bin/pmgr \$*
+export PYTHONPATH=$1/lib/python3.8/site-packages/
+$1/bin/pmgrLauncher.sh \$*
 END
 chmod guo+x $1/pmgr
-
