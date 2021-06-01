@@ -20,6 +20,6 @@ unset LD_LIBRARY_PATH
 source /reg/g/pcds/pyps/conda/py36/etc/profile.d/conda.sh
 conda activate "${VER}"
 export PYTHONPATH=$1/lib/python3.8/site-packages/
-$1/bin/pmgr \$*
+$1/bin/pmgrLauncher.sh \$*
 END
 chmod guo+x $1/pmgr
