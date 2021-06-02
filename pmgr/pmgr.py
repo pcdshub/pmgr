@@ -202,8 +202,8 @@ def main():
 
     param.params.setHutch(options.hutch.lower())
     param.params.setTable(options.type)
-    param.params.debug = False if options.debug == None else True
-    param.params.applyOK = False if options.applyenable == None else True
+    param.params.debug = False if options.debug is None else True
+    param.params.applyOK = False if options.applyenable is None else True
     param.params.prod = True if options.dev is None else False
     gui = GraphicUserInterface()
     param.params.setTable(options.type)  # Sigh, do this again to fix dropdown.
