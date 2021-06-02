@@ -1,5 +1,6 @@
 import threading
 import time
+import sys
 
 from PyQt5 import QtCore
 
@@ -41,7 +42,9 @@ class db(QtCore.QObject):
         super(db, self).__init__()
         self.nameedits = {}
         self.errordialog = dialogs.errordialog()
-        param.params.pobj = pmgrobj(param.params.table, param.params.hutch, param.params.debug)
+        param.params.pobj = pmgrobj(param.params.table, param.params.hutch, 
+                                    debug=param.params.debug, 
+                                    prod=param.params.prod)
         self.poll = None
         self.readTables()
         self.readsig.connect(self.readTables)

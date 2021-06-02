@@ -206,7 +206,7 @@ class pmgrobj(object):
     unwanted = ['seq', 'owner', 'id', 'category', 'dt_created',
                 'date', 'dt_updated', 'name', 'action', 'rec_base', 'comment']
 
-    def __init__(self, table, hutch, debug=False):
+    def __init__(self, table, hutch, debug=False, prod=True):
         self.table = table
         self.hutch = hutch
         self.debug = debug
@@ -217,7 +217,7 @@ class pmgrobj(object):
         self.errorlist = []
         self.autoconfig = None
         self.in_trans = False
-        if False:
+        if prod:
             print("Using production server.")
             self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols')
         else:
