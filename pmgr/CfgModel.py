@@ -680,7 +680,7 @@ class CfgModel(QtGui.QStandardItemModel):
                     param.params.db.addCfgmap(idx, newid)
             else:
                 ee = {}
-                for fld in ['name', 'config', 'mutex', 'owner']:
+                for fld in ['name', 'config', 'mutex']:
                     try:
                         ee[fld] = e[fld]
                     except:
@@ -853,8 +853,7 @@ class CfgModel(QtGui.QStandardItemModel):
             col = index.column()
             idx = self.path[row]
             try:
-                if (col != self.cfgcol and col != self.statcol and col != self.owncol and
-                    (idx < 0 or param.params.pobj.cfgs[idx]['owner'] == param.params.hutch)):
+                if (col != self.cfgcol and col != self.statcol):
                     flags = flags | QtCore.Qt.ItemIsEditable
             except:
                 pass # We seem to get here too fast sometimes after a delete, so just forget it.
