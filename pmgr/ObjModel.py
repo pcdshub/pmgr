@@ -435,7 +435,11 @@ class ObjModel(QtGui.QStandardItemModel):
             return self.edits[idx][f]
         except:
             try:
-                return self.getObj(idx)[f]
+                x = self.getObj(idx)[f]
+                if x is None:
+                    return ""
+                else:
+                    return x
             except:
                 return ""
 
