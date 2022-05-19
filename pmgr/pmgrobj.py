@@ -128,6 +128,8 @@ def createAlias(name):
 #           The keys are a few boilerplate keys (id, config, etc.)
 #           and the configuration fields.  Note that due to inheritance
 #           and mutual exclusion, many of these fields could be "None".
+#     cfgmap
+#         - A configuration name to ID dictionary mapping.
 #     objs
 #         - An object ID to object dictionary mapping.  The keys are a 
 #           few boilerplate keys (id, config, etc.) and the object-only
@@ -469,10 +471,13 @@ class pmgrobj(object):
             if cfgs == []:
                 mask &= ~self.DB_CONFIG
             else:
-                map = {}
+                cid = {}
+                cname = {}
                 for d in cfgs:
-                    map[d['id']] = d
-                self.cfgs = map
+                    cid[d['id']] = d
+                    cname[d['name']] = d['id']
+                self.cfgs = cid
+                self.cfgmap = cname
         if (mask & self.DB_OBJECT) != 0:
             objs = self.readDB(self.DB_OBJECT)
             if objs == []:
@@ -1059,7 +1064,7 @@ class pmgrobj(object):
             d[f['fld']] = v
         return d
 
-    def matchConfigs(self, pattern, substr=True, ci=True):
+    def matchConfigs(self, pattern, substr=True, ci=True, parent=None):
         """
         Search for configuration names in the database.
 
@@ -1078,6 +1083,10 @@ class pmgrobj(object):
             If True, the match is case insensitive, otherwise it is case
             sensitive.  (Defaults to True.)
 
+        parent : str
+            The name of a parent configuration.  Only match children of
+            this configuration.
+
         Returns
         -------
         clist : list
@@ -1089,6 +1098,13 @@ class pmgrobj(object):
         p = p.replace("\DOT", ".").replace("\SPLAT", "*")
         if substr:
             p = "%"+p+"%"
-        self.cur.execute("select name from %s_cfg where name %slike '%s'" %
-                         (self.table, "collate latin1_general_ci " if ci else "", p))
+        if parent is not None:
+            pid = self.cfgmap[parent]
+            self.cur.execute("select name from %s_cfg where name %slike '%s' and config = %d" %
+                             (self.table, "collate latin1_general_ci " if ci else "",
+                              p, pid))
+        else:
+            self.cur.execute("select name from %s_cfg where name %slike '%s'" %
+                             (self.table, "collate latin1_general_ci " if ci else "",
+                              p))
         return [d['name'] for d in self.cur.fetchall()]
