@@ -5,7 +5,7 @@
 DROP TABLE IF EXISTS `ims_motor_cfg`;
 CREATE TABLE `ims_motor_cfg` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(15) NOT NULL UNIQUE,
+  `name` varchar(45) NOT NULL UNIQUE,
   `config` int(11),
   `dt_updated` datetime NOT NULL,
   `mutex` varchar(16),

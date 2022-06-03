@@ -10,7 +10,7 @@ CREATE TABLE `ims_motor_cfg_log` (
   `seq` int(31) NOT NULL AUTO_INCREMENT,
   `action` varchar(10) NOT NULL,
   `id` int(11) NOT NULL,
-  `name` varchar(15),
+  `name` varchar(45),
   `config` int(11),
   `dt_updated` datetime,
   `mutex` varchar(16),

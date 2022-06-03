@@ -273,7 +273,7 @@ class pmgrAPI(object):
                 raise Exception("DB Errors", el)
             self.set_config(pv, cfgname)
 
-    def match_config(self, pattern, substr=True, ci=True):
+    def match_config(self, pattern, substr=True, ci=True, parent=None):
         """
         Find configurations that match a given pattern.
 
@@ -291,6 +291,10 @@ class pmgrAPI(object):
             If True, do a case insensitive match, otherwise be case
             sensitive.  (Default to True.)
 
+        parent : str
+            The name of a parent configuration.  Only match children of
+            this configuration.
+
         Returns
         -------
         clist : list
@@ -299,5 +303,5 @@ class pmgrAPI(object):
         Throws an exception if there is a database problem.
         """
         self.update_db()
-        return self.pm.matchConfigs(pattern, substr, ci)
+        return self.pm.matchConfigs(pattern, substr, ci, parent)
 
