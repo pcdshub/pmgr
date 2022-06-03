@@ -20,7 +20,7 @@ requirements:
 
   run:
     - python >=3.6
-    - pyqt >=5
+    - pyqt >=5,<5.15
     - pyca =3.2.0
     - epicscorelibs =7.0.6.99.2.0
     - pykerberos >=1.1.14
