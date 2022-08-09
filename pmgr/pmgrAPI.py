@@ -305,3 +305,19 @@ class pmgrAPI(object):
         self.update_db()
         return self.pm.matchConfigs(pattern, substr, ci, parent)
 
+    def add_hutch(self, newhutch):
+        """
+        Add a new hutch.
+
+        Parameters
+        ----------
+        hutch : str
+            The name of the new hutch.  Case doesn't matter: the main
+            configuration will be all uppercase, and the new owner will
+            be all lowercase.
+        """
+        self.pm.start_transaction()
+        self.pm.hutchInsert(newhutch)
+        el = self.pm.end_transaction()
+        if el != []:
+            raise Exception("DB Errors", el)
