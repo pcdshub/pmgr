@@ -114,6 +114,23 @@ class pmgrAPI(object):
         d = self._search(self.pm.objs, 'rec_base', pv)
         return self.pm.cfgs[d['config']]['name']
 
+    def get_config_values(self, cfgname):
+        """
+        Return the values in a configuration.
+
+        Parameters
+        ----------
+        config : str
+            The name of the configuration.
+
+        Returns
+        -------
+        A dictionary mapping field names to configured values.
+        """
+        d = self._search(self.pm.cfgs, 'name', cfgname)
+        d = d.copy() # Make a copy, since we don't know what the user is going to do with this!
+        return d
+
     def set_config(self, pv, cfgname, o=None):
         """
         Set the configuration for a given PV base.
