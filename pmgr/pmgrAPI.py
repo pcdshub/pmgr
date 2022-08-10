@@ -114,6 +114,23 @@ class pmgrAPI(object):
         d = self._search(self.pm.objs, 'rec_base', pv)
         return self.pm.cfgs[d['config']]['name']
 
+    def get_config_values(self, cfgname):
+        """
+        Return the values in a configuration.
+
+        Parameters
+        ----------
+        config : str
+            The name of the configuration.
+
+        Returns
+        -------
+        A dictionary mapping field names to configured values.
+        """
+        d = self._search(self.pm.cfgs, 'name', cfgname)
+        d = d.copy() # Make a copy, since we don't know what the user is going to do with this!
+        return d
+
     def set_config(self, pv, cfgname, o=None):
         """
         Set the configuration for a given PV base.
@@ -305,3 +322,19 @@ class pmgrAPI(object):
         self.update_db()
         return self.pm.matchConfigs(pattern, substr, ci, parent)
 
+    def add_hutch(self, newhutch):
+        """
+        Add a new hutch.
+
+        Parameters
+        ----------
+        hutch : str
+            The name of the new hutch.  Case doesn't matter: the main
+            configuration will be all uppercase, and the new owner will
+            be all lowercase.
+        """
+        self.pm.start_transaction()
+        self.pm.hutchInsert(newhutch)
+        el = self.pm.end_transaction()
+        if el != []:
+            raise Exception("DB Errors", el)

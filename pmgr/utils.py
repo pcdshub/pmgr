@@ -285,9 +285,11 @@ def permission():
 # Check if the user/password pair is valid.  This is actually not terribly secure (the KDC can
 # be spoofed), but it's really close enough for our purposes.
 #
+# The verify has to be False... otherwise, this is a bit too secure for us!
+#
 def authenticate_user(user, password):
     try:
-        if kerberos.checkPassword(user, password, "krbtgt/SLAC.STANFORD.EDU", "SLAC.STANFORD.EDU"):
+        if kerberos.checkPassword(user, password, "krbtgt/SLAC.STANFORD.EDU", "SLAC.STANFORD.EDU", False):
             return True
     except:
         pass

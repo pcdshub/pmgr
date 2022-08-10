@@ -1108,3 +1108,22 @@ class pmgrobj(object):
                              (self.table, "collate latin1_general_ci " if ci else "",
                               p))
         return [d['name'] for d in self.cur.fetchall()]
+
+    def hutchInsert(self, hutchname):
+        """
+        Add a new hutch.
+        
+        Parameters
+        ----------
+        hutchname : str
+            The new hutchname.  The owner will be all lowercase, the
+            base config will be all uppercase.
+        """
+        newowner  = hutchname.lower()
+        newconfig = hutchname.upper()
+        d = self.cfgs[0].copy()
+        d['name'] = newconfig
+        d['config'] = 0
+        id = self.configInsert(d)
+        if id is not None:
+            self.cur.execute('insert %s_update (tbl_name, dt_updated) values ("%s", now());' % (self.table, newowner))
