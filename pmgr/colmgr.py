@@ -13,22 +13,25 @@ from . import colchoose_ui, param, utils
 # in our QSettings.  The QSettings parameters are in param.params.settings.
 #
 
-def addColumnManagerMenu(table, extra = [], hideOK=True, cfgOK=True):
+
+def addColumnManagerMenu(table, extra=[], hideOK=True, cfgOK=True):
     menu = utils.MyContextMenu()
     if hideOK:
-        menu.addAction("Hide column",        hidecol)
-        menu.addAction("Reset columns",      resetcol)
+        menu.addAction("Hide column", hidecol)
+        menu.addAction("Reset columns", resetcol)
         menu.addAction("Run column chooser", choosecol)
-    menu.addAction("Autosize columns",   sizecol)
+    menu.addAction("Autosize columns", sizecol)
     if cfgOK:
         menu.addAction("Save column config", savecol)
-        menu.addAction("Use column config",  restorecol)
-    for (t, f) in extra:
+        menu.addAction("Use column config", restorecol)
+    for t, f in extra:
         menu.addAction(t, f)
     table.addHeaderContextMenu(menu)
 
+
 def hidecol(table, index):
     table.horizontalHeader().hideSection(index)
+
 
 def resetcol(table, index):
     for i in range(table.model().columnCount()):
@@ -39,8 +42,10 @@ def resetcol(table, index):
         if h.visualIndex(i) != i:
             h.moveSection(h.visualIndex(i), i)
 
+
 def sizecol(table, index):
     table.resizeColumnsToContents()
+
 
 def choosecol(table, index):
     m = table.model()
@@ -59,10 +64,10 @@ def choosecol(table, index):
             cb.setText(m.horizontalHeaderItem(i).text())
             c.append(cb)
             d.ui.gridLayout.addWidget(cb, (i - m.mutable) / 5, (i - m.mutable) % 5)
-        d.ui.allButton.clicked.connect(lambda : doAllButton(d))
-        d.ui.noneButton.clicked.connect(lambda : doNoneButton(d))
+        d.ui.allButton.clicked.connect(lambda: doAllButton(d))
+        d.ui.noneButton.clicked.connect(lambda: doNoneButton(d))
         d.cols = c
-        d.resize(0,0)
+        d.resize(0, 0)
         m.colchoosedialog = d
     c = d.cols
     for i in range(m.mutable, m.columnCount()):
@@ -74,15 +79,18 @@ def choosecol(table, index):
             else:
                 h.hideSection(i)
 
+
 def doAllButton(d):
     for c in d.cols:
         if c != None:
             c.setChecked(True)
 
+
 def doNoneButton(d):
     for c in d.cols:
         if c != None:
             c.setChecked(False)
+
 
 def savecol(table, index):
     d = param.params.colsavedialog
@@ -96,10 +104,11 @@ def savecol(table, index):
         settings.beginGroup(table.colmgr)
         settings.setValue(cfg, table.saveHeaderState())
 
+
 def restorecol(table, index):
     settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
     settings.beginGroup(table.colmgr)
-    d = param.params.colusedialog;
+    d = param.params.colusedialog
     d.ui.comboBox.clear()
     for x in list(settings.childKeys()):
         d.ui.comboBox.addItem(x)

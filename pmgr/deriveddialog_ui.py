@@ -17,7 +17,9 @@ class Ui_deriveddialog:
         self.label.setObjectName("label")
         self.verticalLayout.addWidget(self.label)
         self.groupBox = QtWidgets.QGroupBox(deriveddialog)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.groupBox.sizePolicy().hasHeightForWidth())
@@ -39,6 +41,12 @@ class Ui_deriveddialog:
 
     def retranslateUi(self, deriveddialog):
         _translate = QtCore.QCoreApplication.translate
-        deriveddialog.setWindowTitle(_translate("deriveddialog", "Derived Quantity Selection"))
-        self.label.setText(_translate("deriveddialog", "Please select which field is a derived quantity:"))
+        deriveddialog.setWindowTitle(
+            _translate("deriveddialog", "Derived Quantity Selection")
+        )
+        self.label.setText(
+            _translate(
+                "deriveddialog", "Please select which field is a derived quantity:"
+            )
+        )
         self.groupBox.setTitle(_translate("deriveddialog", "Fields"))

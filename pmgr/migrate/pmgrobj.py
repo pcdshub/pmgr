@@ -14,16 +14,18 @@ except ImportError:
 #
 ####################
 
+
 # Map MySQL types to python types in a quick and dirty manner.
 def m2pType(name):
-    if name[:7] == 'varchar' or name[:8] == 'datetime':
+    if name[:7] == "varchar" or name[:8] == "datetime":
         return str
-    if name[:3] == 'int' or name[:8] == 'smallint' or name[:7] == 'tinyint':
+    if name[:3] == "int" or name[:8] == "smallint" or name[:7] == "tinyint":
         return int
-    if name[:6] == 'double':
+    if name[:6] == "double":
         return float
     print("Unknown type %s" % name)
     return None
+
 
 # Map MySQL field names to PV extensions.
 def fixName(name):
@@ -31,8 +33,9 @@ def fixName(name):
     if name[:3] == "PV:":
         return name[2:]
     else:
-        c = name.rindex(':')
-        return name[3:c] + '.' + name[c+1:]
+        c = name.rindex(":")
+        return name[3:c] + "." + name[c + 1 :]
+
 
 # Map MySQL field names to the descriptive part of the name.
 def createAlias(name):
@@ -43,6 +46,7 @@ def createAlias(name):
         return name[4:]
     else:
         return name
+
 
 ####################
 #
@@ -188,22 +192,34 @@ def createAlias(name):
 #     applyAllConfigs()
 #         - Apply the current configuration to all objects.
 
+
 class pmgrobj:
     DB_CONFIG = 1
     DB_OBJECT = 2
-    DB_GROUP  = 4
+    DB_GROUP = 4
     DB_CFGGRP = 8
-    DB_ALL    = 7
+    DB_ALL = 7
 
-    ORDER_MASK    = 0x0003ff
+    ORDER_MASK = 0x0003FF
     SETMUTEX_MASK = 0x000200
-    MUST_WRITE    = 0x000400
-    WRITE_ZERO    = 0x000800
-    AUTO_CONFIG   = 0x001000
-    READ_ONLY     = 0x002000
+    MUST_WRITE = 0x000400
+    WRITE_ZERO = 0x000800
+    AUTO_CONFIG = 0x001000
+    READ_ONLY = 0x002000
 
-    unwanted = ['seq', 'owner', 'id', 'category', 'dt_created',
-                'date', 'dt_updated', 'name', 'action', 'rec_base', 'comment']
+    unwanted = [
+        "seq",
+        "owner",
+        "id",
+        "category",
+        "dt_created",
+        "date",
+        "dt_updated",
+        "name",
+        "action",
+        "rec_base",
+        "comment",
+    ]
 
     def __init__(self, table, hutch, debug=False, prod=True):
         self.table = table
@@ -218,30 +234,36 @@ class pmgrobj:
         self.in_trans = False
         if prod:
             print("Using production server.")
-            self.con = mdb.connect('psdb', 'pscontrols', 'pcds', 'pscontrols')
+            self.con = mdb.connect("psdb", "pscontrols", "pcds", "pscontrols")
         else:
             print("Using development server.")
-            self.con = mdb.connect('psdbdev01', 'mctest', 'mctest', 'pscontrols')
+            self.con = mdb.connect("psdbdev01", "mctest", "mctest", "pscontrols")
         self.con.autocommit(False)
         self.cur = self.con.cursor(mdb.cursors.DictCursor)
         self.cur.execute("call init_pcds()")
         self.readFormat()
         self.dbgid = 42
-        self.lastcfg = datetime.datetime(1900,1,1,0,0,1)
-        self.lastobj = datetime.datetime(1900,1,1,0,0,1)
-        self.lastgrp = datetime.datetime(1900,1,1,0,0,1)
+        self.lastcfg = datetime.datetime(1900, 1, 1, 0, 0, 1)
+        self.lastobj = datetime.datetime(1900, 1, 1, 0, 0, 1)
+        self.lastgrp = datetime.datetime(1900, 1, 1, 0, 0, 1)
         self.hutchlist = self.getHutchList()
         self.checkForUpdate()
         self.updateTables()
 
     def readFormat(self):
         self.cur.execute("describe %s" % self.table)
-        locfld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
-        locfld = locfld[10:]   # Skip the standard fields!
+        locfld = [
+            (d["Field"], m2pType(d["Type"]), d["Null"], d["Key"])
+            for d in self.cur.fetchall()
+        ]
+        locfld = locfld[10:]  # Skip the standard fields!
 
         self.cur.execute("describe %s_cfg" % self.table)
-        fld = [(d['Field'], m2pType(d['Type']), d['Null'], d['Key']) for d in self.cur.fetchall()]
-        fld = fld[7:]         # Skip the standard fields!
+        fld = [
+            (d["Field"], m2pType(d["Type"]), d["Null"], d["Key"])
+            for d in self.cur.fetchall()
+        ]
+        fld = fld[7:]  # Skip the standard fields!
 
         self.cur.execute("select * from %s_name_map" % self.table)
         result = self.cur.fetchall()
@@ -258,34 +280,34 @@ class pmgrobj:
         mutex_flds = []
         for i in range(16):
             mutex_sets.append([])
-        for (f, t, nl, k) in locfld:
+        for f, t, nl, k in locfld:
             alias[f] = createAlias(f)
             colorder[f] = 1000
             setorder[f] = 0
             mutex[f] = 0
-            tooltip[f] = ''
-            nullok[f] = ((nl == 'YES') or (t != str))
+            tooltip[f] = ""
+            nullok[f] = (nl == "YES") or (t != str)
             unique[f] = k == "UNI"
-        for (f, t, nl, k) in fld:
+        for f, t, nl, k in fld:
             alias[f] = createAlias(f)
             colorder[f] = 1000
             setorder[f] = 0
             mutex[f] = 0
-            tooltip[f] = ''
-            nullok[f] = ((nl == 'YES') or (t != str))
+            tooltip[f] = ""
+            nullok[f] = (nl == "YES") or (t != str)
             unique[f] = k == "UNI"
 
         for d in result:
-            f = d['db_field_name']
-            if d['alias'] != "":
-                alias[f] = d['alias']
-            colorder[f] = d['col_order']
-            setorder[f] = d['set_order']
-            tooltip[f] = d['tooltip']
-            v = d['enum']
+            f = d["db_field_name"]
+            if d["alias"] != "":
+                alias[f] = d["alias"]
+            colorder[f] = d["col_order"]
+            setorder[f] = d["set_order"]
+            tooltip[f] = d["tooltip"]
+            v = d["enum"]
             if v != "":
-                enum[f] = v.split('|')
-            v = d['mutex_mask']
+                enum[f] = v.split("|")
+            v = d["mutex_mask"]
             if v != 0:
                 for i in range(16):
                     if v & (1 << i) != 0:
@@ -297,9 +319,9 @@ class pmgrobj:
         self.mutex_sets = [l for l in mutex_sets if l != []]
         self.mutex_flds = mutex_flds
         for d in result:
-            f = d['db_field_name']
+            f = d["db_field_name"]
             mutex[f] = []
-            v = d['mutex_mask']
+            v = d["mutex_mask"]
             if v != 0:
                 for i in range(16):
                     if v & (1 << i) != 0:
@@ -308,61 +330,83 @@ class pmgrobj:
         self.objflds = []
         setflds = {}
         setset = set()
-        for (f, t, nl, k) in locfld:
+        for f, t, nl, k in locfld:
             n = fixName(f)
             so = setorder[f] & self.ORDER_MASK
             setset.add(so)
-            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
-                 'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
-                 'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
-                 'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
-                 'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
-                 'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
-                 'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': True}
+            d = {
+                "fld": f,
+                "pv": n,
+                "alias": alias[f],
+                "type": t,
+                "nullok": nullok[f],
+                "colorder": colorder[f],
+                "setorder": so,
+                "unique": unique[f],
+                "mustwrite": (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
+                "writezero": (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
+                "setmutex": (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
+                "readonly": (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
+                "tooltip": tooltip[f],
+                "mutex": mutex[f],
+                "obj": True,
+            }
             try:
                 setflds[so].append(f)
             except:
                 setflds[so] = [f]
             try:
-                d['enum'] = enum[f]
+                d["enum"] = enum[f]
             except:
                 pass
             self.objflds.append(d)
-        for (f, t, nl, k) in fld:
+        for f, t, nl, k in fld:
             n = fixName(f)
             so = setorder[f] & self.ORDER_MASK
             setset.add(so)
-            d = {'fld': f, 'pv': n, 'alias' : alias[f], 'type': t, 'nullok': nullok[f],
-                 'colorder': colorder[f], 'setorder': so, 'unique': unique[f],
-                 'mustwrite': (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
-                 'writezero': (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
-                 'setmutex': (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
-                 'readonly': (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
-                 'tooltip': tooltip[f], 'mutex' : mutex[f], 'obj': False}
+            d = {
+                "fld": f,
+                "pv": n,
+                "alias": alias[f],
+                "type": t,
+                "nullok": nullok[f],
+                "colorder": colorder[f],
+                "setorder": so,
+                "unique": unique[f],
+                "mustwrite": (setorder[f] & self.MUST_WRITE) == self.MUST_WRITE,
+                "writezero": (setorder[f] & self.WRITE_ZERO) == self.WRITE_ZERO,
+                "setmutex": (setorder[f] & self.SETMUTEX_MASK) == self.SETMUTEX_MASK,
+                "readonly": (setorder[f] & self.READ_ONLY) == self.READ_ONLY,
+                "tooltip": tooltip[f],
+                "mutex": mutex[f],
+                "obj": False,
+            }
             try:
                 setflds[so].append(f)
             except:
                 setflds[so] = [f]
             try:
-                d['enum'] = enum[f]
+                d["enum"] = enum[f]
             except:
                 pass
             self.objflds.append(d)
-        self.objflds.sort(key=lambda d: d['colorder'])   # New regime: col_order is manditory and unique!
+        self.objflds.sort(
+            key=lambda d: d["colorder"]
+        )  # New regime: col_order is manditory and unique!
         self.fldmap = {}
         for i in range(len(self.objflds)):
             d = self.objflds[i]
-            d['objidx'] = i
-            self.fldmap[d['fld']] = d
-        self.cfgflds = [d for d in self.objflds if d['obj'] == False]
+            d["objidx"] = i
+            self.fldmap[d["fld"]] = d
+        self.cfgflds = [d for d in self.objflds if d["obj"] == False]
         for i in range(len(self.cfgflds)):
-            self.cfgflds[i]['cfgidx'] = i
+            self.cfgflds[i]["cfgidx"] = i
         # Set the type of each mutex_set and make sure it's consistent
         self.mutex_obj = []
         for l in self.mutex_sets:
-            self.mutex_obj.append(self.fldmap[l[0]]['obj'])
+            self.mutex_obj.append(self.fldmap[l[0]]["obj"])
             for m in l:
-                if self.fldmap[m]['obj'] != self.mutex_obj[-1]:
+                if self.fldmap[m]["obj"] != self.mutex_obj[-1]:
                     print("Inconsistent mutex set %s!" % str(l))
                     raise Exception()
         setset = list(setset)
@@ -375,8 +419,8 @@ class pmgrobj:
         try:
             self.cur.execute("select * from %s_update" % (self.table))
             for d in self.cur.fetchall():
-                n = d['tbl_name']
-                if n[-4:] != '_grp' and n != 'config':
+                n = d["tbl_name"]
+                if n[-4:] != "_grp" and n != "config":
                     l.append(n)
             self.con.commit()
             l.sort()
@@ -386,26 +430,28 @@ class pmgrobj:
 
     def checkForUpdate(self):
         if self.in_trans:
-            return 0      # Not now!
+            return 0  # Not now!
         try:
             v = 0
             if self.hutch is None:
                 self.cur.execute("select * from %s_update" % self.table)
             else:
-                self.cur.execute("select * from %s_update where tbl_name = 'config' or tbl_name = '%s' or tbl_name = '%s'" %
-                                 (self.table, self.hutch, self.hutch + "_grp"))
+                self.cur.execute(
+                    "select * from %s_update where tbl_name = 'config' or tbl_name = '%s' or tbl_name = '%s'"
+                    % (self.table, self.hutch, self.hutch + "_grp")
+                )
             for d in self.cur.fetchall():
-                if d['tbl_name'] == 'config':
-                    if d['dt_updated'] > self.lastcfg:
-                        self.lastcfg = d['dt_updated']
+                if d["tbl_name"] == "config":
+                    if d["dt_updated"] > self.lastcfg:
+                        self.lastcfg = d["dt_updated"]
                         v = v | self.DB_CONFIG
-                elif d['tbl_name'][-4:] == "_grp":
-                    if d['dt_updated'] > self.lastgrp:
-                        self.lastgrp = d['dt_updated']
+                elif d["tbl_name"][-4:] == "_grp":
+                    if d["dt_updated"] > self.lastgrp:
+                        self.lastgrp = d["dt_updated"]
                         v = v | self.DB_GROUP
                 else:
-                    if d['dt_updated'] > self.lastobj:
-                        self.lastobj = d['dt_updated']
+                    if d["dt_updated"] > self.lastobj:
+                        self.lastobj = d["dt_updated"]
                         v = v | self.DB_OBJECT
             self.con.commit()
         except:
@@ -425,7 +471,7 @@ class pmgrobj:
                 ext = "_grp"
             else:
                 ext = "_grp where owner = '%s'" % self.hutch
-        else: # self.DB_CFGGRP
+        else:  # self.DB_CFGGRP
             ext = "_cfg_grp"
         try:
             self.cur.execute("select * from {}{}".format(self.table, ext))
@@ -434,7 +480,7 @@ class pmgrobj:
             return []
 
     def updateTables(self, mask=DB_ALL):
-        if self.in_trans:                    # This shouldn't happen.  But let's be paranoid.
+        if self.in_trans:  # This shouldn't happen.  But let's be paranoid.
             return
         if (mask & self.DB_CONFIG) != 0:
             cfgs = self.readDB(self.DB_CONFIG)
@@ -443,7 +489,7 @@ class pmgrobj:
             else:
                 map = {}
                 for d in cfgs:
-                    map[d['id']] = d
+                    map[d["id"]] = d
                 self.cfgs = map
         if (mask & self.DB_OBJECT) != 0:
             objs = self.readDB(self.DB_OBJECT)
@@ -452,7 +498,7 @@ class pmgrobj:
             else:
                 objmap = {}
                 for o in objs:
-                    objmap[o['id']] = o
+                    objmap[o["id"]] = o
                 self.objs = objmap
         if (mask & self.DB_GROUP) != 0:
             grps = self.readDB(self.DB_GROUP)
@@ -460,24 +506,30 @@ class pmgrobj:
             if grps == []:
                 mask &= ~self.DB_GROUP
             else:
-                self.groupids   = []
-                self.groups     = {}
+                self.groupids = []
+                self.groups = {}
                 for g in grps:
-                    id = g['id']
+                    id = g["id"]
                     self.groupids.append(id)
                     self.groups[id] = {}
                     try:
-                        self.groups[id]['global'] = {'len' : 0, 'name' : g['name'], 'active': g['active']}
+                        self.groups[id]["global"] = {
+                            "len": 0,
+                            "name": g["name"],
+                            "active": g["active"],
+                        }
                     except:
                         print(g)
                         raise
                 for g in cfggrp:
-                    id = g['group_id']
+                    id = g["group_id"]
                     if id in self.groups.keys():
-                        self.groups[id][g['dispseq']] = {'config': g['config_id'],
-                                                         'port': g['port_id']}
-                        sz = self.groups[id]['global']['len'] + 1
-                        self.groups[id]['global']['len'] = sz
+                        self.groups[id][g["dispseq"]] = {
+                            "config": g["config_id"],
+                            "port": g["port_id"],
+                        }
+                        sz = self.groups[id]["global"]["len"] + 1
+                        self.groups[id]["global"]["len"] = sz
         return mask
 
     def start_transaction(self):
@@ -512,11 +564,11 @@ class pmgrobj:
                 el.append("Error: %s\n" % (m))
         return el
 
-####################
-#
-# Actual database manipulation routines!
-#
-####################
+    ####################
+    #
+    # Actual database manipulation routines!
+    #
+    ####################
 
     @staticmethod
     def defaultNamefunc(idx):
@@ -524,10 +576,18 @@ class pmgrobj:
 
     def configDelete(self, idx, namefunc=defaultNamefunc):
         try:
-            if self.cur.execute("select id from %s where config = %%s" % self.table, (idx,)) != 0:
+            if (
+                self.cur.execute(
+                    "select id from %s where config = %%s" % self.table, (idx,)
+                )
+                != 0
+            ):
                 self.errorlist.append(
-                    _mysql_exceptions.Error(0,
-                                            "Can't delete configuration %s, still in use." % namefunc(idx)))
+                    _mysql_exceptions.Error(
+                        0,
+                        "Can't delete configuration %s, still in use." % namefunc(idx),
+                    )
+                )
                 return
             self.cur.execute("delete from %s_cfg where id = %%s" % self.table, (idx,))
         except _mysql_exceptions.Error as e:
@@ -535,22 +595,22 @@ class pmgrobj:
 
     def configInsert(self, d):
         cmd = "insert %s_cfg (name, config, owner, mutex, dt_updated" % self.table
-        vals = d['_val']
+        vals = d["_val"]
         for f in self.cfgflds:
-            fld = f['fld']
+            fld = f["fld"]
             if vals[fld]:
                 cmd += ", " + fld
         cmd += ") values (%s, %s, %s, %s, now()"
-        vlist = [d['name']]
-        vlist.append(d['config'])
+        vlist = [d["name"]]
+        vlist.append(d["config"])
         vlist.append(self.hutch)
-        vlist.append(d['mutex'])
+        vlist.append(d["mutex"])
         for f in self.cfgflds:
-            fld = f['fld']
+            fld = f["fld"]
             if vals[fld]:
                 cmd += ", %s"
                 vlist.append(d[fld])
-        cmd += ')'
+        cmd += ")"
         if self.debug:
             print(cmd % tuple(vlist))
             id = self.dbgid
@@ -577,43 +637,43 @@ class pmgrobj:
             sep = ""
         vlist = []
         try:
-            v = e['name']
+            v = e["name"]
             cmd += "%sname = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
             pass
         try:
-            v = e['config']
+            v = e["config"]
             cmd += "%sconfig = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
             pass
         try:
-            v = e['mutex']
+            v = e["mutex"]
             cmd += "%smutex = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
             pass
         try:
-            v = e['owner']
+            v = e["owner"]
             cmd += "%sowner = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
             pass
         for f in self.cfgflds:
-            fld = f['fld']
+            fld = f["fld"]
             try:
-                v = e[fld]           # We have a new value!
+                v = e[fld]  # We have a new value!
                 cmd += "{}{} = %s".format(sep, fld)
                 sep = ", "
                 vlist.append(v)
             except:
-                pass                 # No change to this field!
-        cmd += ' where id = %s'
+                pass  # No change to this field!
+        cmd += " where id = %s"
         vlist.append(idx)
         if self.debug:
             print(cmd % tuple(vlist))
@@ -630,27 +690,30 @@ class pmgrobj:
             self.errorlist.append(e)
 
     def objectInsert(self, d):
-        cmd = "insert %s (name, config, owner, rec_base, category, mutex, dt_created, dt_updated, comment" % self.table
+        cmd = (
+            "insert %s (name, config, owner, rec_base, category, mutex, dt_created, dt_updated, comment"
+            % self.table
+        )
         for f in self.objflds:
-            if f['obj'] == False:
+            if f["obj"] == False:
                 continue
-            fld = f['fld']
+            fld = f["fld"]
             cmd += ", " + fld
         cmd += ") values (%s, %s, %s, %s, %s, %s, now(), now(), %s"
-        vlist = [d['name']]
-        vlist.append(d['config'])
+        vlist = [d["name"]]
+        vlist.append(d["config"])
         vlist.append(self.hutch)
-        vlist.append(d['rec_base'])
-        vlist.append(d['category'])
-        vlist.append(d['mutex'])
-        vlist.append(d['comment'])
+        vlist.append(d["rec_base"])
+        vlist.append(d["category"])
+        vlist.append(d["mutex"])
+        vlist.append(d["comment"])
         for f in self.objflds:
-            if f['obj'] == False:
+            if f["obj"] == False:
                 continue
-            fld = f['fld']
+            fld = f["fld"]
             cmd += ", %s"
             vlist.append(d[fld])
-        cmd += ')'
+        cmd += ")"
         if self.debug:
             print(cmd % tuple(vlist))
             id = self.dbgid
@@ -676,59 +739,59 @@ class pmgrobj:
             sep = ""
         vlist = []
         try:
-            v = e['name']
+            v = e["name"]
             cmd += "%sname = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
             pass
         try:
-            v = e['config']
+            v = e["config"]
             cmd += "%sconfig = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
             pass
         try:
-            v = e['rec_base']
+            v = e["rec_base"]
             cmd += "%srec_base = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
             pass
         try:
-            v = e['category']
+            v = e["category"]
             cmd += "%scategory = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
             pass
         try:
-            v = e['mutex']
+            v = e["mutex"]
             cmd += "%smutex = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
             pass
         try:
-            v = e['comment']
+            v = e["comment"]
             cmd += "%scomment = %%s" % sep
             sep = ", "
             vlist.append(v)
         except:
             pass
         for f in self.objflds:
-            if f['obj'] == False:
+            if f["obj"] == False:
                 continue
-            fld = f['fld']
+            fld = f["fld"]
             try:
-                v = e[fld]           # We have a new value!
+                v = e[fld]  # We have a new value!
             except:
                 continue
             cmd += "{}{} = %s".format(sep, fld)
             sep = ", "
             vlist.append(v)
-        cmd += ' where id = %s'
+        cmd += " where id = %s"
         vlist.append(idx)
         if self.debug:
             print(cmd % tuple(vlist))
@@ -743,7 +806,9 @@ class pmgrobj:
             print("delete from %s_cfg_grp where group_id = %d" % (self.table, id))
             return True
         try:
-            self.cur.execute("delete from %s_cfg_grp where group_id = %%s" % self.table, (id, ))
+            self.cur.execute(
+                "delete from %s_cfg_grp where group_id = %%s" % self.table, (id,)
+            )
             return True
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
@@ -756,7 +821,7 @@ class pmgrobj:
             print("delete from %s_grp where id = %d" % (self.table, id))
             return True
         try:
-            self.cur.execute("delete from %s_grp where id = %%s" % self.table, (id, ))
+            self.cur.execute("delete from %s_grp where id = %%s" % self.table, (id,))
             return True
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
@@ -764,15 +829,20 @@ class pmgrobj:
 
     def groupInsert(self, g):
         if self.debug:
-            print("insert %s_grp (name, owner, active, dt_created, dt_updated) values (%s, %s, 0, now(), now())" % \
-                  (self.table, g['global']['name'], self.hutch))
+            print(
+                "insert %s_grp (name, owner, active, dt_created, dt_updated) values (%s, %s, 0, now(), now())"
+                % (self.table, g["global"]["name"], self.hutch)
+            )
             print("select last_insert_id()")
             id = self.dbgid
             self.dbgid += 1
         else:
             try:
-                self.cur.execute("insert %s_grp (name, owner, active, dt_created, dt_updated) values (%%s, %%s, 0, now(), now())" \
-                                 % self.table, (g['global']['name'], self.hutch))
+                self.cur.execute(
+                    "insert %s_grp (name, owner, active, dt_created, dt_updated) values (%%s, %%s, 0, now(), now())"
+                    % self.table,
+                    (g["global"]["name"], self.hutch),
+                )
                 self.cur.execute("select last_insert_id()")
                 id = list(self.cur.fetchone().values())[0]
             except _mysql_exceptions.Error as e:
@@ -784,32 +854,38 @@ class pmgrobj:
         if not self.groupClear(id):
             return False
         keys = g.keys()
-        keys.remove('global')
+        keys.remove("global")
         keys.sort()
         seq = 0
         for k in keys:
-            if g[k]['config'] != 0:
+            if g[k]["config"] != 0:
                 try:
-                    cmd = "insert %s_cfg_grp (group_id, config_id, port_id, dispseq)" % self.table
+                    cmd = (
+                        "insert %s_cfg_grp (group_id, config_id, port_id, dispseq)"
+                        % self.table
+                    )
                     cmd += "values (%s, %s, %s, %s)"
                     try:
-                        port = str(g[k]['port'])
+                        port = str(g[k]["port"])
                     except:
                         port = "0"
                     if self.debug:
-                        print(cmd % (str(id), str(g[k]['config']), port, str(seq)))
+                        print(cmd % (str(id), str(g[k]["config"]), port, str(seq)))
                     else:
-                        self.cur.execute(cmd, (id, g[k]['config'], port, seq))
+                        self.cur.execute(cmd, (id, g[k]["config"], port, seq))
                     seq += 1
                 except _mysql_exceptions.Error as e:
                     self.errorlist.append(e)
                     return False
         try:
-            cmd = "update %s_grp set active = %%s, name = %%s, dt_updated = now() where id = %%s" % self.table
+            cmd = (
+                "update %s_grp set active = %%s, name = %%s, dt_updated = now() where id = %%s"
+                % self.table
+            )
             if self.debug:
-                print(cmd % (g['global']['active'], id))
+                print(cmd % (g["global"]["active"], id))
             else:
-                self.cur.execute(cmd, (g['global']['active'], g['global']['name'], id))
+                self.cur.execute(cmd, (g["global"]["active"], g["global"]["name"], id))
             return True
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
@@ -832,15 +908,19 @@ class pmgrobj:
     def getAutoCfg(self, d):
         f = self.autoconfig
         v = d[f]
-        cmd = "select max(seq) from %s_log where %s = %%s and owner = %%s and action != 'delete' group by id" % \
-              (self.table, f)
+        cmd = (
+            "select max(seq) from %s_log where %s = %%s and owner = %%s and action != 'delete' group by id"
+            % (self.table, f)
+        )
         if self.debug:
             print(cmd % (v, self.hutch))
         try:
             if self.cur.execute(cmd, (v, self.hutch)) != 1:
                 # Couldn't find it in our hutch, look in any!
-                cmd = "select max(seq) from %s_log where %s = %%s and action != 'delete' group by id" % \
-                      (self.table, f)
+                cmd = (
+                    "select max(seq) from %s_log where %s = %%s and action != 'delete' group by id"
+                    % (self.table, f)
+                )
                 if self.debug:
                     print(cmd % (v))
                 self.cur.execute(cmd, (v))
@@ -862,8 +942,8 @@ class pmgrobj:
                     pass
             try:
                 # See the comment in ObjModel.setValue.  This is just bizarreness.
-                r['cfgname'] = r['config']
-                del r['config']
+                r["cfgname"] = r["config"]
+                del r["config"]
             except:
                 pass
             return r
@@ -877,35 +957,35 @@ class pmgrobj:
         d = {}
         d.update(self.cfgs[idx])
         haveval = {}
-        v = d['mutex']
-        if d['config'] != None:
+        v = d["mutex"]
+        if d["config"] != None:
             lp = list(loop)
             lp.append(idx)
-            vals = self.getConfig(d['config'], lp)   # Get the parent configuration
-            pmutex = vals['curmutex']
-            mutex = ""                               # Build the mutex from the set and inherited values.
+            vals = self.getConfig(d["config"], lp)  # Get the parent configuration
+            pmutex = vals["curmutex"]
+            mutex = ""  # Build the mutex from the set and inherited values.
             for i in range(len(self.mutex_sets)):
                 if self.mutex_obj[i]:
-                    mutex += ' '
-                elif v[i] != ' ':
+                    mutex += " "
+                elif v[i] != " ":
                     mutex += v[i]
                 else:
                     mutex += pmutex[i]
-            d['curmutex'] = mutex
+            d["curmutex"] = mutex
         else:
-            d['curmutex'] = v
-        for (k, v) in d.items():
-            if k[:3] != 'PV_' and k[:4] != 'FLD_':
+            d["curmutex"] = v
+        for k, v in d.items():
+            if k[:3] != "PV_" and k[:4] != "FLD_":
                 continue
             if v == None:
                 # This key might have a value because it is the unset element of a mutex set!
-                haveval[k] = chr(self.fldmap[k]['colorder']+0x40) in d['curmutex']
+                haveval[k] = chr(self.fldmap[k]["colorder"] + 0x40) in d["curmutex"]
             else:
                 haveval[k] = True
             if not haveval[k]:
                 try:
-                    d[k] = vals[k]     # Try to get the parent value.
+                    d[k] = vals[k]  # Try to get the parent value.
                 except:
                     d[k] = None
-        d['_haveval'] = haveval
+        d["_haveval"] = haveval
         return d

@@ -13,16 +13,18 @@ from .pmgr_ui import Ui_MainWindow
 
 ######################################################################
 
+
 class authdialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-      QtWidgets.QWidget.__init__(self, parent)
-      self.ui = auth_ui.Ui_Dialog()
-      self.ui.setupUi(self)
+        QtWidgets.QWidget.__init__(self, parent)
+        self.ui = auth_ui.Ui_Dialog()
+        self.ui.setupUi(self)
+
 
 ######################################################################
 
-class GraphicUserInterface(QtWidgets.QMainWindow):
 
+class GraphicUserInterface(QtWidgets.QMainWindow):
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
 
@@ -38,7 +40,11 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         ui.statusbar.addWidget(ui.userLabel)
         self.setUser(param.params.myuid)
 
-        self.setWindowTitle("Parameter Manager for {} ({})".format(param.params.hutch.upper(), param.params.table))
+        self.setWindowTitle(
+            "Parameter Manager for {} ({})".format(
+                param.params.hutch.upper(), param.params.table
+            )
+        )
 
         ui.objectTable.verticalHeader().hide()
         ui.objectTable.setCornerButtonEnabled(False)
@@ -65,18 +71,20 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         ui.objectTable.setShowGrid(True)
         ui.objectTable.resizeColumnsToContents()
         ui.objectTable.setSortingEnabled(True)
-        ui.objectTable.sortByColumn(param.params.objmodel.pvcol, QtCore.Qt.AscendingOrder)
+        ui.objectTable.sortByColumn(
+            param.params.objmodel.pvcol, QtCore.Qt.AscendingOrder
+        )
         ui.objectTable.setItemDelegate(MyDelegate(self))
 
         param.params.objmodel.setupContextMenus(ui.objectTable)
         param.params.cfgmodel.setupContextMenus(ui.configTable)
 
-        param.params.cfgdialog       = dialogs.cfgdialog(param.params.cfgmodel, self)
-        param.params.colsavedialog   = dialogs.colsavedialog(self)
-        param.params.colusedialog    = dialogs.colusedialog(self)
-        param.params.deriveddialog   = dialogs.deriveddialog(self)
-        param.params.confirmdialog   = dialogs.confirmdialog(self)
-        param.params.chowndialog     = dialogs.chowndialog(self)
+        param.params.cfgdialog = dialogs.cfgdialog(param.params.cfgmodel, self)
+        param.params.colsavedialog = dialogs.colsavedialog(self)
+        param.params.colusedialog = dialogs.colusedialog(self)
+        param.params.deriveddialog = dialogs.deriveddialog(self)
+        param.params.confirmdialog = dialogs.confirmdialog(self)
+        param.params.chowndialog = dialogs.chowndialog(self)
 
         param.params.db.objchange.connect(param.params.objmodel.objchange)
         param.params.db.cfgchange.connect(param.params.objmodel.cfgchange)
@@ -131,17 +139,25 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         ui.actionAuth.triggered.connect(self.doAuthenticate)
         ui.actionExit.triggered.connect(self.doExit)
         self.utimer.timeout.connect(self.unauthenticate)
-        ui.objectTable.selectionModel().selectionChanged.connect(param.params.objmodel.selectionChanged)
+        ui.objectTable.selectionModel().selectionChanged.connect(
+            param.params.objmodel.selectionChanged
+        )
         # MCB - Sigh. I should just make FreezeTableView actually work.
-        ui.objectTable.cTV.selectionModel().selectionChanged.connect(param.params.objmodel.selectionChanged)
+        ui.objectTable.cTV.selectionModel().selectionChanged.connect(
+            param.params.objmodel.selectionChanged
+        )
 
     def closeEvent(self, event):
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
         settings.beginGroup(param.params.table)
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
-        settings.setValue("cfgcol/default", param.params.ui.configTable.saveHeaderState())
-        settings.setValue("objcol/default", param.params.ui.objectTable.saveHeaderState())
+        settings.setValue(
+            "cfgcol/default", param.params.ui.configTable.saveHeaderState()
+        )
+        settings.setValue(
+            "objcol/default", param.params.ui.objectTable.saveHeaderState()
+        )
         settings.setValue("objsel", param.params.objmodel.getObjSel())
         QtWidgets.QMainWindow.closeEvent(self, event)
 
@@ -158,11 +174,12 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
             return True
         if utils.authenticate_user(user, password):
             self.setUser(user)
-            self.utimer.start(10 * 60000) # Ten minutes!
+            self.utimer.start(10 * 60000)  # Ten minutes!
             return True
         else:
-            QtWidgets.QMessageBox.critical(None, "Error", "Invalid Password",
-                                       QtWidgets.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(
+                None, "Error", "Invalid Password", QtWidgets.QMessageBox.Ok
+            )
             return False
 
     def doAuthenticate(self):
@@ -180,12 +197,12 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
 
 
 def main():
-    #MCB QtWidgets.QApplication.setGraphicsSystem("raster")
+    # MCB QtWidgets.QApplication.setGraphicsSystem("raster")
     param.params = param.param_structure()
-    app = QtWidgets.QApplication([''])
+    app = QtWidgets.QApplication([""])
 
     # Options( [mandatory list, optional list, switches list] )
-    options = Options(['hutch', 'type'], [], ['debug', 'applyenable', 'dev', 'help'])
+    options = Options(["hutch", "type"], [], ["debug", "applyenable", "dev", "help"])
     try:
         options.parse()
     except Exception as msg:
@@ -205,7 +222,7 @@ def main():
     param.params.setTable(options.type)  # Sigh, do this again to fix dropdown.
     # MCB - We need a better way of doing this.
     if options.type == "ims_motor":
-        param.params.setCatEnum(["Beamline", "Dumb"]) # Displayed names.
+        param.params.setCatEnum(["Beamline", "Dumb"])  # Displayed names.
     try:
         gui.show()
         retval = app.exec_()
@@ -214,5 +231,5 @@ def main():
     sys.exit(retval)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

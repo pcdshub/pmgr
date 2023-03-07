@@ -1,7 +1,14 @@
 from PyQt5 import QtCore, QtWidgets
 
-from . import (cfgdialog_ui, chown_ui, colsave_ui, coluse_ui, confirmdialog_ui,
-               deriveddialog_ui, errordialog_ui)
+from . import (
+    cfgdialog_ui,
+    chown_ui,
+    colsave_ui,
+    coluse_ui,
+    confirmdialog_ui,
+    deriveddialog_ui,
+    errordialog_ui,
+)
 
 
 class cfgdialog(QtWidgets.QDialog):
@@ -15,8 +22,8 @@ class cfgdialog(QtWidgets.QDialog):
         self.ui.label.setText(prompt)
         t = self.model.setupTree(self.ui.treeWidget, "ditem")
         if idx != None:
-            self.ui.treeWidget.setCurrentItem(t[idx]['ditem'])
-            self.ui.treeWidget.expandItem(t[idx]['ditem'])
+            self.ui.treeWidget.setCurrentItem(t[idx]["ditem"])
+            self.ui.treeWidget.expandItem(t[idx]["ditem"])
         code = QtWidgets.QDialog.exec_(self)
         if code == QtWidgets.QDialog.Accepted:
             try:
@@ -25,11 +32,13 @@ class cfgdialog(QtWidgets.QDialog):
                 return QtWidgets.QDialog.Rejected  # No selection made!
         return code
 
+
 class colusedialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
         self.ui = coluse_ui.Ui_Dialog()
         self.ui.setupUi(self)
+
 
 class colsavedialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -37,17 +46,20 @@ class colsavedialog(QtWidgets.QDialog):
         self.ui = colsave_ui.Ui_Dialog()
         self.ui.setupUi(self)
 
+
 class errordialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
         self.ui = errordialog_ui.Ui_Dialog()
         self.ui.setupUi(self)
 
+
 class confirmdialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
         self.ui = confirmdialog_ui.Ui_Dialog()
         self.ui.setupUi(self)
+
 
 class deriveddialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -83,6 +95,7 @@ class deriveddialog(QtWidgets.QDialog):
         QtCore.QTimer.singleShot(100, self.fixSize)
         return QtWidgets.QDialog.exec_(self)
 
+
 class chowndialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
@@ -90,7 +103,9 @@ class chowndialog(QtWidgets.QDialog):
         self.ui.setupUi(self)
 
     def exec_(self, cfg, hutch, hutchlist):
-        self.ui.mainLabel.setText("Current owner of {} is {}.".format(cfg, hutch.upper()))
+        self.ui.mainLabel.setText(
+            "Current owner of {} is {}.".format(cfg, hutch.upper())
+        )
         self.ui.comboBox.clear()
         for i in hutchlist:
             if i != hutch:

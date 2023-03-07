@@ -9,6 +9,7 @@ from . import param
 
 ######################################################################
 
+
 #
 # Class to support for context menus in DropTableView.  The API is:
 #     isActive(table, index)
@@ -42,6 +43,7 @@ class MyContextMenu(QtWidgets.QMenu):
         active : boolean
             Return True if the menu should be displayed.
     """
+
     def __init__(self, isAct=None):
         QtWidgets.QMenu.__init__(self)
         self.isAct = isAct
@@ -152,35 +154,38 @@ class MyContextMenu(QtWidgets.QMenu):
                     action(table, index)
                     return
 
+
 ######################################################################
 
 #
 # Utility functions to deal with PVs.
 #
 
-def caput(pvname,value,timeout=1.0,**kw):
+
+def caput(pvname, value, timeout=1.0, **kw):
     try:
         pv = Pv(pvname)
         pv.connect(timeout)
         pv.get(ctrl=False, timeout=timeout)
         try:
-            if kw['enum']:
+            if kw["enum"]:
                 pv.set_string_enum(True)
         except:
             pass
         pv.put(value, timeout=timeout)
         pv.disconnect()
     except pyca.pyexc as e:
-        print('pyca exception: %s' %(e))
+        print("pyca exception: %s" % (e))
     except pyca.caexc as e:
-        print('channel access exception: %s' %(e))
+        print("channel access exception: %s" % (e))
 
-def caget(pvname,timeout=1.0,**kw):
+
+def caget(pvname, timeout=1.0, **kw):
     try:
         pv = Pv(pvname)
         pv.connect(timeout)
         try:
-            if kw['enum']:
+            if kw["enum"]:
                 pv.set_string_enum(True)
         except:
             pass
@@ -189,17 +194,19 @@ def caget(pvname,timeout=1.0,**kw):
         pv.disconnect()
         return v
     except pyca.pyexc as e:
-        print('pyca exception: %s' %(e))
+        print("pyca exception: %s" % (e))
         return None
     except pyca.caexc as e:
-        print('channel access exception: %s' %(e))
+        print("channel access exception: %s" % (e))
         return None
+
 
 def __get_callback(pv, e):
     if e is None:
         pv.get_done.set()
         pv.disconnect()
         pyca.flush_io()
+
 
 #
 # Do an asynchronous caget, but notify a threading.Event after it
@@ -214,11 +221,12 @@ def caget_async(pvname):
         pv.connect(-1)
         return pv
     except pyca.pyexc as e:
-        print('pyca exception: %s' %(e))
+        print("pyca exception: %s" % (e))
         return None
     except pyca.caexc as e:
-        print('channel access exception: %s' %(e))
+        print("channel access exception: %s" % (e))
         return None
+
 
 def connectPv(name, timeout=-1.0):
     try:
@@ -232,14 +240,16 @@ def connectPv(name, timeout=-1.0):
             pv.get(ctrl=False, timeout=timeout)
         return pv
     except:
-      return None
+        return None
+
 
 def __connect_callback(pv, isconn):
-    if (isconn):
+    if isconn:
         pv.connect_cb = pv.save_connect_cb
         if pv.connect_cb:
             pv.connect_cb(isconn)
         pv.get(ctrl=False, timeout=-1.0)
+
 
 def __getevt_callback(pv, e=None):
     if pv.handler:
@@ -250,18 +260,21 @@ def __getevt_callback(pv, e=None):
         pv.monitor(pyca.DBE_VALUE)
         pyca.flush_io()
 
+
 def __monitor_callback(pv, e=None):
     pv.handler(pv, e)
 
-def monitorPv(name,handler):
+
+def monitorPv(name, handler):
     try:
         pv = connectPv(name)
         pv.handler = handler
-        pv.getevt_cb = lambda  e=None: __getevt_callback(pv, e)
+        pv.getevt_cb = lambda e=None: __getevt_callback(pv, e)
         pv.monitor_cb = lambda e=None: __monitor_callback(pv, e)
         return pv
     except:
         return None
+
 
 #
 # Go through a list of dictionaries and create a 'cfgname' name for the
@@ -270,16 +283,18 @@ def monitorPv(name,handler):
 def fixName(l, idx, name):
     for d in l:
         try:
-            if d['config'] == idx:
-                d['cfgname'] = name
+            if d["config"] == idx:
+                d["cfgname"] = name
         except:
             pass
+
 
 #
 # Determine if the current user has the authority to modify a record.
 #
 def permission():
     return param.params.user in param.params.auth_users
+
 
 #
 # Check if the user/password pair is valid.  This is actually not terribly secure (the KDC can
@@ -289,7 +304,9 @@ def permission():
 #
 def authenticate_user(user, password):
     try:
-        if kerberos.checkPassword(user, password, "krbtgt/SLAC.STANFORD.EDU", "SLAC.STANFORD.EDU", False):
+        if kerberos.checkPassword(
+            user, password, "krbtgt/SLAC.STANFORD.EDU", "SLAC.STANFORD.EDU", False
+        ):
             return True
     except:
         pass

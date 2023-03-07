@@ -25,10 +25,11 @@ parser.read(os.path.dirname(os.path.abspath(__file__)) + "/pmgrUtils.cfg")
 supportedHutches = parser.get("pmgr", "supportedHutches")
 supportedObjTypes = parser.get("pmgr", "supportedObjTypes")
 
-nTries = 3                                # Number of attempts when using caget
+nTries = 3  # Number of attempts when using caget
+
 
 def getCfgVals(pmgr, PV, rename=True):
-    """ Returns a dictionary of the live cfg fields associated with a PV """
+    """Returns a dictionary of the live cfg fields associated with a PV"""
     PV = PV.upper()
     configFields = listCfgFields(pmgr)
     cfgDict = getFieldDict(pmgr, PV, configFields)
@@ -36,7 +37,7 @@ def getCfgVals(pmgr, PV, rename=True):
     if rename:
         name = None
         try:
-            name = pv.get(PV +".DESC")
+            name = pv.get(PV + ".DESC")
         except:
             name = "Unknown"
         cfgDict["name"] = name
@@ -44,8 +45,9 @@ def getCfgVals(pmgr, PV, rename=True):
 
     return cfgDict
 
+
 def getObjVals(pmgr, PV, rename=True):
-    """ Returns a dictionary of the live obj fields associated with a PV """
+    """Returns a dictionary of the live obj fields associated with a PV"""
     PV = PV.upper()
     objectFields = listObjFields(pmgr)
     objDict = getFieldDict(pmgr, PV, objectFields)
@@ -66,7 +68,8 @@ def getObjVals(pmgr, PV, rename=True):
 
     return objDict
 
-def newObject(pmgr, objDict,typeStr=None, parent=None, owner=None):
+
+def newObject(pmgr, objDict, typeStr=None, parent=None, owner=None):
     category = "Manual"
     objectFields = listObjFields(pmgr)
 
@@ -95,10 +98,11 @@ def newObject(pmgr, objDict,typeStr=None, parent=None, owner=None):
 
     return objID
 
+
 def objInsert(pmgr, objDict):
-    """ Adds partial configuration dict obj to pmgr as a configuration. """
+    """Adds partial configuration dict obj to pmgr as a configuration."""
     if "mutex" not in objDict:
-        objDict["mutex"] = "  ab"    # MCB - NO NO NO!!!!  This is better than XY, but...
+        objDict["mutex"] = "  ab"  # MCB - NO NO NO!!!!  This is better than XY, but...
     if "rec_base" not in objDict:
         objDict["mutex"] = "Unknown PV"
     result = None
@@ -111,6 +115,7 @@ def objInsert(pmgr, objDict):
 
     return output
 
+
 def nextObjName(pmgr, name):
     """
     Returns name if it's available and valid. Otherwise, appends numbers until
@@ -120,29 +125,35 @@ def nextObjName(pmgr, name):
     name = incrementMatching(str(name), allNames, maxLength=maxLenName)
     return str(name)
 
-def nextCfgName(pmgr, name):
 
+def nextCfgName(pmgr, name):
     """
     Wrapper function for nextName that just makes sure the name is of type str
     """
     allNames = allCfgNames(pmgr)
-    name = incrementMatching(str(name), allNames,  maxLength=maxLenName)
+    name = incrementMatching(str(name), allNames, maxLength=maxLenName)
     return str(name)
 
+
 def objUpdate(pmgr, idx, objDict):
-    """ Updates the obj using the fields specified in objDict """
+    """Updates the obj using the fields specified in objDict"""
     obj = pmgr.objs[idx]
     for field in objDict.keys():
-        try: obj[field] = objDict[field]
-        except: continue
+        try:
+            obj[field] = objDict[field]
+        except:
+            continue
     return transaction(pmgr, "objectChange", idx, obj)
 
+
 def cfgUpdate(pmgr, idx, cfgDict):
-    """ Updates the cfg using the fields specified in cfgDict """
+    """Updates the cfg using the fields specified in cfgDict"""
     cfg = pmgr.cfgs[idx]
     for field in cfgDict.keys():
-        try: cfg[field] = cfgDict[field]
-        except: continue
+        try:
+            cfg[field] = cfgDict[field]
+        except:
+            continue
     return transaction(pmgr, "configChange", idx, cfg)
 
 
@@ -150,7 +161,7 @@ def get_motor_PVs(partialPV):
     motorPVs = []
     i = 1
     while i != 40:
-        basePV = "%s:%02d"%(partialPV, i)
+        basePV = "%s:%02d" % (partialPV, i)
         print(basePV)
         try:
             SN = pv.get(basePV + ".SN")
@@ -158,11 +169,14 @@ def get_motor_PVs(partialPV):
                 motor_PVs[sn] = basepv
                 print(f"PV: {basePV} is active")
                 motorPVs += basePV
-        except: pass
+        except:
+            pass
     return motorPVs
+
 
 def allObjNames(pmgr):
     return setOfAllObjVal(pmgr, "name")
+
 
 def setOfAllObjVal(pmgr, field, fcheck=None, fval=None):
     """
@@ -180,6 +194,7 @@ def setOfAllObjVal(pmgr, field, fcheck=None, fval=None):
         else:
             vals.add(d[field])
     return vals
+
 
 def getObjWithSN(pmgr, SN, verbose):
     """
@@ -200,8 +215,12 @@ def getObjWithSN(pmgr, SN, verbose):
 
         if changed and pmgr.objs[objID]["name"] != "DEFAULT":
             if verbose:
-                print("\nThe SN for motor {} has an incorrect length. Adding \
-zeros to ensure proper pmgr functionality.".format(pmgr.objs[objID]["name"]))
+                print(
+                    "\nThe SN for motor {} has an incorrect length. Adding \
+zeros to ensure proper pmgr functionality.".format(
+                        pmgr.objs[objID]["name"]
+                    )
+                )
             obj = pmgr.objs[objID]
             obj["FLD_SN"] = pmgrSN
             transaction(pmgr, "objectChange", objID, obj)
@@ -209,10 +228,11 @@ zeros to ensure proper pmgr functionality.".format(pmgr.objs[objID]["name"]))
         if pmgrSN == SN:
             return objID
 
-    #If we get here, we know the SN wasn't found
+    # If we get here, we know the SN wasn't found
     if verbose:
         print(f"Serial number {SN} not found in {getHutch(pmgr).upper()} pmgr")
     return None
+
 
 def getFieldDict(pmgr, PV, fields):
     fldDict = {}
@@ -226,47 +246,107 @@ def getFieldDict(pmgr, PV, fields):
             if "enum" in fieldDict:
                 choices = fieldDict["enum"]
                 if val >= len(choices):
-                    print(f"WARNING: index mismatch in field {field}." )
-                    print("An ioc has been updated without updating the Parameter Manager!")
+                    print(f"WARNING: index mismatch in field {field}.")
+                    print(
+                        "An ioc has been updated without updating the Parameter Manager!"
+                    )
                     val = len(choices) - 1
                 val = fieldDict["enum"][val]
             fldDict[field] = val
     return fldDict
 
+
 def objChange(pmgr, idx, objd):
     return transaction_bool(pmgr, "objectChange", idx, objd)
 
-def convertToApplyCfg(cfgDict):
-    DIR = {"pos":0, "neg":0}
-    EE = {"disable":0, "enable":1}
-    EGAG = {"no":0, "yes":1}
-    ERSV = {"no_alarm":0, "minor":1, "major":2, "invalid":3}
-    FOFF = {"variable":0, "frozen":1}
-    HEGE = {"pos":0, "neg":1}
-    HTYP = {"n/a":0, "e mark":1, "h switch":2, "limits":3, "stall":4}
-    LM = {"invalid":0, "decel, canhome":1, "decel, nohome":2,
-          "decel, stopprog":3, "nodecel, canhome":4, "nodecel, nohome":5,
-          "nodecel, stopprog": 6}
-    MODE = {"normal":0, "scan":1}
-    SM = {"stop on stall":0, "no stop":1}
-    STSV = {"no_alarm":0, "minor":1, "major":2, "invalid":3}
-    S1 = {"not used":0, "home l":1, "home h":2, "limit+ l":3, "limit+ h":4,
-          "limit- l":5, "limit- h":6, "5v out":7, "invalid":8}
-    S2 = {"not used":0, "home l":1, "home h":2, "limit+ l":3, "limit+ h":4,
-          "limit- l":5, "limit- h":6, "5v out":7, "invalid":8}
-    S3 = {"not used":0, "home l":1, "home h":2, "limit+ l":3, "limit+ h":4,
-          "limit- l":5, "limit- h":6, "5v out":7, "invalid":8}
-    S4 = {"not used":0, "home l":1, "home h":2, "limit+ l":3, "limit+ h":4,
-          "limit- l":5, "limit- h":6, "5v out":7, "invalid":8}
 
-    enum = {"DIR":DIR, "EE":EE, "EGAG":EGAG, "ERSV":ERSV, "FOFF":FOFF,
-            "HEGE":HEGE, "HTYP":HTYP, "LM":LM, "MODE":MODE, "SM":SM, "STSV":STSV,
-            "S1":S1, "S2":S2, "S3":S3, "S4":S4}
+def convertToApplyCfg(cfgDict):
+    DIR = {"pos": 0, "neg": 0}
+    EE = {"disable": 0, "enable": 1}
+    EGAG = {"no": 0, "yes": 1}
+    ERSV = {"no_alarm": 0, "minor": 1, "major": 2, "invalid": 3}
+    FOFF = {"variable": 0, "frozen": 1}
+    HEGE = {"pos": 0, "neg": 1}
+    HTYP = {"n/a": 0, "e mark": 1, "h switch": 2, "limits": 3, "stall": 4}
+    LM = {
+        "invalid": 0,
+        "decel, canhome": 1,
+        "decel, nohome": 2,
+        "decel, stopprog": 3,
+        "nodecel, canhome": 4,
+        "nodecel, nohome": 5,
+        "nodecel, stopprog": 6,
+    }
+    MODE = {"normal": 0, "scan": 1}
+    SM = {"stop on stall": 0, "no stop": 1}
+    STSV = {"no_alarm": 0, "minor": 1, "major": 2, "invalid": 3}
+    S1 = {
+        "not used": 0,
+        "home l": 1,
+        "home h": 2,
+        "limit+ l": 3,
+        "limit+ h": 4,
+        "limit- l": 5,
+        "limit- h": 6,
+        "5v out": 7,
+        "invalid": 8,
+    }
+    S2 = {
+        "not used": 0,
+        "home l": 1,
+        "home h": 2,
+        "limit+ l": 3,
+        "limit+ h": 4,
+        "limit- l": 5,
+        "limit- h": 6,
+        "5v out": 7,
+        "invalid": 8,
+    }
+    S3 = {
+        "not used": 0,
+        "home l": 1,
+        "home h": 2,
+        "limit+ l": 3,
+        "limit+ h": 4,
+        "limit- l": 5,
+        "limit- h": 6,
+        "5v out": 7,
+        "invalid": 8,
+    }
+    S4 = {
+        "not used": 0,
+        "home l": 1,
+        "home h": 2,
+        "limit+ l": 3,
+        "limit+ h": 4,
+        "limit- l": 5,
+        "limit- h": 6,
+        "5v out": 7,
+        "invalid": 8,
+    }
+
+    enum = {
+        "DIR": DIR,
+        "EE": EE,
+        "EGAG": EGAG,
+        "ERSV": ERSV,
+        "FOFF": FOFF,
+        "HEGE": HEGE,
+        "HTYP": HTYP,
+        "LM": LM,
+        "MODE": MODE,
+        "SM": SM,
+        "STSV": STSV,
+        "S1": S1,
+        "S2": S2,
+        "S3": S3,
+        "S4": S4,
+    }
 
     newDict = cfgDict
 
     for field in enum.keys():
-        newDict["FLD_"+field] = enum[field][cfgDict["FLD_"+field].lower()]
+        newDict["FLD_" + field] = enum[field][cfgDict["FLD_" + field].lower()]
 
     return newDict
 
@@ -294,8 +374,10 @@ def checkSNLength(cfgDict, pmgr):
         print("Failed to check SN")
         return cfgDict
 
+
 def listObjFields(pmgr):
     return listFieldsWith(pmgr, "obj", True)
+
 
 def listCfgFields(pmgr):
     return listFieldsWith(pmgr, "obj", False)
@@ -314,15 +396,14 @@ def createmotordb(hutch, path):
 
     logger.debug("Grepping motor serial number from motor config files")
     if path:
-        command_string = fr"grep -H '\.SN' {path}/*.cfg | sort -n -k 2"
+        command_string = rf"grep -H '\.SN' {path}/*.cfg | sort -n -k 2"
     else:
-        command_string = fr"grep -H '\.SN' /reg/neh/operator/{hutch.lower()}opr/device_config/ims/*.cfg  | sort -n -k 2"
+        command_string = rf"grep -H '\.SN' /reg/neh/operator/{hutch.lower()}opr/device_config/ims/*.cfg  | sort -n -k 2"
 
     logging.debug(command_string)
 
-    grep_out = subprocess.check_output(command_string,shell=True)
+    grep_out = subprocess.check_output(command_string, shell=True)
     sn_list = grep_out.strip().split("\n")
-
 
     # loop through sn_list and build up dictionary of SN to latest
     # config
@@ -330,74 +411,79 @@ def createmotordb(hutch, path):
     motor_db = {}  # Empty motor-db dictionary
 
     for sn in sn_list:
-
         # split line apart
         sn_piece = sn.split()
 
         # If size < 2 -- no SN recorded and should be skipped
-        if len(sn_piece) < 2: continue
+        if len(sn_piece) < 2:
+            continue
 
         # Get config file and serial number
         cfg = sn_piece[0][:-4]  # last 4 characters from grep output
-                                # are always ':.SN
+        # are always ':.SN
         sn = sn_piece[1]
 
         # Add unique entries to motor-db dictionary
-        if sn in motor_db.keys() :
+        if sn in motor_db.keys():
             # Only add latest config
-            logger.debug("Found another config file for SN:%s"%sn)
+            logger.debug("Found another config file for SN:%s" % sn)
 
             db_time = os.stat(motor_db[sn]).st_mtime
             new_time = os.stat(cfg).st_mtime
 
-            logger.debug("%s ==> %s"%(motor_db[sn],
-                                      datetime.datetime.fromtimestamp(db_time) )
-                         )
-            logger.debug("%s ==> %s"%(cfg,
-                                      datetime.datetime.fromtimestamp(new_time))
-                         )
+            logger.debug(
+                "%s ==> %s" % (motor_db[sn], datetime.datetime.fromtimestamp(db_time))
+            )
+            logger.debug("%s ==> %s" % (cfg, datetime.datetime.fromtimestamp(new_time)))
 
-            if new_time > db_time :
-                logger.debug("Picking new config %s"%cfg)
+            if new_time > db_time:
+                logger.debug("Picking new config %s" % cfg)
                 motor_db[sn] = cfg
             else:
-                logger.debug("Sticking with current config %s"%motor_db[sn])
-        else :
+                logger.debug("Sticking with current config %s" % motor_db[sn])
+        else:
             # New entry
-            logger.debug("New entry=>  SN:%s CFG:%s"%(sn,cfg))
+            logger.debug("New entry=>  SN:%s CFG:%s" % (sn, cfg))
             motor_db[sn] = cfg
 
-    logger.info("Number of saved motor configs:%d"%len(sn_list))
-    logger.info("Number of unique motor configs:%d"%len(motor_db))
+    logger.info("Number of saved motor configs:%d" % len(sn_list))
+    logger.info("Number of unique motor configs:%d" % len(motor_db))
     return motor_db
 
 
 def getImportFieldDict(cfgPath):
-    '''
+    """
     Takes in a path to a cfg file, loads the text file and then parses the
     contents into a config dictionary
-    '''
+    """
 
     cfg = open(cfgPath)
     cfgStr = cfg.readlines()
 
     # Remove lines sleep command lines, commented out lines and blank lines
     # from list
-    cfgStr = [field[1:-1] for field in cfgStr if field != '\n' and field[0] != '#' and field[0:5] != 'sleep']
+    cfgStr = [
+        field[1:-1]
+        for field in cfgStr
+        if field != "\n" and field[0] != "#" and field[0:5] != "sleep"
+    ]
 
     # Remove fields that dont have a value - they will be set to None later.
     # Also add FLD
-    cfgStr = ['FLD_' + field for field in cfgStr if ' ' in field ]
+    cfgStr = ["FLD_" + field for field in cfgStr if " " in field]
 
     # Turn the list into a dictionary using the first space as the seperator
-    cfgDict = dict(map(str, field.split(' ',1)) for field in cfgStr)
+    cfgDict = dict(map(str, field.split(" ", 1)) for field in cfgStr)
 
     # Change appropriate values to int if changType is set to true
     for field in cfgDict:
-        try: cfgDict[field] = int(cfgDict[field])
+        try:
+            cfgDict[field] = int(cfgDict[field])
         except:
-            try: cfgDict[field] = float(cfgDict[field])
-            except: pass
+            try:
+                cfgDict[field] = float(cfgDict[field])
+            except:
+                pass
 
     if "FLD_DESC" not in cfgDict.keys():
         cfgDict["FLD_DESC"] = None
@@ -407,20 +493,21 @@ def getImportFieldDict(cfgPath):
     return cfgDict
 
 
-def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose,
-                 rename=True):
-    """ Routine to update the configuration of an obj """
+def updateConfig(
+    PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose, rename=True
+):
+    """Routine to update the configuration of an obj"""
     # PMGR cfg values for comparisons
     objOld = pmgr.objs[objID]
     cfgOld = pmgr.cfgs[cfgID]
 
     # Print live values for troubleshooting
     if verbose:
-        print("\nLive cfg values for {}".format(pv.get(PV+".DESC")))
+        print("\nLive cfg values for {}".format(pv.get(PV + ".DESC")))
         pprint(objDict)
         pprint(cfgDict)
 
-        print("\nPMGR cfg values for {} before update".format(pv.get(PV+".DESC")))
+        print("\nPMGR cfg values for {} before update".format(pv.get(PV + ".DESC")))
         pprint(objOld)
         pprint(cfgOld)
         print
@@ -433,13 +520,15 @@ def updateConfig(PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose,
         if cfgOld["name"] in allNames:
             allNames.remove(cfgOld["name"])
         cfgDict["name"] = incrementMatching(
-            cfgDict["name"], allNames, maxLength=maxLenName)
+            cfgDict["name"], allNames, maxLength=maxLenName
+        )
 
     # Actually do the update
-    print("Saving configuration..." )
+    print("Saving configuration...")
     didWork = cfgChange(pmgr, cfgID, cfgDict)
 
     return didWork, objOld, cfgOld
+
 
 def motorPrelimChecks(PV, hutches, objType, verbose=False):
     """
@@ -450,24 +539,30 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
     SN = False
 
     # Check for valid hutch entry
-    if not hutches: hutches.append(PV[0][:3].lower())
+    if not hutches:
+        hutches.append(PV[0][:3].lower())
     for hutch in hutches:
         if hutch not in supportedHutches:
             print(f"Invalid hutch: {hutch.upper()}.")
             print(f"Removing hutch: {hutch.upper()}")
             hutches.remove(hutch)
     # Replace sxd with amo and sxr if present
-    if 'sxd' in hutches:
-        if 'amo' not in hutches: hutches.append('amo')
-        if 'sxr' not in hutches: hutches.append('sxr')
-        hutches.remove('sxd')
-    if not hutches: return hutches, objType, SN
+    if "sxd" in hutches:
+        if "amo" not in hutches:
+            hutches.append("amo")
+        if "sxr" not in hutches:
+            hutches.append("sxr")
+        hutches.remove("sxd")
+    if not hutches:
+        return hutches, objType, SN
     if verbose:
         print(f"Hutches: {hutches}")
 
     # Check for valid obj entry. Pmgr only supports ims motors as of 1/1/2016
-    if str(objType) in supportedObjTypes: pass
-    elif ":MMS:" in PV[0]: objType = "ims_motor"
+    if str(objType) in supportedObjTypes:
+        pass
+    elif ":MMS:" in PV[0]:
+        objType = "ims_motor"
     else:
         print(f"Unknown device type for {PV[0]}")
         objType = False
@@ -482,7 +577,8 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
             try:
                 SN[motorPV] = pv.get(motorPV + ".SN")
                 break
-            except: i+=1
+            except:
+                i += 1
 
         if not SN:
             print(f"Failed to get motor serial number for motor {motorPV}")
@@ -491,6 +587,7 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
     return hutches, objType, SN
     # Wherever the function is called needs to have a check that ensures none of
     # the return values are None
+
 
 def dumbMotorCheck(PV):
     """
@@ -504,46 +601,51 @@ def dumbMotorCheck(PV):
         try:
             PN = pv.get(PV + ".PN")
             break
-        except: i += 1
+        except:
+            i += 1
 
-    if "MFI" in PN: return True
-    else: return False
+    if "MFI" in PN:
+        return True
+    else:
+        return False
 
 
 def listObjFields(pmgr):
-    """ Returns the list of fields for motor objects """
+    """Returns the list of fields for motor objects"""
 
     fields = []
-    for field in pmgr.objflds: fields.append(field['fld'])
+    for field in pmgr.objflds:
+        fields.append(field["fld"])
 
     return fields
 
 
 def get_all_SN(pmgr):
-    """ Returns a list of all the motor SNs currently in the pmgr"""
+    """Returns a list of all the motor SNs currently in the pmgr"""
     pmgr.updateTables()
     SNs = []
     for obj in pmgr.objs.keys():
-        if pmgr.objs[obj]['FLD_SN'] > 0:
-            SNs.append(pmgr.objs[obj]['FLD_SN'])
+        if pmgr.objs[obj]["FLD_SN"] > 0:
+            SNs.append(pmgr.objs[obj]["FLD_SN"])
 
     return SNs
 
 
 def getPmgr(objType, hutch, verbose):
-    """ Returns a pmgr obj for the inputted hutch and objType """
+    """Returns a pmgr obj for the inputted hutch and objType"""
     try:
         pmgr = pmgrobj(objType, hutch.lower())  # Launch pmgr instance
-        pmgr.updateTables()                     # And update
-        if verbose: print(f"Pmgr instance initialized for hutch or area: {hutch.upper()}")
+        pmgr.updateTables()  # And update
+        if verbose:
+            print(f"Pmgr instance initialized for hutch or area: {hutch.upper()}")
     except:
         print(f"Failed to create pmgr instance for hutch: {hutch.upper()}")
         pmgr = None
     return pmgr
 
-def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind='diffs',
-              **kwargs):
-    """ Prints the diffs between the old values and new values"""
+
+def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind="diffs", **kwargs):
+    """Prints the diffs between the old values and new values"""
     name1 = kwargs.get("name1", "New")
     name2 = kwargs.get("name2", "Old")
     if verbose:
@@ -558,7 +660,7 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind='diffs',
     diffs = {}
     ndiffs = 0
 
-    exclude_fields = ['FLD_TYPE']
+    exclude_fields = ["FLD_TYPE"]
     for field in cfgOld.keys():
         if field in exclude_fields:
             continue
@@ -569,9 +671,11 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind='diffs',
                 continue
             if str(value1) != str(value2):
                 diffs[field] = "{}: {:<20}  {}: {:<20}".format(
-                    name1, str(cfgNew[field]), name2, str(cfgOld[field]))
+                    name1, str(cfgNew[field]), name2, str(cfgOld[field])
+                )
                 ndiffs += 1
-        except: pass
+        except:
+            pass
 
     for field in objOld.keys():
         if field in exclude_fields:
@@ -583,9 +687,11 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind='diffs',
                 continue
             if str(value1) != str(value2):
                 diffs[field] = "{}: {:<20}  {}: {:<20}".format(
-                    name1, str(objNew[field]), name2, str(objOld[field]))
+                    name1, str(objNew[field]), name2, str(objOld[field])
+                )
                 ndiffs += 1
-        except: pass
+        except:
+            pass
 
     print(f"\nNumber of {kind}: {ndiffs}")
     if ndiffs > 0:
@@ -593,8 +699,9 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind='diffs',
             print(f"  {fld:<15}: {diffs[fld]}")
     print
 
+
 def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict, zenity=False):
-    """ Creates a new config and then sets it to the objID """
+    """Creates a new config and then sets it to the objID"""
     status = False
     # Get a valid cfg name
     cfgName = nextCfgName(pmgr, objDict["name"])
@@ -606,12 +713,14 @@ def getAndSetConfig(PV, pmgr, objID, objDict, cfgDict, zenity=False):
 
     if not cfgID:
         print(f"Failed to create cfg for {cfgName}")
-        if zenity: system("zenity --error --text='Error: Failed to create new config'")
+        if zenity:
+            system("zenity --error --text='Error: Failed to create new config'")
         return status
 
     # Set obj to use cfg
     status = setObjCfg(pmgr, objID, cfgID)
     return status
+
 
 def getMostRecentObj(hutches, SN, objType, verbose, zenity=False):
     """
@@ -622,14 +731,16 @@ def getMostRecentObj(hutches, SN, objType, verbose, zenity=False):
     objs = {}
     for hutch in hutches:
         pmgr = getPmgr(objType, hutch, verbose)
-        if not pmgr: continue
+        if not pmgr:
+            continue
 
-        if verbose: print("Checking pmgr SNs for this motor")
+        if verbose:
+            print("Checking pmgr SNs for this motor")
         objID = getObjWithSN(pmgr, SN, verbose)
         if not objID:
             print(f"Serial number {SN} not found in {hutch.upper()} pmgr")
             continue
-        time_Updated = pmgr.cfgs[pmgr.objs[objID]['config']]['dt_updated']
+        time_Updated = pmgr.cfgs[pmgr.objs[objID]["config"]]["dt_updated"]
         if verbose:
             print("Motor found")
             print(f"Last motor update done on {time_Updated}")
@@ -638,17 +749,22 @@ def getMostRecentObj(hutches, SN, objType, verbose, zenity=False):
     # Make sure there is at least one obj with the corresponding SN
     if len(objs) == 0:
         print(f"Failed: Serial number {SN} not found in pmgr")
-        if zenity: system("zenity --error --text='Error: Motor not in pmgr'")
+        if zenity:
+            system("zenity --error --text='Error: Motor not in pmgr'")
         return None, None
 
     # Use the most recent obj and the corresponding pmgr instance
     mostRecent = max(objs.keys())
     objID = objs[mostRecent][0]
-    print("Using most recent obj saved on {} from {} pmgr".format(mostRecent,
-                                                                    objs[mostRecent][1]))
+    print(
+        "Using most recent obj saved on {} from {} pmgr".format(
+            mostRecent, objs[mostRecent][1]
+        )
+    )
     pmgr = getPmgr(objType, objs[mostRecent][1], verbose)
 
     return objID, pmgr
+
 
 def getBasePV(PVArguments):
     """
@@ -659,11 +775,13 @@ def getBasePV(PVArguments):
     if type(PVArguments) != list:
         PVArguments = [PVArguments]
     for arg in PVArguments:
-        if ':' not in arg: continue
+        if ":" not in arg:
+            continue
         for i, char in enumerate(arg[::-1]):
-            if char == ':':
+            if char == ":":
                 return arg[:-i]
     return None
+
 
 # Functions pulled from Zack's utils.py file
 # Original: /reg/neh/home/zlentz/python/pmgrPython/utils.py
@@ -677,14 +795,17 @@ def timing(f):
         time2 = time.time()
         print(f"{f.func_name} function took {time2-time1:0.3f} s")
         return ret
+
     return wrap
+
 
 def config(pmgr, PV):
     d = pmgrConfig(pmgr, PV)
     return d["name"]
 
+
 def pvConfig(pmgr, PV):
-    """ Returns live config dict associated with PV, or None """
+    """Returns live config dict associated with PV, or None"""
     configFields = listCfgFields(pmgr)
     cfgDict = {}
     for field in configFields:
@@ -697,26 +818,31 @@ def pvConfig(pmgr, PV):
             if "enum" in fieldDict:
                 choices = fieldDict["enum"]
                 if val >= len(choices):
-                    print(f"WARNING: index mismatch in field {field}." )
-                    print("An ioc has been updated without updating the Parameter Manager!")
+                    print(f"WARNING: index mismatch in field {field}.")
+                    print(
+                        "An ioc has been updated without updating the Parameter Manager!"
+                    )
                     val = len(choices) - 1
                 val = fieldDict["enum"][val]
             cfgDict[field] = val
     return cfgDict
 
+
 def pmgrConfig(pmgr, PV):
-    """ Returns config dict associated with PV in the pmgr, or None """
+    """Returns config dict associated with PV in the pmgr, or None"""
     obj = objFromPV(pmgr, PV)
     pmgr.updateTables()
     cfg = pmgr.objs[obj]["config"]
     d = cfgVals(pmgr, cfg)
     return d
 
+
 def nameConfig(pmgr, name):
-    """ Returns config dict associated with configuration name """
+    """Returns config dict associated with configuration name"""
     ID = cfgFromName(pmgr, name)
     cfg = cfgVals(pmgr, ID)
     return cfg
+
 
 def newConfig(pmgr, cfgDict, name, typeStr=None, parent=None, owner=None):
     """
@@ -730,7 +856,7 @@ def newConfig(pmgr, cfgDict, name, typeStr=None, parent=None, owner=None):
     configFields = listCfgFields(pmgr)
     for field in configFields:
         if field not in cfgDict:
-            cfgDict[field] = None # configInsert freaks out over missing fields
+            cfgDict[field] = None  # configInsert freaks out over missing fields
     if not parent:
         parent = getHutch(pmgr).upper()
     if type(parent) == str:
@@ -747,8 +873,9 @@ def newConfig(pmgr, cfgDict, name, typeStr=None, parent=None, owner=None):
     ID = cfgInsert(pmgr, cfgDict)
     return ID
 
+
 def setConfig(pmgr, PV, config):
-    """ Sets the config name config to the object associated with PV """
+    """Sets the config name config to the object associated with PV"""
     obj = objFromPV(pmgr, PV)
     if not obj:
         print(f"Error connecting to PV {PV}")
@@ -759,8 +886,9 @@ def setConfig(pmgr, PV, config):
         return False
     return setObjCfg(pmgr, obj, cfg)
 
+
 def applyConfig(pmgr, PV):
-    """ Applies the config assigned to PV to the live values """
+    """Applies the config assigned to PV to the live values"""
     obj = objFromPV(pmgr, PV)
     pprint(obj)
     objApply(pmgr, obj)
@@ -768,10 +896,12 @@ def applyConfig(pmgr, PV):
     # We will not return True/False like the others and instead check in post
     # with a diff in main.
 
+
 def defaultName(pmgr, PV):
-    """ Returns a default name for the config associated with PV """
+    """Returns a default name for the config associated with PV"""
     name = pv.get(PV + ".DESC")
     return nextName(pmgr, name)
+
 
 def nextName(pmgr, name):
     """
@@ -782,17 +912,21 @@ def nextName(pmgr, name):
     name = incrementMatching(name, allNames, maxLength=maxLenName)
     return name
 
+
 def hutchCfgNames(pmgr, hutch):
     return setOfAllCfgVal(pmgr, "name", "owner", hutch)
 
+
 def allCfgNames(pmgr):
     return setOfAllCfgVal(pmgr, "name")
+
 
 def setDesc(pmgr, PV, desc):
     objID = objFromPV(pmgr, PV)
     obj = pmgr.objs[objID]
     obj["FLD_DESC"] = desc
     return transaction(pmgr, "objectChange", objID, obj)
+
 
 def changeConfig(pmgr, cfgName, **kwargs):
     idx = cfgFromName(pmgr, cfgName)
@@ -811,18 +945,21 @@ def changeConfig(pmgr, cfgName, **kwargs):
     else:
         return 0
 
+
 def nextType(pmgr, typeStr):
     allTypes = setOfAllCfgVal(pmgr, "FLD_TYPE")
     typeStr = incrementMatching(typeStr, allTypes)
     return typeStr
 
+
 def cfgInsert(pmgr, cfg):
-    """ Adds partial configuration dict cfg to pmgr as a configuration. """
+    """Adds partial configuration dict cfg to pmgr as a configuration."""
     if "mutex" not in cfg:
-        cfg["mutex"] = "XY  "    ### MCB - NONONONONO!!!!
+        cfg["mutex"] = "XY  "  ### MCB - NONONONONO!!!!
     result = None
     result = transaction(pmgr, "configInsert", cfg)
     return result
+
 
 def setObjCfg(pmgr, objID, cfgID):
     pmgr.updateTables()
@@ -833,6 +970,7 @@ def setObjCfg(pmgr, objID, cfgID):
         return False
     return True
 
+
 def objApply(pmgr, objID):
     try:
         pmgr.applyConfig(objID)
@@ -840,12 +978,14 @@ def objApply(pmgr, objID):
     except Exception:
         return False
 
+
 def getHutch(pmgr):
     try:
         return pmgr.hutch
     except AttributeError:
         print("getHutch: Error, pmgr likely does not exist!")
         exit()
+
 
 def getObjPV(pmgr, objID):
     """
@@ -857,8 +997,10 @@ def getObjPV(pmgr, objID):
         print("getObjPV: Error with pmgr and/or objID, one or both may not exist!")
         exit()
 
+
 def listCfgFields(pmgr):
     return listFieldsWith(pmgr, "obj", False)
+
 
 def setOfAllCfgVal(pmgr, field, fcheck=None, fval=None):
     """
@@ -877,13 +1019,16 @@ def setOfAllCfgVal(pmgr, field, fcheck=None, fval=None):
             vals.add(d[field])
     return vals
 
+
 def objFromPV(pmgr, PV):
-    """ Returns objID associated with PV, or None """
+    """Returns objID associated with PV, or None"""
     return firstObjWith(pmgr, "rec_base", PV)
 
+
 def cfgFromName(pmgr, name):
-    """ Returns cfgID associated with name, or None """
+    """Returns cfgID associated with name, or None"""
     return firstCfgWith(pmgr, "name", name)
+
 
 def incrementMatching(text, matchSet, maxLength=None, n=2):
     """
@@ -902,23 +1047,25 @@ def incrementMatching(text, matchSet, maxLength=None, n=2):
             text = text[:-n]
         else:
             num = "0" * n
-        if maxLength is not None and len(text) > maxLength-n:
-            text = text[0:maxLength-n]
+        if maxLength is not None and len(text) > maxLength - n:
+            text = text[0 : maxLength - n]
         text += num
     return text
 
+
 def fixSN(pmgr, PV):
-    pv.put(PV + ".RINI", 1) # Re-initialize motor to get accurate SN
+    pv.put(PV + ".RINI", 1)  # Re-initialize motor to get accurate SN
     objID = objFromPV(pmgr, PV)
     pmgr.updateTables()
     d = pmgr.objs[objID]
     # Set up Pv object so we can specify a timeout and wait for init.
     SNPV = pv.Pv(PV + ".SN")
     SNPV.connect(timeout=5)
-    SN = SNPV.get() # Pull the value we need
+    SN = SNPV.get()  # Pull the value we need
     SNPV.disconnect()
     d["FLD_SN"] = SN
     transaction(pmgr, "objectChange", objID, d)
+
 
 def findValidCfgField(pmgr, field):
     flds = listCfgFields(pmgr)
@@ -928,8 +1075,10 @@ def findValidCfgField(pmgr, field):
             return c
     return None
 
+
 def cfgChange(pmgr, idx, cfgd):
     return transaction_bool(pmgr, "configChange", idx, cfgd)
+
 
 def transaction_bool(pmgr, method, *args):
     """
@@ -941,6 +1090,7 @@ def transaction_bool(pmgr, method, *args):
         return False
     return True
 
+
 def cfgVals(pmgr, idx):
     pmgr.updateTables()
     d = {}
@@ -948,8 +1098,9 @@ def cfgVals(pmgr, idx):
     del d["dt_updated"]
     return d
 
+
 def listFieldsWith(pmgr, property, value):
-    """ Returns a list of field names where property = value """
+    """Returns a list of field names where property = value"""
     fWith = []
     pmgr.updateTables()
     for field in pmgr.objflds:
@@ -957,21 +1108,24 @@ def listFieldsWith(pmgr, property, value):
             fWith += [field["fld"]]
     return fWith
 
+
 def firstObjWith(pmgr, field, val):
-    """ Returns the first objID found where field is value """
+    """Returns the first objID found where field is value"""
     pmgr.updateTables()
     for obj in pmgr.objs.keys():
         if pmgr.objs[obj][field] == val:
             return obj
     return None
 
+
 def firstCfgWith(pmgr, field, val):
-    """ Returns the first cfgID found where field is value """
+    """Returns the first cfgID found where field is value"""
     pmgr.updateTables()
     for cfg in pmgr.cfgs.keys():
         if pmgr.cfgs[cfg][field] == val:
             return cfg
     return None
+
 
 def transaction(pmgr, method, *args):
     """

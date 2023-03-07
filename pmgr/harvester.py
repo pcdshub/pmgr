@@ -17,18 +17,15 @@ from psp.Pv import Pv
 
 from .pmgrobj import pmgrobj
 
-CONFIG_FILE    = "/reg/g/pcds/pyps/config/%s/iocmanager.cfg"
-EPICS_TOP      = "/reg/g/pcds/package/epics/"
+CONFIG_FILE = "/reg/g/pcds/pyps/config/%s/iocmanager.cfg"
+EPICS_TOP = "/reg/g/pcds/package/epics/"
 EPICS_SITE_TOP = "/reg/g/pcds/package/epics/3.14/"
 
 hutch = None
-fldlist = { 'FLD_HLM',
-            'FLD_HOMD',
-            'FLD_LLM',
-            'FLD_OFF',
-            'FLD_DESC' };
+fldlist = {"FLD_HLM", "FLD_HOMD", "FLD_LLM", "FLD_OFF", "FLD_DESC"}
 
-def caget(pvname,timeout=30.0):
+
+def caget(pvname, timeout=30.0):
     try:
         pv = Pv(pvname)
         pv.connect(timeout)
@@ -37,23 +34,35 @@ def caget(pvname,timeout=30.0):
         pv.disconnect()
         return v
     except pyca.pyexc as e:
-        print('pyca exception: %s' %(e))
+        print("pyca exception: %s" % (e))
         return None
     except pyca.caexc as e:
-        print('channel access exception: %s' %(e))
+        print("channel access exception: %s" % (e))
         return None
 
+
 def readConfig():
-    config = {'procmgr_config': None, 'hosts': None, 'dir':'dir',
-              'id':'id', 'cmd':'cmd', 'flags':'flags', 'port':'port', 'host':'host',
-              'disable':'disable', 'history':'history', 'delay':'delay', 'alias':'alias' }
+    config = {
+        "procmgr_config": None,
+        "hosts": None,
+        "dir": "dir",
+        "id": "id",
+        "cmd": "cmd",
+        "flags": "flags",
+        "port": "port",
+        "host": "host",
+        "disable": "disable",
+        "history": "history",
+        "delay": "delay",
+        "alias": "alias",
+    }
     vars = set(config.keys())
     cfgfn = CONFIG_FILE % hutch
     f = open(cfgfn)
-    fcntl.lockf(f, fcntl.LOCK_SH)    # Wait for the lock!!!!
+    fcntl.lockf(f, fcntl.LOCK_SH)  # Wait for the lock!!!!
     try:
         execfile(cfgfn, {}, config)
-        res = config['procmgr_config']
+        res = config["procmgr_config"]
     except:
         res = None
     fcntl.lockf(f, fcntl.LOCK_UN)
@@ -62,43 +71,46 @@ def readConfig():
         return None
     d = []
     for l in res:
-        if 'disable' in l.keys() and l['disable']:
+        if "disable" in l.keys() and l["disable"]:
             continue
-        name = l['id']
-        dir  = l['dir']
+        name = l["id"]
+        dir = l["dir"]
         if re.search("/ims/", dir) or re.search("/ims$", dir):
             if dir[0:3] == "../":
                 dir = EPICS_TOP + dir[3:]
-            elif dir[0] != '/':
+            elif dir[0] != "/":
                 dir = EPICS_SITE_TOP + dir
             d.append((name, dir))
     return d
 
-class config():
+
+class config:
     def __init__(self):
         self.path = os.getcwd()
-        self.dirname = self.path.split('/')[-1]
+        self.dirname = self.path.split("/")[-1]
         self.ddict = {}
         self.idict = {}
 
         # Pre-define some regular expressions!
         self.doubledollar = re.compile(r"^(.*?)\$\$")
-        self.keyword      = re.compile(r"^(UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
-        self.parens       = re.compile(r"^\(([^)]*?)\)")
-        self.brackets     = re.compile(r"^\{([^}]*?)\}")
-        self.trargs       = re.compile(r'^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
-        self.ifargs       = re.compile(r'^\(([^,)]*?),([^,)]*?),([^,)]*?)\)')
-        self.word         = re.compile("^([A-Za-z0-9_]*)")
-        self.operators = {ast.Add: operator.add,
-                          ast.Sub: operator.sub,
-                          ast.Mult: operator.mul,
-                          ast.Div: operator.truediv,
-                          ast.Pow: operator.pow,
-                          ast.LShift : operator.lshift,
-                          ast.RShift: operator.rshift,
-                          ast.BitOr: operator.or_,
-                          ast.BitAnd : operator.and_,
-                          ast.BitXor: operator.xor}
+        self.keyword = re.compile(r"^(UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
+        self.parens = re.compile(r"^\(([^)]*?)\)")
+        self.brackets = re.compile(r"^\{([^}]*?)\}")
+        self.trargs = re.compile(r'^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
+        self.ifargs = re.compile(r"^\(([^,)]*?),([^,)]*?),([^,)]*?)\)")
+        self.word = re.compile("^([A-Za-z0-9_]*)")
+        self.operators = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.Pow: operator.pow,
+            ast.LShift: operator.lshift,
+            ast.RShift: operator.rshift,
+            ast.BitOr: operator.or_,
+            ast.BitAnd: operator.and_,
+            ast.BitXor: operator.xor,
+        }
 
     def create_instance(self, iname, id, idict, ndict):
         try:
@@ -117,28 +129,34 @@ class config():
         idict[iname].append(dd)
 
     def read_config(self, file, extra):
-        w       = re.compile("^[ \t]*([^ \t=]+)")
-        wq      = re.compile('^[ \t]*"([^"]*)"')
-        wqq     = re.compile("^[ \t]*'([^']*)'")
-        assign  = re.compile("^[ \t]*=")
-        sp      = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+(.+?)[ \t]*$")
-        spq     = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+"([^"]*)"[ \t]*$')
-        spqq    = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+'([^']*)'[ \t]*$")
-        eq      = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.*?)[ \t]*$")
-        eqq     = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"([^"]*)"[ \t]*$')
-        eqqq    = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*'([^']*)'[ \t]*$")
-        inst    = re.compile("^[ \t]*(([A-Za-z_][A-Za-z0-9_]*):[ \t]*)?([A-Za-z_][A-Za-z0-9_]*)\\((.*)\\)[ \t]*$")
-        inst2    = re.compile("^[ \t]*INSTANCE[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*([A-Za-z0-9_]*)[ \t]*$")
+        w = re.compile("^[ \t]*([^ \t=]+)")
+        wq = re.compile('^[ \t]*"([^"]*)"')
+        wqq = re.compile("^[ \t]*'([^']*)'")
+        assign = re.compile("^[ \t]*=")
+        sp = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+(.+?)[ \t]*$")
+        spq = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+"([^"]*)"[ \t]*$')
+        spqq = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+'([^']*)'[ \t]*$")
+        eq = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.*?)[ \t]*$")
+        eqq = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"([^"]*)"[ \t]*$')
+        eqqq = re.compile(
+            "^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*'([^']*)'[ \t]*$"
+        )
+        inst = re.compile(
+            "^[ \t]*(([A-Za-z_][A-Za-z0-9_]*):[ \t]*)?([A-Za-z_][A-Za-z0-9_]*)\\((.*)\\)[ \t]*$"
+        )
+        inst2 = re.compile(
+            "^[ \t]*INSTANCE[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*([A-Za-z0-9_]*)[ \t]*$"
+        )
 
         prminst = re.compile("^([A-Za-z_][A-Za-z0-9_]*)(,)")
-        prmidx  = re.compile("^([A-Za-z_][A-Za-z0-9_]*?)([0-9_]+)(,)")
-        prmeq   = re.compile("^([A-Za-z_][A-Za-z0-9_]*)=([^,]*)(,)")
-        prmeqq  = re.compile('^([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"(,)')
+        prmidx = re.compile("^([A-Za-z_][A-Za-z0-9_]*?)([0-9_]+)(,)")
+        prmeq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)=([^,]*)(,)")
+        prmeqq = re.compile('^([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"(,)')
         prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
 
         fp = open(file)
         if not fp:
-            raise OSError("File %s not found!" % ( file ))
+            raise OSError("File %s not found!" % (file))
         lines = [l + "\n" for l in extra] + fp.readlines()
         fp.close()
         origlines = lines
@@ -150,14 +168,14 @@ class config():
         output.close()
         lines = value.split("\n")
 
-        d = {"DIRNAME": self.dirname, "PATH" : self.path}
+        d = {"DIRNAME": self.dirname, "PATH": self.path}
         for l in lines:
             l = l.strip()
             m = inst.search(l)
             if m != None:
-                continue            # Skip instantiations for now!
+                continue  # Skip instantiations for now!
             m = inst2.search(l)
-            if m != None:           # First new-style instantiation --> we're done here!
+            if m != None:  # First new-style instantiation --> we're done here!
                 break
             # Search for a one-line assignment of some form!
             m = eqqq.search(l)
@@ -174,9 +192,9 @@ class config():
             if m != None:
                 var = m.group(1)
                 val = m.group(2)
-                d[var] = val;
+                d[var] = val
                 continue
-            if l != "" and l[0] != '#':
+            if l != "" and l[0] != "#":
                 print("Skipping unknown line: %s" % l)
         self.ddict = d
 
@@ -193,7 +211,7 @@ class config():
         d = {"DIRNAME": self.dirname, "PATH": self.path}
         nd = {}
         newstyle = False
-        ininst   = False
+        ininst = False
 
         for l in lines:
             l = l.strip()
@@ -209,17 +227,17 @@ class config():
                     id = m.group(2)
                     dd, n = self.create_instance(iname, id, i, nd)
                 else:
-                    loc = 0           # Look for parameters!
+                    loc = 0  # Look for parameters!
                     first = None
                     haveeq = False
-                    while l[loc:] != '':
+                    while l[loc:] != "":
                         m = assign.search(l[loc:])
                         if m != None:
                             loc += m.end()
                             if haveeq:
                                 print("Double equal sign in |%s|" % l)
                             haveeq = True
-                            continue   # Just ignore it!
+                            continue  # Just ignore it!
 
                         m = wqq.search(l[loc:])
                         if m != None:
@@ -233,7 +251,7 @@ class config():
                                 if m != None:
                                     loc += m.end() + 1
                                 else:
-                                    break        # How does this even happen?!?
+                                    break  # How does this even happen?!?
                         val = m.group(1)
                         if first != None:
                             dd[first] = val
@@ -241,14 +259,14 @@ class config():
                             first = None
                         else:
                             # Could this be an instance parameter?
-                            useinst = ''
-                            usenum  = 0
+                            useinst = ""
+                            usenum = 0
                             try:
                                 t = nd[val]
                                 useinst = t[0]
                                 usenum = t[1]
                             except:
-                                m = prmidx.search(val+",")
+                                m = prmidx.search(val + ",")
                                 if m != None:
                                     useinst = m.group(1)
                                     usenum = int(m.group(2))
@@ -268,7 +286,7 @@ class config():
                 iname = m.group(3)
                 params = m.group(4) + ","
                 dd, n = self.create_instance(iname, id, i, nd)
-                while (params != ""):
+                while params != "":
                     m = prmeqqq.search(params)
                     if m == None:
                         m = prmeqq.search(params)
@@ -281,7 +299,7 @@ class config():
                         val = m.group(2)
                         dd[var] = val
                         d[iname + var + n] = val
-                        params = params[m.end(3):len(params)]
+                        params = params[m.end(3) : len(params)]
                     else:
                         m = prminst.search(params)
                         if m != None:
@@ -291,7 +309,7 @@ class config():
                                 t = nd[m.group(1)]
                                 useinst = t[0]
                                 usenum = t[1]
-                                params = params[m.end(2):len(params)]
+                                params = params[m.end(2) : len(params)]
                             except:
                                 m = prmidx.search(params)
                                 if m == None:
@@ -300,7 +318,7 @@ class config():
                                     continue
                                 useinst = m.group(1)
                                 usenum = int(m.group(2))
-                                params = params[m.end(3):len(params)]
+                                params = params[m.end(3) : len(params)]
                             # Find the instance, and add all of its named parameters
                             # VAL with the name INSTVAL.
                             used = i[useinst][usenum]
@@ -328,9 +346,9 @@ class config():
             if m != None:
                 var = m.group(1)
                 val = m.group(2)
-                d[var] = val;
+                d[var] = val
                 continue
-            if l != "" and l[0] != '#':
+            if l != "" and l[0] != "#":
                 print("Skipping unknown line: %s" % l)
         if ininst:
             self.finish_instance(iname, i, dd)
@@ -338,7 +356,9 @@ class config():
         self.ddict = d
 
     def eval_expr(self, expr):
-        return self.eval_(ast.parse(expr).body[0].value) # Module(body=[Expr(value=...)])
+        return self.eval_(
+            ast.parse(expr).body[0].value
+        )  # Module(body=[Expr(value=...)])
 
     def eval_(self, node):
         if isinstance(node, ast.Num):
@@ -371,46 +391,46 @@ def expand(cfg, lines, f):
 
         # Write the first part
         f.write(m.group(1))
-        pos = loc + m.end(1)     # save where we found this!
-        loc = pos + 2            # skip the '$$'!
+        pos = loc + m.end(1)  # save where we found this!
+        loc = pos + 2  # skip the '$$'!
 
         m = cfg.keyword.search(lines[i][loc:])
         if m != None:
             kw = m.group(1)
             if kw == None:
                 kw = m.group(2)
-                loc += m.end(2)      # Leave on the '{'!
+                loc += m.end(2)  # Leave on the '{'!
             else:
-                loc += m.end(1)      # Leave on the '('!
+                loc += m.end(1)  # Leave on the '('!
 
             if kw == "TRANSLATE":
                 argm = cfg.trargs.search(lines[i][loc:])
                 if argm != None:
-                    loc += argm.end(3)+2
+                    loc += argm.end(3) + 2
             elif kw == "CALC":
                 argm = cfg.brackets.search(lines[i][loc:])
                 if argm != None:
-                    loc += argm.end(1)+1
+                    loc += argm.end(1) + 1
             elif kw == "IF":
                 argm = cfg.ifargs.search(lines[i][loc:])
                 if argm != None:
-                    kw = "TIF"    # Triple IF!
-                    loc += argm.end(3)+1
+                    kw = "TIF"  # Triple IF!
+                    loc += argm.end(3) + 1
                 else:
                     argm = cfg.parens.search(lines[i][loc:])
                     if argm != None:
-                        loc += argm.end(1)+1
+                        loc += argm.end(1) + 1
                     if pos == 0 and lines[i][loc:].strip() == "":
                         # If the $$ directive is the entire line, don't add a newline!
-                        loc = 0;
+                        loc = 0
                         i += 1
             else:
                 argm = cfg.parens.search(lines[i][loc:])
                 if argm != None:
-                    loc += argm.end(1)+1
+                    loc += argm.end(1) + 1
                 if pos == 0 and lines[i][loc:].strip() == "":
                     # If the $$ directive is the entire line, don't add a newline!
-                    loc = 0;
+                    loc = 0
                     i += 1
 
             if argm != None:
@@ -471,8 +491,8 @@ def expand(cfg, lines, f):
                     else:
                         # False, do the else!
                         if elset != None:
-                            newlines = t[0][elset[1]:]
-                            newlines[0] = newlines[0][elset[2]:]
+                            newlines = t[0][elset[1] :]
+                            newlines[0] = newlines[0][elset[2] :]
                             expand(cfg, newlines, f)
                     i = t[1]
                     loc = t[2]
@@ -496,7 +516,7 @@ def expand(cfg, lines, f):
                     except:
                         fn = argm.group(1)
                     try:
-                        newlines=open(fn).readlines()
+                        newlines = open(fn).readlines()
                         expand(cfg, newlines, f)
                     except:
                         print("Cannot open file %s!" % fn)
@@ -528,13 +548,16 @@ def expand(cfg, lines, f):
                     except:
                         fn = argm.group(1)
                     try:
-                        f.write(fn[:fn.rindex('/')])
+                        f.write(fn[: fn.rindex("/")])
                     except:
                         pass
-                else: # Must be "TRANSLATE"
+                else:  # Must be "TRANSLATE"
                     try:
-                        val = cfg.ddict[argm.group(1)].translate(string.maketrans(enumstring(argm.group(2)),
-                                                                                  enumstring(argm.group(3))))
+                        val = cfg.ddict[argm.group(1)].translate(
+                            string.maketrans(
+                                enumstring(argm.group(2)), enumstring(argm.group(3))
+                            )
+                        )
                         f.write(val)
                     except:
                         pass
@@ -554,12 +577,13 @@ def expand(cfg, lines, f):
                 f.write(val)
             except:
                 pass
-            if lines[i][loc] == '(':
+            if lines[i][loc] == "(":
                 loc += m.end(1) + 1
             else:
                 loc += m.end(1)
         else:
             print("Can't find variable name?!?")
+
 
 def getMotorVals(pvbase):
     d = {}
@@ -570,105 +594,155 @@ def getMotorVals(pvbase):
             d[f] = None
     return d
 
+
 def makeMotor(ioc, pvbase, port, extra=""):
     d = getMotorVals(pvbase)
     cat = "Manual"
     if extra != "":
         extra = " " + extra
-    d.update({'name': pvbase,
-            'config' : 0,
-            'owner' : hutch,
-            'rec_base': pvbase,
-            'category': cat,
-            'mutex': '  ab',
-            'comment': ioc + extra,
-            'FLD_PORT': port,
-            'FLD_DHLM': None,
-            'FLD_DLLM': None })
+    d.update(
+        {
+            "name": pvbase,
+            "config": 0,
+            "owner": hutch,
+            "rec_base": pvbase,
+            "category": cat,
+            "mutex": "  ab",
+            "comment": ioc + extra,
+            "FLD_PORT": port,
+            "FLD_DHLM": None,
+            "FLD_DLLM": None,
+        }
+    )
     return d
+
 
 def findMotors(cfglist, ioc):
     motors = []
-    for (name, dir) in cfglist:
+    for name, dir in cfglist:
         if ioc != None and ioc != name:
             continue
         cfg = config()
         try:
-            cfg.read_config(dir +  "/" + name + ".cfg", {})
+            cfg.read_config(dir + "/" + name + ".cfg", {})
         except:
             print("WARNING: %s has no configuration file!" % name)
-            continue   # Wow, XCS has one *really* old controller!!
+            continue  # Wow, XCS has one *really* old controller!!
         for k in cfg.idict.keys():
-            if k == 'MOTOR':
+            if k == "MOTOR":
                 for i in cfg.idict[k]:
-                    motors.append(makeMotor(name, i['NAME'], i['PORT'], ""))
-            elif k == 'IPM':
+                    motors.append(makeMotor(name, i["NAME"], i["PORT"], ""))
+            elif k == "IPM":
                 for i in cfg.idict[k]:
-                    motors.append(makeMotor(name, i['DIODE_X'], i['DDX_PORT'],
-                                            i['NAME'] + " IPM DIODE_X"))
-                    motors.append(makeMotor(name, i['DIODE_Y'], i['DDY_PORT'],
-                                            i['NAME'] + " IPM DIODE_Y"))
-                    motors.append(makeMotor(name, i['TARGET_Y'], i['TTY_PORT'],
-                                            i['NAME'] + " IPM TARGET_Y"))
-            elif k == 'PIM':
+                    motors.append(
+                        makeMotor(
+                            name,
+                            i["DIODE_X"],
+                            i["DDX_PORT"],
+                            i["NAME"] + " IPM DIODE_X",
+                        )
+                    )
+                    motors.append(
+                        makeMotor(
+                            name,
+                            i["DIODE_Y"],
+                            i["DDY_PORT"],
+                            i["NAME"] + " IPM DIODE_Y",
+                        )
+                    )
+                    motors.append(
+                        makeMotor(
+                            name,
+                            i["TARGET_Y"],
+                            i["TTY_PORT"],
+                            i["NAME"] + " IPM TARGET_Y",
+                        )
+                    )
+            elif k == "PIM":
                 for i in cfg.idict[k]:
-                    motors.append(makeMotor(name, i['YAG'], i['PORT'],
-                                            i['NAME'] + " PIM"))
-            elif k == 'SLIT':
+                    motors.append(
+                        makeMotor(name, i["YAG"], i["PORT"], i["NAME"] + " PIM")
+                    )
+            elif k == "SLIT":
                 for i in cfg.idict[k]:
-                    motors.append(makeMotor(name, i['LEFT'], i['LEFT_PORT'],
-                                            i['NAME'] + " SLIT LEFT"))
-                    motors.append(makeMotor(name, i['RIGHT'], i['RIGHT_PORT'],
-                                            i['NAME'] + " SLIT RIGHT"))
-                    motors.append(makeMotor(name, i['TOP'], i['TOP_PORT'],
-                                            i['NAME'] + " SLIT TOP"))
-                    motors.append(makeMotor(name, i['BOTTOM'], i['BOTTOM_PORT'],
-                                            i['NAME'] + " SLIT BOTTOM"))
-            elif k == 'NAVITAR':
+                    motors.append(
+                        makeMotor(
+                            name, i["LEFT"], i["LEFT_PORT"], i["NAME"] + " SLIT LEFT"
+                        )
+                    )
+                    motors.append(
+                        makeMotor(
+                            name, i["RIGHT"], i["RIGHT_PORT"], i["NAME"] + " SLIT RIGHT"
+                        )
+                    )
+                    motors.append(
+                        makeMotor(
+                            name, i["TOP"], i["TOP_PORT"], i["NAME"] + " SLIT TOP"
+                        )
+                    )
+                    motors.append(
+                        makeMotor(
+                            name,
+                            i["BOTTOM"],
+                            i["BOTTOM_PORT"],
+                            i["NAME"] + " SLIT BOTTOM",
+                        )
+                    )
+            elif k == "NAVITAR":
                 for i in cfg.idict[k]:
-                    motors.append(makeMotor(name, i['ZOOM'], i['ZOOM_PORT'],
-                                            i['NAME'] + " ZOOM"))
+                    motors.append(
+                        makeMotor(name, i["ZOOM"], i["ZOOM_PORT"], i["NAME"] + " ZOOM")
+                    )
                     try:
-                        motors.append(makeMotor(name, i['FOCUS'], i['FOCUS_PORT'],
-                                                i['NAME'] + " FOCUS"))
+                        motors.append(
+                            makeMotor(
+                                name, i["FOCUS"], i["FOCUS_PORT"], i["NAME"] + " FOCUS"
+                            )
+                        )
                     except:
                         pass
-            elif k == 'XFLS':
+            elif k == "XFLS":
                 for i in cfg.idict[k]:
-                    motors.append(makeMotor(name, i['X'], i['X_PORT'],
-                                            i['NAME'] + " XFLS X"))
-                    motors.append(makeMotor(name, i['Y'], i['Y_PORT'],
-                                            i['NAME'] + " XFLS Y"))
+                    motors.append(
+                        makeMotor(name, i["X"], i["X_PORT"], i["NAME"] + " XFLS X")
+                    )
+                    motors.append(
+                        makeMotor(name, i["Y"], i["Y_PORT"], i["NAME"] + " XFLS Y")
+                    )
                     try:
-                        motors.append(makeMotor(name, i['Z'], i['Z_PORT'],
-                                                i['NAME'] + " XFLS Z"))
+                        motors.append(
+                            makeMotor(name, i["Z"], i["Z_PORT"], i["NAME"] + " XFLS Z")
+                        )
                     except:
                         pass
-            elif k == 'INOUT':
+            elif k == "INOUT":
                 for i in cfg.idict[k]:
-                    motors.append(makeMotor(name, i['MOTOR'], i['PORT'],
-                                            i['NAME'] + " INOUT"))
-            elif k == 'REFL':
+                    motors.append(
+                        makeMotor(name, i["MOTOR"], i["PORT"], i["NAME"] + " INOUT")
+                    )
+            elif k == "REFL":
                 for i in cfg.idict[k]:
-                    motors.append(makeMotor(name, i['MIRROR'], i['PORT'],
-                                            i['NAME'] + " REFL"))
+                    motors.append(
+                        makeMotor(name, i["MIRROR"], i["PORT"], i["NAME"] + " REFL")
+                    )
     return motors
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Options( [mandatory list, optional list, switches list] )
-    options = Options(['hutch'], ['ioc'], ['debug'])
+    options = Options(["hutch"], ["ioc"], ["debug"])
     try:
         options.parse()
     except Exception as msg:
         options.usage(str(msg))
         sys.exit()
-    hutch   = options.hutch
+    hutch = options.hutch
     cfglist = readConfig()
-    motors  = findMotors(cfglist, options.ioc)
-    pmgr    = pmgrobj("ims_motor", hutch)
+    motors = findMotors(cfglist, options.ioc)
+    pmgr = pmgrobj("ims_motor", hutch)
     if options.debug != None:
         for m in motors:
-            print(m['name'], m['FLD_PORT'], caget(m['rec_base']+".PN"))
+            print(m["name"], m["FLD_PORT"], caget(m["rec_base"] + ".PN"))
     else:
         pmgr.start_transaction()
         for m in motors:

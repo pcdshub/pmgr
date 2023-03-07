@@ -14,7 +14,9 @@ class Ui_Dialog:
         self.verticalLayout = QtWidgets.QVBoxLayout(Dialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.errorText = QtWidgets.QPlainTextEdit(Dialog)
-        self.errorText.setTextInteractionFlags(QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
+        self.errorText.setTextInteractionFlags(
+            QtCore.Qt.TextSelectableByKeyboard | QtCore.Qt.TextSelectableByMouse
+        )
         self.errorText.setObjectName("errorText")
         self.verticalLayout.addWidget(self.errorText)
         self.buttonBox = QtWidgets.QDialogButtonBox(Dialog)

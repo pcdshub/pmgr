@@ -67,10 +67,11 @@ def getBasePV(PVArguments):
     for arg in PVArguments:
         try:
             i = arg.rindex(":")
-            return arg[:i+1]
+            return arg[: i + 1]
         except:
             pass
     return None
+
 
 def parsePVArguments(PVArguments):
     """
@@ -79,36 +80,45 @@ def parsePVArguments(PVArguments):
     """
 
     PVs = set()
-    if len(PVArguments) == 0: return None
+    if len(PVArguments) == 0:
+        return None
     basePV = getBasePV(PVArguments)
-    if not basePV: return None
+    if not basePV:
+        return None
     for arg in PVArguments:
         try:
-            if '-' in arg:
-                splitArgs = arg.split('-')
-                if getBasePV(splitArgs[0]) == basePV: PVs.add(splitArgs[0])
+            if "-" in arg:
+                splitArgs = arg.split("-")
+                if getBasePV(splitArgs[0]) == basePV:
+                    PVs.add(splitArgs[0])
                 start = int(splitArgs[0][-2:])
                 end = int(splitArgs[1])
                 while start <= end:
                     PVs.add(basePV + f"{start:02}")
                     start += 1
             elif len(arg) > 3:
-                if getBasePV(arg) == basePV: PVs.add(arg)
+                if getBasePV(arg) == basePV:
+                    PVs.add(arg)
             elif len(arg) < 3:
                 PVs.add(basePV + f"{int(arg):02}")
-            else: pass
-        except: pass
+            else:
+                pass
+        except:
+            pass
 
     PVs = list(PVs)
     PVs.sort()
     return PVs
 
+
 def message(z, d, msg, abort=True):
-    if z: os.system("zenity --width 500 --{} --text='{}'".format(d, msg))
+    if z:
+        os.system("zenity --width 500 --{} --text='{}'".format(d, msg))
     if abort:
         exit(msg)
     else:
         print(msg)
+
 
 def exc_to_str(action, PV, e):
     msg = "Failed to {} {}:\n".format(action, PV)
@@ -118,9 +128,11 @@ def exc_to_str(action, PV, e):
         msg += "Error: %s\n" % e.args[0]
     return msg
 
+
 ################################################################################
 ##                                   Main                                     ##
 ################################################################################
+
 
 def main():
     # Parse docopt variables
@@ -156,20 +168,22 @@ def main():
         if len(l) == 0:
             message(zenity, "error", 'No matches for "%s" found.' % pattern)
         else:
-            message(zenity, "info", 'Possible matches for "%s":\n' % pattern + "\n".join(l))
-        return 0;
+            message(
+                zenity, "info", 'Possible matches for "%s":\n' % pattern + "\n".join(l)
+            )
+        return 0
 
     # Parse the PV input into full PV names, exit if none input
     if len(PVarguments) > 0:
         motorPVs = parsePVArguments(PVarguments)
     else:
-        message(zenity, "error", 'No PV input.  Try --help')
+        message(zenity, "error", "No PV input.  Try --help")
 
     # Sanity check arguments.
-    if args['save'] and cfg and len(motorPVs) > 1:
-        message(zenity, "error", 'Save with --cfg must be for a single motor.')
+    if args["save"] and cfg and len(motorPVs) > 1:
+        message(zenity, "error", "Save with --cfg must be for a single motor.")
     if args["set"] and cfg is None:
-        message(zenity, "error", 'Set must specify a configuration!')
+        message(zenity, "error", "Set must specify a configuration!")
 
     # Loop through each of the motorPVs
     msg = ""
@@ -207,11 +221,27 @@ def main():
                 if len(d) == 0:
                     message(zenity, "info", "No differences for %s.\n" % PV)
                 else:
-                    m = "\n".join(["    {}: actual={}, configured={}".format(f, d[f][0], d[f][1])
-                                   for f in d.keys()])
-                    message(zenity, "info", "Differences for %s:\n" % PV + m + "\n", abort=False)
+                    m = "\n".join(
+                        [
+                            "    {}: actual={}, configured={}".format(
+                                f, d[f][0], d[f][1]
+                            )
+                            for f in d.keys()
+                        ]
+                    )
+                    message(
+                        zenity,
+                        "info",
+                        "Differences for %s:\n" % PV + m + "\n",
+                        abort=False,
+                    )
             except Exception as e:
-                message(zenity, "error", exc_to_str("find differences of", PV, e), abort=False)
+                message(
+                    zenity,
+                    "error",
+                    exc_to_str("find differences of", PV, e),
+                    abort=False,
+                )
         if args["save"]:
             try:
                 p.save_config(PV, cfgname=cfg, overwrite=True, parent=parent)
@@ -222,6 +252,7 @@ def main():
     if args["diff"]:
         exit()
     message(zenity, dialog, msg)
+
 
 if __name__ == "__main__":
     main()

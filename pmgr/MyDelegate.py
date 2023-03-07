@@ -7,24 +7,27 @@ import numpy as np
 # Code shamelessly stolen from http://jdreaver.com/posts/2014-07-28-scientific-notation-spin-box-pyside.html.
 #
 
-_float_re = re.compile(r'(([+-]?\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)')
+_float_re = re.compile(r"(([+-]?\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)")
+
 
 def valid_float_string(string):
     match = _float_re.search(string)
     return match.groups()[0] == string if match else False
+
 
 class FloatValidator(QValidator):
     def validate(self, string, position):
         if valid_float_string(string):
             return (QValidator.Acceptable, string, position)
         s = str(string)
-        if s == "" or s[position-1] in 'e.-+':
+        if s == "" or s[position - 1] in "e.-+":
             return (QValidator.Intermediate, string, position)
         return (QValidator.Invalid, string, position)
 
     def fixup(self, text):
         match = _float_re.search(str(text))
         return match.groups()[0] if match else ""
+
 
 class ScientificDoubleSpinBox(QDoubleSpinBox):
     def __init__(self, parent=None):
@@ -54,13 +57,16 @@ class ScientificDoubleSpinBox(QDoubleSpinBox):
         new_string = f"{decimal:g}" + (groups[3] if groups[3] else "")
         self.lineEdit().setText(new_string)
 
+
 def format_float(value):
     """Modified form of the 'g' format specifier."""
     string = f"{value:g}".replace("e+", "e")
     string = re.sub(r"e(-?)0*(\d+)", r"e\1\2", string)
     return string
 
+
 #########################################################################
+
 
 class MyDelegate(QStyledItemDelegate):
     def __init__(self, parent):
@@ -69,10 +75,14 @@ class MyDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         e = index.model().editorInfo(index)
         if e == str:
-            editor = QItemEditorFactory.defaultFactory().createEditor(QVariant.String, parent)
+            editor = QItemEditorFactory.defaultFactory().createEditor(
+                QVariant.String, parent
+            )
             editor.mydelegate = False
         elif e == int:
-            editor = QItemEditorFactory.defaultFactory().createEditor(QVariant.Int, parent)
+            editor = QItemEditorFactory.defaultFactory().createEditor(
+                QVariant.Int, parent
+            )
             editor.mydelegate = False
         elif e == float:
             editor = ScientificDoubleSpinBox(parent)

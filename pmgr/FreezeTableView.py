@@ -2,6 +2,7 @@ from PyQt5 import QtCore, QtWidgets
 
 ######################################################################
 
+
 class FreezeHeaderView(QtWidgets.QHeaderView):
     def __init__(self, orientation, parent=None):
         QtWidgets.QHeaderView.__init__(self, orientation, parent)
@@ -11,7 +12,7 @@ class FreezeHeaderView(QtWidgets.QHeaderView):
         self.sortindicator = (None, None)
         self.sectionResized.connect(self.updateSectionWidth)
         self.sortIndicatorChanged.connect(self.selfSortChanged)
-        #MCB self.setClickable(True)  # Sigh.  Why isn't this done when we ask it to be sortable?!?
+        # MCB self.setClickable(True)  # Sigh.  Why isn't this done when we ask it to be sortable?!?
 
     def setShadowHeader(self, hdr):
         self.__hdr = hdr
@@ -39,7 +40,9 @@ class FreezeHeaderView(QtWidgets.QHeaderView):
             self.sortindicator = (logidx, order)
             self.setSortIndicator(logidx, order)
 
+
 ######################################################################
+
 
 class DropTableView(QtWidgets.QTableView):
     def __init__(self, parent, rows, cols, name):
@@ -61,7 +64,9 @@ class DropTableView(QtWidgets.QTableView):
         self.horizontalHeader().setHighlightSections(False)
 
         self.customContextMenuRequested.connect(self.showContextMenu)
-        self.horizontalHeader().customContextMenuRequested.connect(self.showHeaderContextMenu)
+        self.horizontalHeader().customContextMenuRequested.connect(
+            self.showHeaderContextMenu
+        )
 
     #
     # We're cheating here.  We are making a distinction between a drag (which
@@ -85,9 +90,9 @@ class DropTableView(QtWidgets.QTableView):
         if self.hidecols != -1:
             if self.model().columnCount() != self.horizontalHeader().count():
                 # Sigh.  We have a race condition.  Just reschedule for later.
-                QtCore.QTimer.singleShot(0, lambda : self.hideAllColumns(start))
+                QtCore.QTimer.singleShot(0, lambda: self.hideAllColumns(start))
             else:
-                for col in range(start, finish+1):
+                for col in range(start, finish + 1):
                     if col >= self.hidecols:
                         self.setColumnHidden(col, True)
 
@@ -95,16 +100,16 @@ class DropTableView(QtWidgets.QTableView):
         if self.hiderows != -1:
             if self.model().rowCount() != self.verticalHeader().count():
                 # Sigh.  We have a race condition.  Just reschedule for later.
-                QtCore.QTimer.singleShot(0, lambda : self.hideAllRows(start))
+                QtCore.QTimer.singleShot(0, lambda: self.hideAllRows(start))
             else:
-                for row in range(start, finish+1):
+                for row in range(start, finish + 1):
                     if row >= self.hiderows:
                         self.setRowHidden(row, True)
 
     def hideAllColumns(self, start):
         if self.model().columnCount() != self.horizontalHeader().count():
             # Still racing!
-            QtCore.QTimer.singleShot(0, lambda : self.hideAllColumns(start))
+            QtCore.QTimer.singleShot(0, lambda: self.hideAllColumns(start))
         else:
             for col in range(start, self.model().columnCount()):
                 if col >= self.hidecols:
@@ -113,7 +118,7 @@ class DropTableView(QtWidgets.QTableView):
     def hideAllRows(self, start):
         if self.model().rowCount() != self.verticalHeader().count():
             # Still racing!
-            QtCore.QTimer.singleShot(0, lambda : self.hideAllRows(start))
+            QtCore.QTimer.singleShot(0, lambda: self.hideAllRows(start))
         else:
             for row in range(start, self.model().rowCount()):
                 if row >= self.hiderows:
@@ -143,7 +148,9 @@ class DropTableView(QtWidgets.QTableView):
                 m.doMenu(self, pos, index)
                 return
 
+
 ######################################################################
+
 
 class FreezeTableView(DropTableView):
     def __init__(self, parent=None):
@@ -166,8 +173,8 @@ class FreezeTableView(DropTableView):
         fTV.setVerticalHeader(FreezeHeaderView(QtCore.Qt.Vertical, self))
         fTV.verticalHeader().setShadowHeader(self.verticalHeader())
         fTV.setStyleSheet("QTableView { border: none; }")
-        #fTV.setStyleSheet("QTableView { border: none; background-color: #FF0000  }")
-        #fTV.horizontalHeader().setStyleSheet("QHeaderView { background-color: #FF0000  }")
+        # fTV.setStyleSheet("QTableView { border: none; background-color: #FF0000  }")
+        # fTV.horizontalHeader().setStyleSheet("QHeaderView { background-color: #FF0000  }")
 
         for col in range(self.model().columnCount()):
             if col >= self.fcols:
@@ -254,8 +261,12 @@ class FreezeTableView(DropTableView):
         cTV.verticalScrollBar().valueChanged.connect(self.verticalScrollBar().setValue)
         self.verticalScrollBar().valueChanged.connect(cTV.verticalScrollBar().setValue)
 
-        rTV.horizontalScrollBar().valueChanged.connect(self.horizontalScrollBar().setValue)
-        self.horizontalScrollBar().valueChanged.connect(rTV.horizontalScrollBar().setValue)
+        rTV.horizontalScrollBar().valueChanged.connect(
+            self.horizontalScrollBar().setValue
+        )
+        self.horizontalScrollBar().valueChanged.connect(
+            rTV.horizontalScrollBar().setValue
+        )
 
         self.selectionModel().selectionChanged.connect(self.parentSelectionChanged)
         cTV.selectionModel().selectionChanged.connect(self.colSelectionChanged)
@@ -356,15 +367,27 @@ class FreezeTableView(DropTableView):
 
     def moveCursor(self, ca, mods):
         cur = DropTableView.moveCursor(self, ca, mods)
-        if (ca == QtWidgets.QAbstractItemView.MoveLeft and cur.column() > 0 and
-            self.visualRect(cur).topLeft().x() < self.fcolwidth):
-            nv = (self.horizontalScrollBar().value() + self.visualRect(cur).topLeft().x() -
-                  self.fcolwidth)
+        if (
+            ca == QtWidgets.QAbstractItemView.MoveLeft
+            and cur.column() > 0
+            and self.visualRect(cur).topLeft().x() < self.fcolwidth
+        ):
+            nv = (
+                self.horizontalScrollBar().value()
+                + self.visualRect(cur).topLeft().x()
+                - self.fcolwidth
+            )
             self.horizontalScrollBar().setValue(nv)
-        if (ca == QtWidgets.QAbstractItemView.MoveUp and cur.row() > 0 and
-            self.visualRect(cur).topLeft().y() < self.frowheight):
-            nv = (self.verticalScrollBar().value() + self.visualRect(cur).topLeft().y() -
-                  self.frowheight)
+        if (
+            ca == QtWidgets.QAbstractItemView.MoveUp
+            and cur.row() > 0
+            and self.visualRect(cur).topLeft().y() < self.frowheight
+        ):
+            nv = (
+                self.verticalScrollBar().value()
+                + self.visualRect(cur).topLeft().y()
+                - self.frowheight
+            )
             self.verticalScrollBar().setValue(nv)
         return cur
 
@@ -373,22 +396,36 @@ class FreezeTableView(DropTableView):
             DropTableView.scrollTo(self, index, hint)
 
     def updateFTGeometry(self):
-        self.fTV.setGeometry((self.frameWidth() +
-                              (self.verticalHeader().width() if self.frowheight == 0 else 0)),
-                             (self.frameWidth() +
-                              (self.horizontalHeader().height() if self.fcolwidth == 0 else 0)),
-                             (self.fcolwidth + (self.verticalHeader().width()
-                                               if self.frowheight != 0 else 0)),
-                             (self.frowheight + (self.horizontalHeader().height()
-                                                 if self.fcolwidth != 0 else 0)))
-        self.cTV.setGeometry(self.verticalHeader().width() + self.frameWidth(),
-                             self.horizontalHeader().height() + self.frameWidth() + self.frowheight,
-                             self.fcolwidth,
-                             self.viewport().height() - self.frowheight)
-        self.rTV.setGeometry(self.verticalHeader().width() + self.frameWidth() + self.fcolwidth,
-                             self.horizontalHeader().height() + self.frameWidth(),
-                             self.viewport().width() - self.fcolwidth,
-                             self.frowheight)
+        self.fTV.setGeometry(
+            (
+                self.frameWidth()
+                + (self.verticalHeader().width() if self.frowheight == 0 else 0)
+            ),
+            (
+                self.frameWidth()
+                + (self.horizontalHeader().height() if self.fcolwidth == 0 else 0)
+            ),
+            (
+                self.fcolwidth
+                + (self.verticalHeader().width() if self.frowheight != 0 else 0)
+            ),
+            (
+                self.frowheight
+                + (self.horizontalHeader().height() if self.fcolwidth != 0 else 0)
+            ),
+        )
+        self.cTV.setGeometry(
+            self.verticalHeader().width() + self.frameWidth(),
+            self.horizontalHeader().height() + self.frameWidth() + self.frowheight,
+            self.fcolwidth,
+            self.viewport().height() - self.frowheight,
+        )
+        self.rTV.setGeometry(
+            self.verticalHeader().width() + self.frameWidth() + self.fcolwidth,
+            self.horizontalHeader().height() + self.frameWidth(),
+            self.viewport().width() - self.fcolwidth,
+            self.frowheight,
+        )
 
     def setHorizontalHeader(self, header):
         DropTableView.setHorizontalHeader(self, header)
@@ -450,8 +487,16 @@ class FreezeTableView(DropTableView):
         self.rTV.setRowHeight(row, size)
 
     def printSize(self, n):
-        print("%d: main=%d, fTV=%d, rTV=%d, cTV=%d" % (n, self.rowHeight(n), self.fTV.rowHeight(n),
-                                                       self.rTV.rowHeight(n), self.cTV.rowHeight(n)))
+        print(
+            "%d: main=%d, fTV=%d, rTV=%d, cTV=%d"
+            % (
+                n,
+                self.rowHeight(n),
+                self.fTV.rowHeight(n),
+                self.rTV.rowHeight(n),
+                self.cTV.rowHeight(n),
+            )
+        )
 
     def addContextMenu(self, menu):
         DropTableView.addContextMenu(self, menu)

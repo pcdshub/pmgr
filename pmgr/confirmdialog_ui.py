@@ -21,7 +21,9 @@ class Ui_Dialog:
         self.verticalLayout.addWidget(self.label_2)
         self.buttonBox = QtWidgets.QDialogButtonBox(Dialog)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(
+            QtWidgets.QDialogButtonBox.Cancel | QtWidgets.QDialogButtonBox.Ok
+        )
         self.buttonBox.setObjectName("buttonBox")
         self.verticalLayout.addWidget(self.buttonBox)
 
@@ -33,5 +35,10 @@ class Ui_Dialog:
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
-        self.label.setText(_translate("Dialog", "This commit will affect XXXXX configurations and YYYYY motors."))
+        self.label.setText(
+            _translate(
+                "Dialog",
+                "This commit will affect XXXXX configurations and YYYYY motors.",
+            )
+        )
         self.label_2.setText(_translate("Dialog", "Please confirm."))
