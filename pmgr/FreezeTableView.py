@@ -19,7 +19,7 @@ class FreezeHeaderView(QtWidgets.QHeaderView):
         self.__hdr.sortIndicatorChanged.connect(self.parentSortChanged)
 
     def sectionSizeFromContents(self, logidx):
-        if self.__hdr == None:
+        if self.__hdr is None:
             return QtWidgets.QHeaderView.sectionSizeFromContents(self, logidx)
         elif self.__orientation == QtCore.Qt.Horizontal:
             return QtCore.QSize(self.__hdr.sectionSize(logidx), self.__hdr.height())

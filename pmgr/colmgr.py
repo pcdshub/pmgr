@@ -52,7 +52,7 @@ def choosecol(table, index):
     h = table.horizontalHeader()
     try:
         d = m.colchoosedialog
-    except:
+    except Exception:
         d = QtWidgets.QDialog()
         d.ui = colchoose_ui.Ui_Dialog()
         d.ui.setupUi(d)
@@ -82,13 +82,13 @@ def choosecol(table, index):
 
 def doAllButton(d):
     for c in d.cols:
-        if c != None:
+        if c is not None:
             c.setChecked(True)
 
 
 def doNoneButton(d):
     for c in d.cols:
-        if c != None:
+        if c is not None:
             c.setChecked(False)
 
 

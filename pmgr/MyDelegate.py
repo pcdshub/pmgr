@@ -1,6 +1,8 @@
 import re
 
 import numpy as np
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt
 
 #########################################################################
 #
@@ -15,23 +17,23 @@ def valid_float_string(string):
     return match.groups()[0] == string if match else False
 
 
-class FloatValidator(QValidator):
+class FloatValidator(QtGui.QValidator):
     def validate(self, string, position):
         if valid_float_string(string):
-            return (QValidator.Acceptable, string, position)
+            return (self.State.Acceptable, string, position)
         s = str(string)
         if s == "" or s[position - 1] in "e.-+":
-            return (QValidator.Intermediate, string, position)
-        return (QValidator.Invalid, string, position)
+            return (self.State.Intermediate, string, position)
+        return (self.State.Invalid, string, position)
 
     def fixup(self, text):
         match = _float_re.search(str(text))
         return match.groups()[0] if match else ""
 
 
-class ScientificDoubleSpinBox(QDoubleSpinBox):
+class ScientificDoubleSpinBox(QtWidgets.QDoubleSpinBox):
     def __init__(self, parent=None):
-        QDoubleSpinBox.__init__(self, parent)
+        super().__init__(parent)
         self.setMinimum(-np.inf)
         self.setMaximum(np.inf)
         self.validator = FloatValidator()
@@ -68,20 +70,17 @@ def format_float(value):
 #########################################################################
 
 
-class MyDelegate(QStyledItemDelegate):
-    def __init__(self, parent):
-        QStyledItemDelegate.__init__(self, parent)
-
+class MyDelegate(QtWidgets.QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         e = index.model().editorInfo(index)
         if e == str:
-            editor = QItemEditorFactory.defaultFactory().createEditor(
-                QVariant.String, parent
+            editor = QtWidgets.QItemEditorFactory.defaultFactory().createEditor(
+                QtCore.QVariant.String, parent
             )
             editor.mydelegate = False
         elif e == int:
-            editor = QItemEditorFactory.defaultFactory().createEditor(
-                QVariant.Int, parent
+            editor = QtWidgets.QItemEditorFactory.defaultFactory().createEditor(
+                QtCore.QVariant.Int, parent
             )
             editor.mydelegate = False
         elif e == float:
@@ -89,7 +88,7 @@ class MyDelegate(QStyledItemDelegate):
             editor.mydelegate = False
         else:
             # Must be an enum list!
-            editor = QComboBox(parent)
+            editor = QtWidgets.QComboBox(parent)
             editor.enum = e
             editor.setAutoFillBackground(True)
             for item in e:
@@ -103,15 +102,15 @@ class MyDelegate(QStyledItemDelegate):
             try:
                 idx = editor.enum.index(value)
                 editor.setCurrentIndex(idx)
-            except:
+            except Exception:
                 # What was dumb is now smart?!?
                 editor.setCurrentIndex(0)
         else:
-            QStyledItemDelegate.setEditorData(self, editor, index)
+            super().setEditorData(editor, index)
 
     def setModelData(self, editor, model, index):
         if editor.mydelegate:
-            if editor.enum == None:
+            if editor.enum is None:
                 v = editor.checkState()
                 if v == Qt.Checked:
                     model.setData(index, 1)
@@ -120,7 +119,4 @@ class MyDelegate(QStyledItemDelegate):
             else:
                 model.setData(index, editor.currentText())
         else:
-            QStyledItemDelegate.setModelData(self, editor, model, index)
-
-    def sizeHint(self, option, index):
-        return QStyledItemDelegate.sizeHint(self, option, index)
+            super().setModelData(editor, model, index)

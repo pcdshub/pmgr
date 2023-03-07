@@ -90,7 +90,7 @@ class MyContextMenu(QtWidgets.QMenu):
             active : boolean
                 True if this menu item should be active.
         """
-        if cond != None:
+        if cond is not None:
             self.havecond = True
         self.actions.append((name, action, cond))
         QtWidgets.QMenu.addAction(self, name)
@@ -114,11 +114,11 @@ class MyContextMenu(QtWidgets.QMenu):
             Return True if this menu should be displayed, rebuilding it
             if necessary.
         """
-        if self.isAct == None or self.isAct(table, index):
+        if self.isAct is None or self.isAct(table, index):
             if self.havecond:
                 self.clear()
                 for name, action, cond in self.actions:
-                    if cond == None or cond(table, index):
+                    if cond is None or cond(table, index):
                         QtWidgets.QMenu.addAction(self, name)
             return True
         else:
@@ -147,7 +147,7 @@ class MyContextMenu(QtWidgets.QMenu):
         else:
             gpos = table.viewport().mapToGlobal(pos)
         selectedItem = self.exec_(gpos)
-        if selectedItem != None:
+        if selectedItem is not None:
             txt = selectedItem.text()
             for name, action, cond in self.actions:
                 if txt == name:
@@ -170,7 +170,7 @@ def caput(pvname, value, timeout=1.0, **kw):
         try:
             if kw["enum"]:
                 pv.set_string_enum(True)
-        except:
+        except Exception:
             pass
         pv.put(value, timeout=timeout)
         pv.disconnect()
@@ -187,7 +187,7 @@ def caget(pvname, timeout=1.0, **kw):
         try:
             if kw["enum"]:
                 pv.set_string_enum(True)
-        except:
+        except Exception:
             pass
         pv.get(ctrl=False, timeout=timeout)
         v = pv.value
@@ -239,7 +239,7 @@ def connectPv(name, timeout=-1.0):
             pv.connect(timeout)
             pv.get(ctrl=False, timeout=timeout)
         return pv
-    except:
+    except Exception:
         return None
 
 
@@ -272,7 +272,7 @@ def monitorPv(name, handler):
         pv.getevt_cb = lambda e=None: __getevt_callback(pv, e)
         pv.monitor_cb = lambda e=None: __monitor_callback(pv, e)
         return pv
-    except:
+    except Exception:
         return None
 
 
@@ -285,7 +285,7 @@ def fixName(l, idx, name):
         try:
             if d["config"] == idx:
                 d["cfgname"] = name
-        except:
+        except Exception:
             pass
 
 
@@ -308,6 +308,6 @@ def authenticate_user(user, password):
             user, password, "krbtgt/SLAC.STANFORD.EDU", "SLAC.STANFORD.EDU", False
         ):
             return True
-    except:
+    except Exception:
         pass
     return False

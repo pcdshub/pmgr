@@ -60,13 +60,13 @@ class db(QtCore.QObject):
                 del self.nameedits[id]["name"]
             else:
                 self.nameedits[id] = name
-        except:
+        except Exception:
             self.nameedits[id] = name
 
     def getCfgName(self, id):
         try:
             return self.nameedits[id]
-        except:
+        except Exception:
             return param.params.pobj.cfgs[id]["name"]
 
     def getCfgId(self, name):
@@ -81,13 +81,13 @@ class db(QtCore.QObject):
     def setCfgNames(self, l):
         for o in l:
             c = o["config"]
-            if c == None:
+            if c is None:
                 o["cfgname"] = ""
             else:
                 o["cfgname"] = self.getCfgName(c)
 
     def readTables(self, mask=None, nosig=False):
-        if mask == None:
+        if mask is None:
             mask = param.params.pobj.DB_ALL
         mask = param.params.pobj.updateTables(mask)
         if mask == 0:
@@ -145,7 +145,7 @@ class db(QtCore.QObject):
             dd.update(d)
             dd["config"] = newcfg
             d = dd
-        except:
+        except Exception:
             pass
         try:
             oldport = d["port"]
@@ -154,7 +154,7 @@ class db(QtCore.QObject):
             dd.update(d)
             dd["port"] = newport
             d = dd
-        except:
+        except Exception:
             pass
         return d
 

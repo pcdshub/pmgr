@@ -157,7 +157,7 @@ object for {} pmgr'".format(
     # Try to get the cfg id the obj uses
     try:
         cfgID = pmgr.objs[objID]["config"]
-    except Exception as e:
+    except Exception:
         cfgID = None
 
     # If there was a valid cfgID and it isnt the default one, try to update the cfg
@@ -206,7 +206,7 @@ pmgr".format(
         objPmgr = pmgr.objs[objID]
         try:
             utlp.printDiff(pmgr, objOld, cfgOld, objPmgr, cfgPmgr, verbose)
-        except:
+        except Exception:
             pass
         if zenity:
             system(
@@ -281,7 +281,7 @@ def applyConfig(
                     print("Closest matches to your input:")
                     closest_cfgs = get_close_matches(cfgName, allNames.keys(), 10, 0.1)
                     pprint(closest_cfgs)
-                cfgName = raw_input(
+                cfgName = input(
                     "Please input a configuration to apply or search: (or 'quit' to quit)\n"
                 )
                 if cfgName == "quit":
@@ -289,7 +289,7 @@ def applyConfig(
                 if cfgName not in allNames:
                     print("Invalid configuration inputted.")
                     continue
-                confirm = raw_input(
+                confirm = input(
                     f"\nAre you sure you want to apply {cfgName} to {PV}?\n"
                 )
         elif cfgName not in allNames:
@@ -347,7 +347,7 @@ def applyConfig(
     objNew = utlp.getObjVals(pmgr, PV)
     try:
         utlp.printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind="changes")
-    except:
+    except Exception:
         pass
     if zenity:
         system('zenity --info --text="Configuration successfully applied"')
@@ -488,7 +488,7 @@ def importConfigs(hutch, pmgr, path, update=False, verbose=False):
                     print(
                         "Motor '{}' failed to be added to pmgr".format(objDict["name"])
                     )
-        except:
+        except Exception:
             if verbose:
                 print("Motor '{}' failed to be added to pmgr".format(objDict["name"]))
             continue
@@ -511,10 +511,10 @@ def Diff(PV, hutch, pmgr, SN, verbose):
         return
     try:
         cfgID = pmgr.objs[objID]["config"]
-    except:
+    except Exception:
         cfgID = None
     if not cfgID:
-        print(f"\nInvalid config associated with motor, cannot find diffs")
+        print("\nInvalid config associated with motor, cannot find diffs")
         return
 
     # Get pmgr configurations
@@ -534,7 +534,7 @@ def Diff(PV, hutch, pmgr, SN, verbose):
             name1="Pmgr",
             name2="Live",
         )
-    except:
+    except Exception:
         pass
 
 
@@ -568,17 +568,12 @@ def parsePVArguments(PVArguments):
                 PVs.add(basePV + f"{int(arg):02}")
             else:
                 pass
-        except:
+        except Exception:
             pass
 
     PVs = list(PVs)
     PVs.sort()
     return PVs
-
-
-################################################################################
-##                                   Main                                     ##
-################################################################################
 
 
 def main():

@@ -210,7 +210,7 @@ def main():
         sys.exit()
 
     if options.help is not None:
-        options.usage(str(msg))
+        options.usage("")  # TODO: 'msg' was unset here
         sys.exit()
 
     param.params.setHutch(options.hutch.lower())

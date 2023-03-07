@@ -45,8 +45,7 @@ class pmgrAPI:
                 return d
         raise Exception("%s not found!" % v)
 
-    @staticmethod
-    def _fixmutex(d, mutex):
+    def _fixmutex(self, d, mutex):
         """
         A private method to fix the configuration fields to match the
         mutex condition.
@@ -74,11 +73,13 @@ class pmgrAPI:
             The original configuration dictionary with the derived fields
             removed.
         """
+        # NOTE: fixed as this cannot be a staticmethod since it refers to 'self.pm'
+        # NOTE: fixed as ord() was used incorrectly
         for c in mutex:
             if c != " ":
                 try:
-                    del d[self.pm.objflds[ord[c] - 65]["name"]]
-                except:
+                    del d[self.pm.objflds[ord(c) - 65]["name"]]
+                except Exception:
                     pass
         return d
 
@@ -184,7 +185,7 @@ class pmgrAPI:
         try:
             # See if the object is in the database.
             o = self._search(self.pm.objs, "rec_base", pv)
-        except:
+        except Exception:
             # It isn't.  So use the alternative form of applyConfig.
             c = self._search(self.pm.cfgs, "name", cfgname)
             self.pm.applyConfig(pv, cfg=c["id"])
@@ -263,7 +264,7 @@ class pmgrAPI:
         else:
             try:
                 do = self._search(self.pm.cfgs, "name", cfgname)
-            except:
+            except Exception:
                 do = None
                 overwrite = False
             if do is not None and not overwrite:

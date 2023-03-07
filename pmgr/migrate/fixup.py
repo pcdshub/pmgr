@@ -23,7 +23,7 @@ def assign_mutex(p, cfg, m, full, cm):
                 ff.append(f)
     if len(ff) >= 2:
         raise Exception(
-            "A: cfg %d has too many nulls for mutex %s." % (i, p.mutex_sets[m])
+            "A: cfg has too many nulls for mutex %s." % (p.mutex_sets[m], )
         )
     if len(ff) == 0:
         if cm == " ":
@@ -134,7 +134,7 @@ def main():
     for k, v in p.objs.items():
         try:
             rdict[v["rec_base"]].append(v["id"])
-        except:
+        except Exception:
             rdict[v["rec_base"]] = [v["id"]]
     for k, v in rdict.items():
         if len(v) > 1:

@@ -353,11 +353,11 @@ class pmgrobj:
             }
             try:
                 setflds[so].append(f)
-            except:
+            except Exception:
                 setflds[so] = [f]
             try:
                 d["enum"] = enum[f]
-            except:
+            except Exception:
                 pass
             self.objflds.append(d)
         for f, t, nl, k in fld:
@@ -383,11 +383,11 @@ class pmgrobj:
             }
             try:
                 setflds[so].append(f)
-            except:
+            except Exception:
                 setflds[so] = [f]
             try:
                 d["enum"] = enum[f]
-            except:
+            except Exception:
                 pass
             self.objflds.append(d)
         self.objflds.sort(
@@ -398,7 +398,7 @@ class pmgrobj:
             d = self.objflds[i]
             d["objidx"] = i
             self.fldmap[d["fld"]] = d
-        self.cfgflds = [d for d in self.objflds if d["obj"] == False]
+        self.cfgflds = [d for d in self.objflds if d["obj"] is False]
         for i in range(len(self.cfgflds)):
             self.cfgflds[i]["cfgidx"] = i
         # Set the type of each mutex_set and make sure it's consistent
@@ -424,7 +424,7 @@ class pmgrobj:
                     l.append(n)
             self.con.commit()
             l.sort()
-        except:
+        except Exception:
             pass
         return l
 
@@ -454,7 +454,7 @@ class pmgrobj:
                         self.lastobj = d["dt_updated"]
                         v = v | self.DB_OBJECT
             self.con.commit()
-        except:
+        except Exception:
             pass
         return v
 
@@ -476,7 +476,7 @@ class pmgrobj:
         try:
             self.cur.execute("select * from {}{}".format(self.table, ext))
             return list(self.cur.fetchall())
-        except:
+        except Exception:
             return []
 
     def updateTables(self, mask=DB_ALL):
@@ -518,7 +518,7 @@ class pmgrobj:
                             "name": g["name"],
                             "active": g["active"],
                         }
-                    except:
+                    except Exception:
                         print(g)
                         raise
                 for g in cfggrp:
@@ -641,28 +641,28 @@ class pmgrobj:
             cmd += "%sname = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["config"]
             cmd += "%sconfig = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["mutex"]
             cmd += "%smutex = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["owner"]
             cmd += "%sowner = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         for f in self.cfgflds:
             fld = f["fld"]
@@ -671,7 +671,7 @@ class pmgrobj:
                 cmd += "{}{} = %s".format(sep, fld)
                 sep = ", "
                 vlist.append(v)
-            except:
+            except Exception:
                 pass  # No change to this field!
         cmd += " where id = %s"
         vlist.append(idx)
@@ -695,7 +695,7 @@ class pmgrobj:
             % self.table
         )
         for f in self.objflds:
-            if f["obj"] == False:
+            if f["obj"] is False:
                 continue
             fld = f["fld"]
             cmd += ", " + fld
@@ -708,7 +708,7 @@ class pmgrobj:
         vlist.append(d["mutex"])
         vlist.append(d["comment"])
         for f in self.objflds:
-            if f["obj"] == False:
+            if f["obj"] is False:
                 continue
             fld = f["fld"]
             cmd += ", %s"
@@ -743,50 +743,50 @@ class pmgrobj:
             cmd += "%sname = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["config"]
             cmd += "%sconfig = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["rec_base"]
             cmd += "%srec_base = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["category"]
             cmd += "%scategory = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["mutex"]
             cmd += "%smutex = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["comment"]
             cmd += "%scomment = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         for f in self.objflds:
-            if f["obj"] == False:
+            if f["obj"] is False:
                 continue
             fld = f["fld"]
             try:
                 v = e[fld]  # We have a new value!
-            except:
+            except Exception:
                 continue
             cmd += "{}{} = %s".format(sep, fld)
             sep = ", "
@@ -867,7 +867,7 @@ class pmgrobj:
                     cmd += "values (%s, %s, %s, %s)"
                     try:
                         port = str(g[k]["port"])
-                    except:
+                    except Exception:
                         port = "0"
                     if self.debug:
                         print(cmd % (str(id), str(g[k]["config"]), port, str(seq)))
@@ -933,18 +933,18 @@ class pmgrobj:
             r = self.cur.fetchone()
             try:
                 del r[f]
-            except:
+            except Exception:
                 pass
             for f in self.unwanted:
                 try:
                     del r[f]
-                except:
+                except Exception:
                     pass
             try:
                 # See the comment in ObjModel.setValue.  This is just bizarreness.
                 r["cfgname"] = r["config"]
                 del r["config"]
-            except:
+            except Exception:
                 pass
             return r
         except _mysql_exceptions.Error as err:
@@ -952,13 +952,13 @@ class pmgrobj:
             return {}
 
     def getConfig(self, idx, loop=[]):
-        if idx == None or idx in loop:
+        if idx is None or idx in loop:
             return {}
         d = {}
         d.update(self.cfgs[idx])
         haveval = {}
         v = d["mutex"]
-        if d["config"] != None:
+        if d["config"] is not None:
             lp = list(loop)
             lp.append(idx)
             vals = self.getConfig(d["config"], lp)  # Get the parent configuration
@@ -977,7 +977,7 @@ class pmgrobj:
         for k, v in d.items():
             if k[:3] != "PV_" and k[:4] != "FLD_":
                 continue
-            if v == None:
+            if v is None:
                 # This key might have a value because it is the unset element of a mutex set!
                 haveval[k] = chr(self.fldmap[k]["colorder"] + 0x40) in d["curmutex"]
             else:
@@ -985,7 +985,7 @@ class pmgrobj:
             if not haveval[k]:
                 try:
                     d[k] = vals[k]  # Try to get the parent value.
-                except:
+                except Exception:
                     d[k] = None
         d["_haveval"] = haveval
         return d

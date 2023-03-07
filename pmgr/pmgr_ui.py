@@ -187,4 +187,4 @@ class Ui_MainWindow:
         self.actionAuth.setText(_translate("MainWindow", "Authenticate"))
 
 
-from pmgr.FreezeTableView import FreezeTableView
+from pmgr.FreezeTableView import FreezeTableView  # noqa: E402

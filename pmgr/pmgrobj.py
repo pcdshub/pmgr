@@ -346,11 +346,11 @@ class pmgrobj:
                 }
                 try:
                     setflds[so].append(f)
-                except:
+                except Exception:
                     setflds[so] = [f]
                 try:
                     d["enum"] = enum[f]
-                except:
+                except Exception:
                     pass
                 self.objflds.append(d)
         for f, t, nl, k in fld:
@@ -378,11 +378,11 @@ class pmgrobj:
                 }
                 try:
                     setflds[so].append(f)
-                except:
+                except Exception:
                     setflds[so] = [f]
                 try:
                     d["enum"] = enum[f]
-                except:
+                except Exception:
                     pass
                 self.objflds.append(d)
         self.objflds.sort(
@@ -393,7 +393,7 @@ class pmgrobj:
             d = self.objflds[i]
             d["objidx"] = i
             self.fldmap[d["fld"]] = d
-        self.cfgflds = [d for d in self.objflds if d["obj"] == False]
+        self.cfgflds = [d for d in self.objflds if d["obj"] is False]
         for i in range(len(self.cfgflds)):
             self.cfgflds[i]["cfgidx"] = i
         # Set the type of each mutex_set and make sure it's consistent
@@ -431,7 +431,7 @@ class pmgrobj:
                     l.append(n)
             self.con.commit()
             l.sort()
-        except:
+        except Exception:
             pass
         return l
 
@@ -470,7 +470,7 @@ class pmgrobj:
                         self.lastobj = d["dt_updated"]
                         v = v | self.DB_OBJECT
             self.con.commit()
-        except:
+        except Exception:
             pass
         return v
 
@@ -498,7 +498,7 @@ class pmgrobj:
         try:
             self.cur.execute("select * from {}{}".format(self.table, ext))
             return list(self.cur.fetchall())
-        except:
+        except Exception:
             return []
 
     def updateTables(self, mask=DB_ALL):
@@ -738,21 +738,21 @@ class pmgrobj:
             cmd += "%sname = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["config"]
             cmd += "%sconfig = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["mutex"]
             cmd += "%smutex = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         for f in self.cfgflds:
             fld = f["fld"]
@@ -761,7 +761,7 @@ class pmgrobj:
                 cmd += "{}{} = %s".format(sep, fld)
                 sep = ", "
                 vlist.append(v)
-            except:
+            except Exception:
                 pass  # No change to this field!
         cmd += " where id = %s"
         vlist.append(idx)
@@ -815,7 +815,7 @@ class pmgrobj:
             % self.table
         )
         for f in self.objflds:
-            if f["obj"] == False:
+            if f["obj"] is False:
                 continue
             fld = f["fld"]
             cmd += ", " + fld
@@ -827,7 +827,7 @@ class pmgrobj:
         vlist.append(d["mutex"])
         vlist.append(d["comment"])
         for f in self.objflds:
-            if f["obj"] == False:
+            if f["obj"] is False:
                 continue
             fld = f["fld"]
             cmd += ", %s"
@@ -882,50 +882,50 @@ class pmgrobj:
             cmd += "%sname = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["config"]
             cmd += "%sconfig = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["rec_base"]
             cmd += "%srec_base = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["category"]
             cmd += "%scategory = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["mutex"]
             cmd += "%smutex = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         try:
             v = e["comment"]
             cmd += "%scomment = %%s" % sep
             sep = ", "
             vlist.append(v)
-        except:
+        except Exception:
             pass
         for f in self.objflds:
-            if f["obj"] == False:
+            if f["obj"] is False:
                 continue
             fld = f["fld"]
             try:
                 v = e[fld]  # We have a new value!
-            except:
+            except Exception:
                 continue
             cmd += "{}{} = %s".format(sep, fld)
             sep = ", "
@@ -997,37 +997,37 @@ class pmgrobj:
             # Write zeros.
             #
             for f in s:
-                if self.fldmap[f]["readonly"] or vals[f] == None:
+                if self.fldmap[f]["readonly"] or vals[f] is None:
                     continue
                 if self.fldmap[f]["writezero"]:
                     try:
                         z = self.fldmap[f]["enum"][0]
                         haveenum = True
-                    except:
+                    except Exception:
                         z = 0
                         haveenum = False
                     try:
                         utils.caput(base + self.fldmap[f]["pv"], z, enum=haveenum)
-                    except:
+                    except Exception:
                         pass
             #
             # Write values.
             #
             for f in s:
                 try:
-                    if vals[f] == None or self.fldmap[f]["readonly"]:
+                    if vals[f] is None or self.fldmap[f]["readonly"]:
                         continue
-                except:
+                except Exception:
                     continue  # If we just passed in a base PV, we might not have every field!
                 try:
                     z = self.fldmap[f]["enum"][0]
                     haveenum = True
-                except:
+                except Exception:
                     z = 0
                     haveenum = False
                 try:
                     utils.caput(base + self.fldmap[f]["pv"], vals[f], enum=haveenum)
-                except:
+                except Exception:
                     pass
 
     def applyAllConfigs(self):
@@ -1074,13 +1074,13 @@ class pmgrobj:
         d = {}
         for s in self.setflds:
             for f in s:
-                if vals[f] == None or self.fldmap[f]["readonly"]:
+                if vals[f] is None or self.fldmap[f]["readonly"]:
                     continue
                 n = base + self.fldmap[f]["pv"]
                 try:
-                    z = self.fldmap[f]["enum"][0]
+                    self.fldmap[f]["enum"][0]
                     haveenum = True
-                except:
+                except Exception:
                     haveenum = False
                 v = utils.caget(n, enum=haveenum)
                 if type(v) == float:
@@ -1114,9 +1114,9 @@ class pmgrobj:
         for f in self.cfgflds:
             n = base + f["pv"]
             try:
-                z = f["enum"][0]
+                f["enum"][0]
                 haveenum = True
-            except:
+            except Exception:
                 haveenum = False
             v = utils.caget(n, enum=haveenum)
             d[f["fld"]] = v

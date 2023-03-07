@@ -15,7 +15,7 @@ def equal(v1, v2):
             return v1 == v2 or abs(v1 - v2) < (abs(v1) + abs(v2)) * 1e-12
         else:
             return v1 == v2
-    except:
+    except Exception:
         return False
 
 
@@ -67,7 +67,7 @@ class param_structure:
 
     def setCatEnum(self, l):
         self.catenum2 = l
-        if self.ui != None:
+        if self.ui is not None:
             self.ui.actionProtected.setText("Show " + l[0])
             self.ui.actionManual.setText("Show " + l[1])
 

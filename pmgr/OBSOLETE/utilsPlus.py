@@ -6,6 +6,7 @@ import datetime
 import logging
 import os
 import subprocess
+import time
 from configparser import SafeConfigParser
 from os import system
 from pprint import pprint
@@ -38,7 +39,7 @@ def getCfgVals(pmgr, PV, rename=True):
         name = None
         try:
             name = pv.get(PV + ".DESC")
-        except:
+        except Exception:
             name = "Unknown"
         cfgDict["name"] = name
         cfgDict["FLD_TYPE"] = f"{name}_{PV[:4]}"
@@ -105,14 +106,12 @@ def objInsert(pmgr, objDict):
         objDict["mutex"] = "  ab"  # MCB - NO NO NO!!!!  This is better than XY, but...
     if "rec_base" not in objDict:
         objDict["mutex"] = "Unknown PV"
-    result = None
 
     pmgr.updateTables()
     pmgr.start_transaction()
 
     output = pmgr.objectInsert(objDict)
-    errors = pmgr.end_transaction()
-
+    pmgr.end_transaction()
     return output
 
 
@@ -141,7 +140,7 @@ def objUpdate(pmgr, idx, objDict):
     for field in objDict.keys():
         try:
             obj[field] = objDict[field]
-        except:
+        except Exception:
             continue
     return transaction(pmgr, "objectChange", idx, obj)
 
@@ -152,7 +151,7 @@ def cfgUpdate(pmgr, idx, cfgDict):
     for field in cfgDict.keys():
         try:
             cfg[field] = cfgDict[field]
-        except:
+        except Exception:
             continue
     return transaction(pmgr, "configChange", idx, cfg)
 
@@ -161,15 +160,15 @@ def get_motor_PVs(partialPV):
     motorPVs = []
     i = 1
     while i != 40:
-        basePV = "%s:%02d" % (partialPV, i)
-        print(basePV)
+        base_pv = "%s:%02d" % (partialPV, i)
+        print(base_pv)
         try:
-            SN = pv.get(basePV + ".SN")
-            if len(SN) >= 8:
-                motor_PVs[sn] = basepv
-                print(f"PV: {basePV} is active")
-                motorPVs += basePV
-        except:
+            sn = pv.get(base_pv + ".SN")
+            if len(sn) >= 8:
+                motorPVs[sn] = base_pv
+                print(f"PV: {base_pv} is active")
+                motorPVs += base_pv
+        except Exception:
             pass
     return motorPVs
 
@@ -362,7 +361,7 @@ def checkSNLength(cfgDict, pmgr):
     # Make sure it is a string
     cfgDict["FLD_SN"] = str(cfgDict["FLD_SN"])
 
-    SN = cfgDict["FLD_SN"]
+    # SN = cfgDict["FLD_SN"]
     try:
         # Continue adding 0s until the SN is the correct length
         while len(cfgDict["FLD_SN"]) < 9:
@@ -370,13 +369,9 @@ def checkSNLength(cfgDict, pmgr):
         return cfgDict
 
     # If it fails in any way just return the dictionary
-    except:
+    except Exception:
         print("Failed to check SN")
         return cfgDict
-
-
-def listObjFields(pmgr):
-    return listFieldsWith(pmgr, "obj", True)
 
 
 def listCfgFields(pmgr):
@@ -479,10 +474,10 @@ def getImportFieldDict(cfgPath):
     for field in cfgDict:
         try:
             cfgDict[field] = int(cfgDict[field])
-        except:
+        except Exception:
             try:
                 cfgDict[field] = float(cfgDict[field])
-            except:
+            except Exception:
                 pass
 
     if "FLD_DESC" not in cfgDict.keys():
@@ -577,7 +572,7 @@ def motorPrelimChecks(PV, hutches, objType, verbose=False):
             try:
                 SN[motorPV] = pv.get(motorPV + ".SN")
                 break
-            except:
+            except Exception:
                 i += 1
 
         if not SN:
@@ -601,7 +596,7 @@ def dumbMotorCheck(PV):
         try:
             PN = pv.get(PV + ".PN")
             break
-        except:
+        except Exception:
             i += 1
 
     if "MFI" in PN:
@@ -638,7 +633,7 @@ def getPmgr(objType, hutch, verbose):
         pmgr.updateTables()  # And update
         if verbose:
             print(f"Pmgr instance initialized for hutch or area: {hutch.upper()}")
-    except:
+    except Exception:
         print(f"Failed to create pmgr instance for hutch: {hutch.upper()}")
         pmgr = None
     return pmgr
@@ -674,7 +669,7 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind="diffs", **kwa
                     name1, str(cfgNew[field]), name2, str(cfgOld[field])
                 )
                 ndiffs += 1
-        except:
+        except Exception:
             pass
 
     for field in objOld.keys():
@@ -690,7 +685,7 @@ def printDiff(pmgr, objOld, cfgOld, objNew, cfgNew, verbose, kind="diffs", **kwa
                     name1, str(objNew[field]), name2, str(objOld[field])
                 )
                 ndiffs += 1
-        except:
+        except Exception:
             pass
 
     print(f"\nNumber of {kind}: {ndiffs}")
@@ -785,7 +780,6 @@ def getBasePV(PVArguments):
 
 # Functions pulled from Zack's utils.py file
 # Original: /reg/neh/home/zlentz/python/pmgrPython/utils.py
-import time
 
 
 def timing(f):
@@ -955,7 +949,7 @@ def nextType(pmgr, typeStr):
 def cfgInsert(pmgr, cfg):
     """Adds partial configuration dict cfg to pmgr as a configuration."""
     if "mutex" not in cfg:
-        cfg["mutex"] = "XY  "  ### MCB - NONONONONO!!!!
+        cfg["mutex"] = "XY  "  # MCB - NONONONONO!!!!
     result = None
     result = transaction(pmgr, "configInsert", cfg)
     return result
@@ -996,10 +990,6 @@ def getObjPV(pmgr, objID):
     except AttributeError:
         print("getObjPV: Error with pmgr and/or objID, one or both may not exist!")
         exit()
-
-
-def listCfgFields(pmgr):
-    return listFieldsWith(pmgr, "obj", False)
 
 
 def setOfAllCfgVal(pmgr, field, fcheck=None, fval=None):

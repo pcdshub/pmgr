@@ -1,14 +1,7 @@
 from PyQt5 import QtCore, QtWidgets
 
-from . import (
-    cfgdialog_ui,
-    chown_ui,
-    colsave_ui,
-    coluse_ui,
-    confirmdialog_ui,
-    deriveddialog_ui,
-    errordialog_ui,
-)
+from . import (cfgdialog_ui, chown_ui, colsave_ui, coluse_ui, confirmdialog_ui,
+               deriveddialog_ui, errordialog_ui)
 
 
 class cfgdialog(QtWidgets.QDialog):
@@ -21,14 +14,14 @@ class cfgdialog(QtWidgets.QDialog):
     def exec_(self, prompt, idx=None):
         self.ui.label.setText(prompt)
         t = self.model.setupTree(self.ui.treeWidget, "ditem")
-        if idx != None:
+        if idx is not None:
             self.ui.treeWidget.setCurrentItem(t[idx]["ditem"])
             self.ui.treeWidget.expandItem(t[idx]["ditem"])
         code = QtWidgets.QDialog.exec_(self)
         if code == QtWidgets.QDialog.Accepted:
             try:
                 self.result = self.ui.treeWidget.currentItem().id
-            except:
+            except Exception:
                 return QtWidgets.QDialog.Rejected  # No selection made!
         return code
 
@@ -114,6 +107,6 @@ class chowndialog(QtWidgets.QDialog):
         if code == QtWidgets.QDialog.Accepted:
             try:
                 self.result = self.ui.comboBox.currentText().lower()
-            except:
+            except Exception:
                 return QtWidgets.QDialog.Rejected  # No selection made!
         return code

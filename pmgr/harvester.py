@@ -56,18 +56,19 @@ def readConfig():
         "delay": "delay",
         "alias": "alias",
     }
-    vars = set(config.keys())
     cfgfn = CONFIG_FILE % hutch
     f = open(cfgfn)
     fcntl.lockf(f, fcntl.LOCK_SH)  # Wait for the lock!!!!
     try:
-        execfile(cfgfn, {}, config)
+        with open(cfgfn, "rt") as fp:
+            contents = fp.read()
+        exec(contents, {}, config)
         res = config["procmgr_config"]
-    except:
+    except Exception:
         res = None
     fcntl.lockf(f, fcntl.LOCK_UN)
     f.close()
-    if res == None:
+    if res is None:
         return None
     d = []
     for l in res:
@@ -115,11 +116,11 @@ class config:
     def create_instance(self, iname, id, idict, ndict):
         try:
             allinst = idict[iname]
-        except:
+        except Exception:
             allinst = []
             idict[iname] = []
         n = str(len(allinst))
-        if id != None:
+        if id is not None:
             ndict[id] = (iname, int(n))
         dd = {}
         dd["INDEX"] = n
@@ -172,24 +173,24 @@ class config:
         for l in lines:
             l = l.strip()
             m = inst.search(l)
-            if m != None:
+            if m is not None:
                 continue  # Skip instantiations for now!
             m = inst2.search(l)
-            if m != None:  # First new-style instantiation --> we're done here!
+            if m is not None:  # First new-style instantiation --> we're done here!
                 break
             # Search for a one-line assignment of some form!
             m = eqqq.search(l)
-            if m == None:
+            if m is None:
                 m = eqq.search(l)
-                if m == None:
+                if m is None:
                     m = eq.search(l)
-                    if m == None:
+                    if m is None:
                         m = spqq.search(l)
-                        if m == None:
+                        if m is None:
                             m = spq.search(l)
-                            if m == None:
+                            if m is None:
                                 m = sp.search(l)
-            if m != None:
+            if m is not None:
                 var = m.group(1)
                 val = m.group(2)
                 d[var] = val
@@ -212,14 +213,16 @@ class config:
         nd = {}
         newstyle = False
         ininst = False
+        iname = None
+        dd = None
 
         for l in lines:
             l = l.strip()
             m = inst2.search(l)
-            if m != None:
+            if m is not None:
                 newstyle = True
             if newstyle:
-                if m != None:
+                if m is not None:
                     if ininst:
                         self.finish_instance(iname, i, dd)
                     ininst = True
@@ -232,7 +235,7 @@ class config:
                     haveeq = False
                     while l[loc:] != "":
                         m = assign.search(l[loc:])
-                        if m != None:
+                        if m is not None:
                             loc += m.end()
                             if haveeq:
                                 print("Double equal sign in |%s|" % l)
@@ -240,20 +243,20 @@ class config:
                             continue  # Just ignore it!
 
                         m = wqq.search(l[loc:])
-                        if m != None:
+                        if m is not None:
                             loc += m.end()
                         else:
                             m = wq.search(l[loc:])
-                            if m != None:
+                            if m is not None:
                                 loc += m.end() + 1
                             else:
                                 m = w.search(l[loc:])
-                                if m != None:
+                                if m is not None:
                                     loc += m.end() + 1
                                 else:
                                     break  # How does this even happen?!?
                         val = m.group(1)
-                        if first != None:
+                        if first is not None:
                             dd[first] = val
                             d[iname + first + n] = val
                             first = None
@@ -265,9 +268,9 @@ class config:
                                 t = nd[val]
                                 useinst = t[0]
                                 usenum = t[1]
-                            except:
+                            except Exception:
                                 m = prmidx.search(val + ",")
-                                if m != None:
+                                if m is not None:
                                     useinst = m.group(1)
                                     usenum = int(m.group(2))
                             try:
@@ -276,23 +279,23 @@ class config:
                                     var = useinst + k
                                     val = used[k]
                                     dd[var] = val
-                            except:
+                            except Exception:
                                 first = val
                                 haveeq = False
                 continue
             m = inst.search(l)
-            if m != None:
+            if m is not None:
                 id = m.group(2)
                 iname = m.group(3)
                 params = m.group(4) + ","
                 dd, n = self.create_instance(iname, id, i, nd)
                 while params != "":
                     m = prmeqqq.search(params)
-                    if m == None:
+                    if m is None:
                         m = prmeqq.search(params)
-                        if m == None:
+                        if m is None:
                             m = prmeq.search(params)
-                    if m != None:
+                    if m is not None:
                         # Parameter of the form VAR=VAL. Global dictionary will also
                         # get inameVARn=VAL.
                         var = m.group(1)
@@ -302,7 +305,7 @@ class config:
                         params = params[m.end(3) : len(params)]
                     else:
                         m = prminst.search(params)
-                        if m != None:
+                        if m is not None:
                             # This is an instance parameter.  It is either old-style,
                             # INSTn, or an arbitrary name.  Check the name dict first!
                             try:
@@ -310,9 +313,9 @@ class config:
                                 useinst = t[0]
                                 usenum = t[1]
                                 params = params[m.end(2) : len(params)]
-                            except:
+                            except Exception:
                                 m = prmidx.search(params)
-                                if m == None:
+                                if m is None:
                                     print("Unknown parameter in line %s" % params)
                                     params = ""
                                     continue
@@ -333,17 +336,17 @@ class config:
                 continue
             # Search for a one-line assignment of some form!
             m = eqqq.search(l)
-            if m == None:
+            if m is None:
                 m = eqq.search(l)
-                if m == None:
+                if m is None:
                     m = eq.search(l)
-                    if m == None:
+                    if m is None:
                         m = spqq.search(l)
-                        if m == None:
+                        if m is None:
                             m = spq.search(l)
-                            if m == None:
+                            if m is None:
                                 m = sp.search(l)
-            if m != None:
+            if m is not None:
                 var = m.group(1)
                 val = m.group(2)
                 d[var] = val
@@ -366,7 +369,7 @@ class config:
         elif isinstance(node, ast.Name):
             try:
                 x = int(self.ddict[node.id])
-            except:
+            except Exception:
                 x = 0
             return x
         elif isinstance(node, ast.operator):
@@ -382,7 +385,7 @@ def expand(cfg, lines, f):
     loc = 0
     while i < len(lines):
         m = cfg.doubledollar.search(lines[i][loc:])
-        if m == None:
+        if m is None:
             # Line without a $$.
             f.write("%s" % lines[i][loc:])
             i += 1
@@ -395,9 +398,9 @@ def expand(cfg, lines, f):
         loc = pos + 2  # skip the '$$'!
 
         m = cfg.keyword.search(lines[i][loc:])
-        if m != None:
+        if m is not None:
             kw = m.group(1)
-            if kw == None:
+            if kw is None:
                 kw = m.group(2)
                 loc += m.end(2)  # Leave on the '{'!
             else:
@@ -405,20 +408,20 @@ def expand(cfg, lines, f):
 
             if kw == "TRANSLATE":
                 argm = cfg.trargs.search(lines[i][loc:])
-                if argm != None:
+                if argm is not None:
                     loc += argm.end(3) + 2
             elif kw == "CALC":
                 argm = cfg.brackets.search(lines[i][loc:])
-                if argm != None:
+                if argm is not None:
                     loc += argm.end(1) + 1
             elif kw == "IF":
                 argm = cfg.ifargs.search(lines[i][loc:])
-                if argm != None:
+                if argm is not None:
                     kw = "TIF"  # Triple IF!
                     loc += argm.end(3) + 1
                 else:
                     argm = cfg.parens.search(lines[i][loc:])
-                    if argm != None:
+                    if argm is not None:
                         loc += argm.end(1) + 1
                     if pos == 0 and lines[i][loc:].strip() == "":
                         # If the $$ directive is the entire line, don't add a newline!
@@ -426,42 +429,42 @@ def expand(cfg, lines, f):
                         i += 1
             else:
                 argm = cfg.parens.search(lines[i][loc:])
-                if argm != None:
+                if argm is not None:
                     loc += argm.end(1) + 1
                 if pos == 0 and lines[i][loc:].strip() == "":
                     # If the $$ directive is the entire line, don't add a newline!
                     loc = 0
                     i += 1
 
-            if argm != None:
+            if argm is not None:
                 if kw == "LOOP":
                     iname = argm.group(1)
                     startloop = re.compile(r"(.*?)\$\$LOOP\(" + iname + r"(\))")
                     endloop = re.compile(r"(.*?)\$\$ENDLOOP\(" + iname + r"(\))")
-                    t = searchforend(lines, endloop, startloop, endloop, i, loc)
-                    if t == None:
+                    t = searchforend(lines, endloop, startloop, endloop, i, loc)  # noqa: F821
+                    if t is None:
                         print("Cannot find $$ENDLOOP(%s)?" % iname)
                         sys.exit(1)
                     if iname[0] >= "0" and iname[0] <= "9":
                         try:
                             cnt = int(iname)
-                        except:
+                        except Exception:
                             cnt = 0
                         ilist = [{"INDEX": str(n)} for n in range(cnt)]
                     elif iname in cfg.idict.keys():
                         try:
                             ilist = cfg.idict[iname]
-                        except:
+                        except Exception:
                             ilist = []
                     else:
                         try:
                             cnt = int(cfg.ddict[iname])
-                        except:
+                        except Exception:
                             cnt = 0
                         ilist = [{"INDEX": str(n)} for n in range(cnt)]
                     olddict = cfg.ddict
                     for inst in ilist:
-                        cfg.ddict = rename_index(olddict.copy())
+                        cfg.ddict = rename_index(olddict.copy())  # noqa: F821
                         cfg.ddict.update(inst)
                         expand(cfg, t[0], f)
                     cfg.ddict = olddict
@@ -472,25 +475,25 @@ def expand(cfg, lines, f):
                     ifre = re.compile(r"(.*?)\$\$IF\(" + iname + r"(\))")
                     endre = re.compile(r"(.*?)\$\$ENDIF\(" + iname + r"(\))")
                     elsere = re.compile(r"(.*?)\$\$ELSE\(" + iname + r"(\))")
-                    t = searchforend(lines, endre, ifre, endre, i, loc)
-                    if t == None:
+                    t = searchforend(lines, endre, ifre, endre, i, loc)  # noqa: F821
+                    if t is None:
                         print("Cannot find $$ENDIF(%s)?" % iname)
                         sys.exit(1)
-                    elset = searchforend(t[0], elsere, ifre, endre, 0, 0)
+                    elset = searchforend(t[0], elsere, ifre, endre, 0, 0)  # noqa: F821
                     try:
                         v = cfg.ddict[iname]
-                    except:
+                    except Exception:
                         v = ""
                     if v != "":
                         # True, do the if!
-                        if elset != None:
+                        if elset is not None:
                             newlines = elset[0]
                         else:
                             newlines = t[0]
                         expand(cfg, newlines, f)
                     else:
                         # False, do the else!
-                        if elset != None:
+                        if elset is not None:
                             newlines = t[0][elset[1] :]
                             newlines[0] = newlines[0][elset[2] :]
                             expand(cfg, newlines, f)
@@ -501,7 +504,7 @@ def expand(cfg, lines, f):
                     newlines = []
                     try:
                         v = cfg.ddict[iname]
-                    except:
+                    except Exception:
                         v = ""
                     if v != "":
                         # True, do the if!
@@ -513,17 +516,17 @@ def expand(cfg, lines, f):
                 elif kw == "INCLUDE":
                     try:
                         fn = cfg.ddict[argm.group(1)]
-                    except:
+                    except Exception:
                         fn = argm.group(1)
                     try:
                         newlines = open(fn).readlines()
                         expand(cfg, newlines, f)
-                    except:
+                    except Exception:
                         print("Cannot open file %s!" % fn)
                 elif kw == "COUNT":
                     try:
                         cnt = str(len(cfg.idict[argm.group(1)]))
-                    except:
+                    except Exception:
                         cnt = "0"
                     f.write(cnt)
                 elif kw == "CALC":
@@ -539,27 +542,28 @@ def expand(cfg, lines, f):
                         fmt = "%d"
                     try:
                         v = cfg.eval_expr(value)
-                    except:
+                    except Exception:
                         v = 0
                     f.write(fmt % (v))
                 elif kw == "UP":
                     try:
                         fn = cfg.ddict[argm.group(1)]
-                    except:
+                    except Exception:
                         fn = argm.group(1)
                     try:
                         f.write(fn[: fn.rindex("/")])
-                    except:
+                    except Exception:
                         pass
                 else:  # Must be "TRANSLATE"
                     try:
                         val = cfg.ddict[argm.group(1)].translate(
-                            string.maketrans(
-                                enumstring(argm.group(2)), enumstring(argm.group(3))
+                            str.maketrans(
+                                enumstring(argm.group(2)),  # noqa: F821
+                                enumstring(argm.group(3))  # noqa: F821
                             )
                         )
                         f.write(val)
-                    except:
+                    except Exception:
                         pass
             else:
                 print("Malformed $$%s statement?" % kw)
@@ -571,11 +575,11 @@ def expand(cfg, lines, f):
             m = cfg.parens.search(lines[i][loc:])
         else:
             m = cfg.word.search(lines[i][loc:])
-        if m != None:
+        if m is not None:
             try:
                 val = cfg.ddict[m.group(1)]
                 f.write(val)
-            except:
+            except Exception:
                 pass
             if lines[i][loc] == "(":
                 loc += m.end(1) + 1
@@ -590,7 +594,7 @@ def getMotorVals(pvbase):
     for f in fldlist:
         try:
             d[f] = caget(pvbase + "." + f[4:])
-        except:
+        except Exception:
             d[f] = None
     return d
 
@@ -620,12 +624,12 @@ def makeMotor(ioc, pvbase, port, extra=""):
 def findMotors(cfglist, ioc):
     motors = []
     for name, dir in cfglist:
-        if ioc != None and ioc != name:
+        if ioc is not None and ioc != name:
             continue
         cfg = config()
         try:
             cfg.read_config(dir + "/" + name + ".cfg", {})
-        except:
+        except Exception:
             print("WARNING: %s has no configuration file!" % name)
             continue  # Wow, XCS has one *really* old controller!!
         for k in cfg.idict.keys():
@@ -699,7 +703,7 @@ def findMotors(cfglist, ioc):
                                 name, i["FOCUS"], i["FOCUS_PORT"], i["NAME"] + " FOCUS"
                             )
                         )
-                    except:
+                    except Exception:
                         pass
             elif k == "XFLS":
                 for i in cfg.idict[k]:
@@ -713,7 +717,7 @@ def findMotors(cfglist, ioc):
                         motors.append(
                             makeMotor(name, i["Z"], i["Z_PORT"], i["NAME"] + " XFLS Z")
                         )
-                    except:
+                    except Exception:
                         pass
             elif k == "INOUT":
                 for i in cfg.idict[k]:
@@ -740,7 +744,7 @@ if __name__ == "__main__":
     cfglist = readConfig()
     motors = findMotors(cfglist, options.ioc)
     pmgr = pmgrobj("ims_motor", hutch)
-    if options.debug != None:
+    if options.debug is not None:
         for m in motors:
             print(m["name"], m["FLD_PORT"], caget(m["rec_base"] + ".PN"))
     else:

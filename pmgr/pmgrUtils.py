@@ -68,7 +68,7 @@ def getBasePV(PVArguments):
         try:
             i = arg.rindex(":")
             return arg[: i + 1]
-        except:
+        except Exception:
             pass
     return None
 
@@ -103,7 +103,7 @@ def parsePVArguments(PVArguments):
                 PVs.add(basePV + f"{int(arg):02}")
             else:
                 pass
-        except:
+        except Exception:
             pass
 
     PVs = list(PVs)
@@ -127,11 +127,6 @@ def exc_to_str(action, PV, e):
     else:
         msg += "Error: %s\n" % e.args[0]
     return msg
-
-
-################################################################################
-##                                   Main                                     ##
-################################################################################
 
 
 def main():

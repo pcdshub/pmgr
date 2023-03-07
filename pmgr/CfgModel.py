@@ -80,7 +80,7 @@ class CfgModel(QtGui.QStandardItemModel):
         try:
             param.params.ui.treeWidget.setCurrentItem(self.tree[self.hutchid]["item"])
             self.curidx = self.hutchid
-        except:
+        except Exception:
             self.setCurIdx(0)
         if self.curidx != 0:
             param.params.ui.treeWidget.expandItem(self.tree[self.curidx]["item"])
@@ -91,32 +91,29 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def createStatus(self):
         for d in param.params.pobj.cfgs.values():
-            try:
-                v = self.status[d["id"]]
-            except:
-                self.status[d["id"]] = ""
+            self.status.setdefault(d["id"], "")
 
     def cfgchange(self):
         self.createStatus()
         self.buildtree()
         try:
             param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]["item"])
-        except:
+        except Exception:
             self.setCurIdx(0)
 
     def setModifiedStatus(self, index, idx, d):
         if idx < 0:
             return
         try:
-            v = self.status[idx].index("M")
+            self.status[idx].index("M")
             wasmod = True
-        except:
+        except Exception:
             wasmod = False
         mod = False
         try:
             if self.edits[idx] != {}:
                 mod = True
-        except:
+        except Exception:
             pass
         if mod != wasmod:
             if mod:
@@ -137,7 +134,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 if self.edits[i]["config"] == idx:
                     index = self.index(r, self.cfgcol)
                     self.dataChanged.emit(index, index)
-            except:
+            except Exception:
                 if i >= 0:
                     d = param.params.pobj.cfgs[i]
                 else:
@@ -157,7 +154,7 @@ class CfgModel(QtGui.QStandardItemModel):
             t[idx] = {"name": d["name"], "link": d["config"], "children": []}
             try:
                 t[idx]["link"] = self.edits[idx]["config"]
-            except:
+            except Exception:
                 pass
         for d in self.cfgs.values():
             idx = d["id"]
@@ -165,7 +162,7 @@ class CfgModel(QtGui.QStandardItemModel):
         r = []
         for k, v in t.items():
             l = v["link"]
-            if l == None:
+            if l is None:
                 r.append(k)
             else:
                 t[l]["children"].append(k)
@@ -215,13 +212,13 @@ class CfgModel(QtGui.QStandardItemModel):
             if t[id]["name"] == hutch:
                 self.hutchid = id
             t[id][fld] = item
-            if parent != None:
+            if parent is not None:
                 t[parent][fld].addChild(item)
             try:
                 # Everything defaults to collapsed!
                 if self.is_expanded[id]:
                     tree.expandItem(item)
-            except:
+            except Exception:
                 self.is_expanded[id] = False
             r[len(r) :] = t[id]["children"]
         return t
@@ -241,7 +238,7 @@ class CfgModel(QtGui.QStandardItemModel):
             c = param.params.pobj.fldmap[f]["cfgidx"] + self.coff
             r = self.path.index(idx)
             return self.index(r, c)
-        except:
+        except Exception:
             return None
 
     def getCfg(self, idx):
@@ -255,7 +252,7 @@ class CfgModel(QtGui.QStandardItemModel):
         This routine also creates a "_color" dictionary that gives the
         modification status of each field.
         """
-        if idx == None:
+        if idx is None:
             return {}
         if idx >= 0:
             d = param.params.pobj.cfgs[idx]
@@ -263,20 +260,20 @@ class CfgModel(QtGui.QStandardItemModel):
             d = self.cfgs[idx]
         try:
             e = self.edits[idx].keys()
-        except:
+        except Exception:
             e = []
-        if not "_color" in d.keys():
+        if "_color" not in d.keys():
             color = {}
             try:
                 v = self.edits[idx]["mutex"]
-            except:
+            except Exception:
                 v = d["mutex"]
             d["curmutex"] = v
             for k, v in d.items():
-                if k[:3] != "PV_" and k[:4] != "FLD_" and not k in self.cfld:
+                if k[:3] != "PV_" and k[:4] != "FLD_" and k not in self.cfld:
                     continue
                 if (
-                    v == None
+                    v is None
                     and chr(param.params.pobj.fldmap[k]["colorder"] + 0x40)
                     in d["curmutex"]
                 ):
@@ -291,7 +288,7 @@ class CfgModel(QtGui.QStandardItemModel):
     def getval(self, idx, f):
         try:
             return self.edits[idx][f]
-        except:
+        except Exception:
             return self.getCfg(idx)[f]
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
@@ -330,18 +327,18 @@ class CfgModel(QtGui.QStandardItemModel):
         else:
             try:
                 v = self.edits[idx][f]
-            except:
+            except Exception:
                 v = d[f]
             return v
 
     def setData(self, index, v, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
-            return QtGui.QStandardItemModel.setData(self, index, value, role)
+            return super().setData(index, v, role)
         (idx, f) = self.index2db(index)
         # Get all the edits for this config.
         try:
             e = self.edits[idx]
-        except:
+        except Exception:
             e = {}
         # OK, the config/cfgname thing is slightly weird.  The field name for our index is
         # 'cfgname', but we are passing an int that should go to 'config'.  So we need to
@@ -355,7 +352,7 @@ class CfgModel(QtGui.QStandardItemModel):
             del e[f]
             if f == "cfgname":
                 del e["config"]
-        except:
+        except Exception:
             pass
         # Get the configured values.
         d = self.getCfg(idx)
@@ -377,7 +374,7 @@ class CfgModel(QtGui.QStandardItemModel):
         else:
             try:
                 del self.edits[idx]
-            except:
+            except Exception:
                 pass
         self.setModifiedStatus(index, idx, d)
         # Set our color.
@@ -393,7 +390,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 # This was a calculated value!
                 i = d["curmutex"].find(cm)
                 d["curmutex"] = self.promote(idx, f, i, d["curmutex"])
-        except:
+        except Exception:
             pass
         self.dataChanged.emit(index, index)
         if c == self.namecol:
@@ -429,28 +426,28 @@ class CfgModel(QtGui.QStandardItemModel):
         for fld in mlist:
             if fld == derived:
                 # The derived value must be None!
-                if cfg[fld] == None:
+                if cfg[fld] is None:
                     try:
                         del self.edits[idx][fld]
                         if self.edits[idx] == {}:
                             del self.edits[idx]
-                    except:
+                    except Exception:
                         pass
                 else:
                     try:
                         self.edits[idx][fld] = None
-                    except:
+                    except Exception:
                         self.edits[idx] = {fld: None}
         cm = chr(param.params.pobj.fldmap[derived]["colorder"] + 0x40)
         curmutex = curmutex[:setidx] + cm + curmutex[setidx + 1 :]
         try:
             e = self.edits[idx]["mutex"]
-        except:
+        except Exception:
             e = cfg["mutex"]
         e = e[:setidx] + cm + e[setidx + 1 :]
         try:
             self.edits[idx]["mutex"] = e
-        except:
+        except Exception:
             self.edits[idx] = {"mutex": e}
         return curmutex
 
@@ -459,13 +456,13 @@ class CfgModel(QtGui.QStandardItemModel):
         self.layoutAboutToBeChanged.emit()
         idx = id
         path = [idx]
-        while self.tree[idx]["link"] != None:
+        while self.tree[idx]["link"] is not None:
             idx = self.tree[idx]["link"]
             if idx == self.curidx:
                 break
             path[:0] = [idx]
         for c in self.tree[id]["children"]:
-            if not c in path:
+            if c not in path:
                 path.append(c)
         self.path = path
         self.setRowCount(len(path))
@@ -475,15 +472,15 @@ class CfgModel(QtGui.QStandardItemModel):
         param.params.ui.treeWidget.setCurrentItem(self.tree[cfg]["item"])
 
     def treeNavigation(self, cur, prev):
-        if cur != None:
+        if cur is not None:
             self.setCurIdx(cur.id)
 
     def treeCollapse(self, item):
-        if item != None:
+        if item is not None:
             self.is_expanded[item.id] = False
 
     def treeExpand(self, item):
-        if item != None:
+        if item is not None:
             self.is_expanded[item.id] = True
 
     def checkStatus(self, index, vals):
@@ -568,28 +565,28 @@ class CfgModel(QtGui.QStandardItemModel):
         self.buildtree()
         try:
             param.params.ui.treeWidget.setCurrentItem(self.tree[id]["item"])
-        except:
+        except Exception:
             pass
         return id
 
     def createnew(self, table, index):
         (idx, f) = self.index2db(index)
-        id = self.create_child(idx, self.getCfg(idx))
+        self.create_child(idx, self.getCfg(idx))
 
     def clone(self, table, index):
         (idx, f) = self.index2db(index)
         parent = self.getCfg(idx)["config"]
-        id = self.create_child(parent, self.getCfg(idx))
+        self.create_child(parent, self.getCfg(idx))
 
     def hasChildren(self, idx, checked=[]):
         for c in self.tree[idx]["children"]:
-            if not "D" in self.status[c]:
+            if "D" not in self.status[c]:
                 return True
         # Sigh.  We might have a circular dependency.
         newchecked = list(checked)
         newchecked[:0] = self.tree[idx]["children"]
         for c in self.tree[idx]["children"]:
-            if not c in checked:
+            if c not in checked:
                 if self.hasChildren(c, newchecked):
                     return True
         return False
@@ -601,15 +598,15 @@ class CfgModel(QtGui.QStandardItemModel):
                 continue
             try:
                 z = f["enum"][0]
-            except:
+            except Exception:
                 z = 0
             vlist = []
             for f in s:
                 try:
                     v = e[f]
-                except:
+                except Exception:
                     v = d[f]
-                if v != None and not param.equal(v, z):
+                if v is not None and not param.equal(v, z):
                     if v in vlist:
                         return [param.params.pobj.fldmap[f]["alias"] for f in s]
                     else:
@@ -628,7 +625,7 @@ class CfgModel(QtGui.QStandardItemModel):
         d = self.getCfg(idx)
         try:
             name = self.edits[idx]["name"]
-        except:
+        except Exception:
             name = d["name"]
         if not utils.permission():
             param.params.pobj.transaction_error("Not Authorized to Change %s!" % name)
@@ -670,7 +667,7 @@ class CfgModel(QtGui.QStandardItemModel):
             #    - Every unique field has a value (we'll let mysql actually deal with uniqueness!)
             try:
                 e = self.edits[idx]
-            except:
+            except Exception:
                 e = {}
             s = self.checkSetMutex(d, e)
             if s != []:
@@ -686,9 +683,9 @@ class CfgModel(QtGui.QStandardItemModel):
                     return True
             try:
                 p = self.edits[idx]["config"]
-            except:
+            except Exception:
                 p = d["config"]
-            while p != None:
+            while p is not None:
                 if not param.params.db.cfgIsValid(p):
                     if mustdo:
                         param.params.pobj.transaction_error(
@@ -705,7 +702,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 else:
                     try:
                         p = self.edits[p]["config"]
-                    except:
+                    except Exception:
                         p = self.getCfg(p)["config"]
                 if p == idx:
                     return param.params.pobj.transaction_error(
@@ -715,26 +712,26 @@ class CfgModel(QtGui.QStandardItemModel):
                     return True
             if "N" in self.status[idx]:
                 newid = param.params.pobj.configInsert(param.params.db.doMap(d))
-                if newid != None:
+                if newid is not None:
                     param.params.db.addCfgmap(idx, newid)
             else:
                 ee = {}
                 for fld in ["name", "config", "mutex"]:
                     try:
                         ee[fld] = e[fld]
-                    except:
+                    except Exception:
                         pass
                 for f in param.params.pobj.cfgflds:
                     fld = f["fld"]
                     try:
                         ee[fld] = e[fld]  # We have a new value!
-                    except:
+                    except Exception:
                         try:
                             if not self.editval[idx][fld]:  # We want to inherit now!
                                 ee[fld] = None
                             else:  # The new value is what we are already inheriting!
                                 ee[fld] = d[fld]
-                        except:
+                        except Exception:
                             pass  # No change!
                 param.params.pobj.configChange(idx, param.params.db.doMap(ee))
             return True
@@ -742,10 +739,10 @@ class CfgModel(QtGui.QStandardItemModel):
     # Commit all of the changes.  Again, we assume we're in a transaction
     # already.
     def commitall(self, verify=True):
-        try:
-            todo = todo.union(set(self.edits.keys()))
-        except:
-            todo = set()
+        # NOTE: the following was removed:
+        # todo = todo.union(set(self.edits.keys()))
+        # because 'todo' is not bound at the start of the method
+        todo = set()
         # We only need to confirm the changes.  We forbid the deletion of a used config!
         if verify and not self.confirmCommit(list(todo)):
             return
@@ -787,17 +784,17 @@ class CfgModel(QtGui.QStandardItemModel):
             (idx, f) = self.index2db(index)
         try:
             newparent = self.edits[idx]["config"]
-        except:
+        except Exception:
             newparent = None
         try:
             del self.edits[idx]
-        except:
+        except Exception:
             pass
         c = self.getCfg(idx)
         del c["_color"]
         c = self.getCfg(idx)
         self.status[idx] = self.status[idx].replace("M", "")
-        if newparent != None:
+        if newparent is not None:
             self.buildtree()
             self.setCurIdx(self.curidx)
         elif not doall:
@@ -805,10 +802,10 @@ class CfgModel(QtGui.QStandardItemModel):
             self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt - 1))
 
     def cfgChangeDone(self, idx=None):
-        if idx != None:
+        if idx is not None:
             try:
                 del self.edits[idx]
-            except:
+            except Exception:
                 pass
             self.status[idx] = ""
             if idx < 0:
@@ -824,14 +821,14 @@ class CfgModel(QtGui.QStandardItemModel):
         self.buildtree()
         try:
             param.params.ui.treeWidget.setCurrentItem(self.tree[self.curidx]["item"])
-        except:
+        except Exception:
             param.params.ui.treeWidget.setCurrentItem(self.tree[0]["item"])
 
     def deletecfg(self, table, index):
         (idx, f) = self.index2db(index)
         if idx >= 0:
             d = self.getCfg(idx)
-            if d["config"] != None:
+            if d["config"] is not None:
                 self.status[idx] = "".join(sorted("D" + self.status[idx]))
                 statidx = self.index(index.row(), self.statcol)
                 self.dataChanged.emit(statidx, statidx)
@@ -857,12 +854,12 @@ class CfgModel(QtGui.QStandardItemModel):
                 param.params.ui.treeWidget.setCurrentItem(
                     self.tree[self.curidx]["item"]
                 )
-            except:
+            except Exception:
                 param.params.ui.treeWidget.setCurrentItem(self.tree[0]["item"])
 
     def undeletecfg(self, table, index):
         (idx, f) = self.index2db(index)
-        d = self.getCfg(idx)
+        self.getCfg(idx)
         self.status[idx] = self.status[idx].replace("D", "")
         statidx = self.index(index.row(), self.statcol)
         self.dataChanged.emit(statidx, statidx)
@@ -870,7 +867,7 @@ class CfgModel(QtGui.QStandardItemModel):
     def chparent(self, table, index):
         (idx, f) = self.index2db(index)
         d = self.getCfg(idx)
-        if d["config"] == None:
+        if d["config"] is None:
             QtWidgets.QMessageBox.critical(
                 None,
                 "Error",
@@ -910,13 +907,11 @@ class CfgModel(QtGui.QStandardItemModel):
     def flags(self, index):
         flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         if index.isValid():
-            row = index.row()
             col = index.column()
-            idx = self.path[row]
             try:
                 if col != self.cfgcol and col != self.statcol:
                     flags = flags | QtCore.Qt.ItemIsEditable
-            except:
+            except Exception:
                 pass  # We seem to get here too fast sometimes after a delete, so just forget it.
         return flags
 
@@ -938,10 +933,10 @@ class CfgModel(QtGui.QStandardItemModel):
         return s
 
     def confirmCommit(self, l=None):
-        if l == None:
+        if l is None:
             try:
-                todo = todo.union(set(self.edits.keys()))
-            except:
+                todo = list(set(self.edits.keys()))
+            except Exception:
                 todo = []
             l = list(todo)
         chg = {}
@@ -950,7 +945,7 @@ class CfgModel(QtGui.QStandardItemModel):
             try:
                 e = self.edits[idx].keys()
                 chg[idx] = self.findChange(idx, e, set(), l)
-            except:
+            except Exception:
                 # No changed values --> no child changes!
                 chg[idx] = {idx}
             chgall = chgall.union(chg[idx])
@@ -970,7 +965,7 @@ class CfgModel(QtGui.QStandardItemModel):
             return str
         try:
             return param.params.pobj.cfgflds[c - self.coff]["enum"]
-        except:
+        except Exception:
             return param.params.pobj.cfgflds[c - self.coff]["type"]
 
     def cfgrenumber(self, old, new):
@@ -978,7 +973,7 @@ class CfgModel(QtGui.QStandardItemModel):
             try:
                 if d["config"] == old:
                     d["config"] = new
-            except:
+            except Exception:
                 pass
         for d in self.cfgs.values():
             if d["config"] == old:
@@ -991,12 +986,15 @@ class CfgModel(QtGui.QStandardItemModel):
                 d["link"] = new
             try:
                 d["children"][d["children"].index(old)] = new
-            except:
+            except Exception:
                 pass
-        try:
-            self.root[index(self.root, old)] = new
-        except:
-            pass
+
+        # TODO: this is commented out because 'index' is undefined
+        #       and this would do nothing:
+        # try:
+        #     self.root[index(self.root, old)] = new
+        # except Exception:
+        #     pass
         if old == self.curidx:
             self.setCurIdx(new)
 
@@ -1015,5 +1013,5 @@ class CfgModel(QtGui.QStandardItemModel):
             try:
                 if obj[f] != cfg[f]:
                     self.setData(self.index(r, c), obj[f])
-            except:
+            except Exception:
                 pass
