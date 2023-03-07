@@ -88,11 +88,11 @@ class ObjModel(QtGui.QStandardItemModel):
             try:
                 v = self.istatus[d['id']]
             except:
-                self.istatus[d['id']] = set([])
+                self.istatus[d['id']] = set()
 
     def getStatus(self, idx):
         v = self.status[idx]
-        if self.istatus[idx] != set([]):
+        if self.istatus[idx] != set():
             return "".join(sorted("X" + v))
         else:
             return v
@@ -715,7 +715,7 @@ class ObjModel(QtGui.QStandardItemModel):
               'cfgname': param.params.db.getCfgName(0) }
         d.update(dd)
         self.status[idx] = "N"
-        self.istatus[idx] = set([])
+        self.istatus[idx] = set()
         d['_cfg'] = dict(d)
         self.objs[idx] = d
         self.rowmap.append(idx)
@@ -906,7 +906,7 @@ class ObjModel(QtGui.QStandardItemModel):
                         try:
                             pv = pvd[f]
                             if param.params.debug:
-                                print("Put %s to %s" % (str(z), pv.name))
+                                print("Put {} to {}".format(str(z), pv.name))
                             else:
                                 pv.put(z, timeout=-1.0)
                         except:
@@ -925,7 +925,7 @@ class ObjModel(QtGui.QStandardItemModel):
                     try:
                         pv = pvd[f]
                         if param.params.debug:
-                            print("Put %s to %s" % (str(v2), pv.name))
+                            print("Put {} to {}".format(str(v2), pv.name))
                         else:
                             pv.put(v2, timeout=-1.0)
                     except:

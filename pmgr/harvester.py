@@ -45,7 +45,7 @@ def readConfig():
               'disable':'disable', 'history':'history', 'delay':'delay', 'alias':'alias' }
     vars = set(config.keys())
     cfgfn = CONFIG_FILE % hutch
-    f = open(cfgfn, "r")
+    f = open(cfgfn)
     fcntl.lockf(f, fcntl.LOCK_SH)    # Wait for the lock!!!!
     try:
         execfile(cfgfn, {}, config)
@@ -78,12 +78,12 @@ class config():
         self.idict = {}
 
         # Pre-define some regular expressions!
-        self.doubledollar = re.compile("^(.*?)\$\$")
-        self.keyword      = re.compile("^(UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
-        self.parens       = re.compile("^\(([^)]*?)\)")
-        self.brackets     = re.compile("^\{([^}]*?)\}")
-        self.trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
-        self.ifargs       = re.compile('^\(([^,)]*?),([^,)]*?),([^,)]*?)\)')
+        self.doubledollar = re.compile(r"^(.*?)\$\$")
+        self.keyword      = re.compile(r"^(UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
+        self.parens       = re.compile(r"^\(([^)]*?)\)")
+        self.brackets     = re.compile(r"^\{([^}]*?)\}")
+        self.trargs       = re.compile(r'^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
+        self.ifargs       = re.compile(r'^\(([^,)]*?),([^,)]*?),([^,)]*?)\)')
         self.word         = re.compile("^([A-Za-z0-9_]*)")
         self.operators = {ast.Add: operator.add,
                           ast.Sub: operator.sub,
@@ -123,7 +123,7 @@ class config():
         eq      = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.*?)[ \t]*$")
         eqq     = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"([^"]*)"[ \t]*$')
         eqqq    = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*'([^']*)'[ \t]*$")
-        inst    = re.compile("^[ \t]*(([A-Za-z_][A-Za-z0-9_]*):[ \t]*)?([A-Za-z_][A-Za-z0-9_]*)\((.*)\)[ \t]*$")
+        inst    = re.compile("^[ \t]*(([A-Za-z_][A-Za-z0-9_]*):[ \t]*)?([A-Za-z_][A-Za-z0-9_]*)\\((.*)\\)[ \t]*$")
         inst2    = re.compile("^[ \t]*INSTANCE[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*([A-Za-z0-9_]*)[ \t]*$")
 
         prminst = re.compile("^([A-Za-z_][A-Za-z0-9_]*)(,)")
@@ -134,7 +134,7 @@ class config():
 
         fp = open(file)
         if not fp:
-            raise IOError("File %s not found!" % ( file ))
+            raise OSError("File %s not found!" % ( file ))
         lines = [l + "\n" for l in extra] + fp.readlines()
         fp.close()
         origlines = lines
@@ -412,8 +412,8 @@ def expand(cfg, lines, f):
             if argm != None:
                 if kw == "LOOP":
                     iname = argm.group(1)
-                    startloop = re.compile("(.*?)\$\$LOOP\(" + iname + "(\))")
-                    endloop = re.compile("(.*?)\$\$ENDLOOP\(" + iname + "(\))")
+                    startloop = re.compile(r"(.*?)\$\$LOOP\(" + iname + r"(\))")
+                    endloop = re.compile(r"(.*?)\$\$ENDLOOP\(" + iname + r"(\))")
                     t = searchforend(lines, endloop, startloop, endloop, i, loc)
                     if t == None:
                         print("Cannot find $$ENDLOOP(%s)?" % iname)
@@ -445,9 +445,9 @@ def expand(cfg, lines, f):
                     loc = t[2]
                 elif kw == "IF":
                     iname = argm.group(1)
-                    ifre = re.compile("(.*?)\$\$IF\(" + iname + "(\))")
-                    endre = re.compile("(.*?)\$\$ENDIF\(" + iname + "(\))")
-                    elsere = re.compile("(.*?)\$\$ELSE\(" + iname + "(\))")
+                    ifre = re.compile(r"(.*?)\$\$IF\(" + iname + r"(\))")
+                    endre = re.compile(r"(.*?)\$\$ENDIF\(" + iname + r"(\))")
+                    elsere = re.compile(r"(.*?)\$\$ELSE\(" + iname + r"(\))")
                     t = searchforend(lines, endre, ifre, endre, i, loc)
                     if t == None:
                         print("Cannot find $$ENDIF(%s)?" % iname)

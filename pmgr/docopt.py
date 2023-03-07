@@ -29,7 +29,7 @@ class DocoptExit(SystemExit):
         SystemExit.__init__(self, (message + '\n' + self.usage).strip())
 
 
-class Pattern(object):
+class Pattern:
 
     def __eq__(self, other):
         return repr(self) == repr(other)
@@ -104,7 +104,7 @@ class LeafPattern(Pattern):
         self.name, self.value = name, value
 
     def __repr__(self):
-        return '%s(%r, %r)' % (self.__class__.__name__, self.name, self.value)
+        return '{}({!r}, {!r})'.format(self.__class__.__name__, self.name, self.value)
 
     def flat(self, *types):
         return [self] if not types or type(self) in types else []
@@ -138,7 +138,7 @@ class BranchPattern(Pattern):
         self.children = list(children)
 
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__,
+        return '{}({})'.format(self.__class__.__name__,
                            ', '.join(repr(a) for a in self.children))
 
     def flat(self, *types):
@@ -157,8 +157,8 @@ class Argument(LeafPattern):
 
     @classmethod
     def parse(class_, source):
-        name = re.findall('(<\S*?>)', source)[0]
-        value = re.findall('\[default: (.*)\]', source, flags=re.I)
+        name = re.findall(r'(<\S*?>)', source)[0]
+        value = re.findall(r'\[default: (.*)\]', source, flags=re.I)
         return class_(name, value[0] if value else None)
 
 
@@ -197,7 +197,7 @@ class Option(LeafPattern):
             else:
                 argcount = 1
         if argcount:
-            matched = re.findall('\[default: (.*)\]', description, flags=re.I)
+            matched = re.findall(r'\[default: (.*)\]', description, flags=re.I)
             value = matched[0] if matched else None
         return class_(short, long, argcount, value)
 
@@ -212,7 +212,7 @@ class Option(LeafPattern):
         return self.long or self.short
 
     def __repr__(self):
-        return 'Option(%r, %r, %r, %r)' % (self.short, self.long,
+        return 'Option({!r}, {!r}, {!r}, {!r})'.format(self.short, self.long,
                                            self.argcount, self.value)
 
 
@@ -288,7 +288,7 @@ class Tokens(list):
     @staticmethod
     def from_pattern(source):
         source = re.sub(r'([\[\]\(\)\|]|\.\.\.)', r' \1 ', source)
-        source = [s for s in re.split('\s+|(\S*<.*?>)', source) if s]
+        source = [s for s in re.split(r'\s+|(\S*<.*?>)', source) if s]
         return Tokens(source, error=DocoptLanguageError)
 
     def move(self):
@@ -454,7 +454,7 @@ def parse_defaults(doc):
     for s in parse_section('options:', doc):
         # FIXME corner case "bla: options: --foo"
         _, _, s = s.partition(':')  # get rid of "options:"
-        split = re.split('\n[ \t]*(-\S+?)', '\n' + s)[1:]
+        split = re.split('\n[ \t]*(-\\S+?)', '\n' + s)[1:]
         split = [s1 + s2 for s1, s2 in zip(split[::2], split[1::2])]
         options = [Option.parse(s) for s in split if s.startswith('-')]
         defaults += options

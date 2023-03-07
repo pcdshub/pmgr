@@ -706,19 +706,19 @@ class CfgModel(QtGui.QStandardItemModel):
         try:
             todo = todo.union(set(self.edits.keys()))
         except:
-            todo = set([])
+            todo = set()
         # We only need to confirm the changes.  We forbid the deletion of a used config!
         if verify and not self.confirmCommit(list(todo)):
             return
         todo = todo.union(set(self.cfgs.keys()))
-        todo = todo.union(set([idx for idx in self.status.keys() if 'D' in self.status[idx]]))
-        while todo != set([]):
-            done = set([])
+        todo = todo.union({idx for idx in self.status.keys() if 'D' in self.status[idx]})
+        while todo != set():
+            done = set()
             for idx in todo:
                 if self.commit(idx, False):
-                    done = done.union(set([idx]))
+                    done = done.union({idx})
             todo = todo.difference(done)
-            if done == set([]):
+            if done == set():
                 param.params.pobj.transaction_error("Configuration commit is not making progress!")
                 return
 
@@ -884,14 +884,14 @@ class CfgModel(QtGui.QStandardItemModel):
                 todo = ([])
             l = list(todo)
         chg = {}
-        chgall = set([])
+        chgall = set()
         for idx in l:
             try:
                 e = self.edits[idx].keys()
-                chg[idx] = self.findChange(idx, e, set([]), l)
+                chg[idx] = self.findChange(idx, e, set(), l)
             except:
                 # No changed values --> no child changes!
-                chg[idx] = set([idx])
+                chg[idx] = {idx}
             chgall = chgall.union(chg[idx])
         nc = len(chgall)
         no = param.params.pobj.countInstance(chgall)

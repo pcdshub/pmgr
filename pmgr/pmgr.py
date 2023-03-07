@@ -42,7 +42,7 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         ui.statusbar.addWidget(ui.userLabel)
         self.setUser(param.params.myuid)
         
-        self.setWindowTitle("Parameter Manager for %s (%s)" % (param.params.hutch.upper(), param.params.table))
+        self.setWindowTitle("Parameter Manager for {} ({})".format(param.params.hutch.upper(), param.params.table))
 
         ui.objectTable.verticalHeader().hide()
         ui.objectTable.setCornerButtonEnabled(False)

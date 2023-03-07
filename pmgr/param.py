@@ -15,7 +15,7 @@ def equal(v1, v2):
     except:
         return False
 
-class param_structure(object):
+class param_structure:
     def __init__(self):
         self.myuid = pwd.getpwuid(os.getuid())[0]
         self.user = None

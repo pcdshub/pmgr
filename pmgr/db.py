@@ -12,7 +12,7 @@ from . import param
 class dbPoll(threading.Thread):
     
     def __init__(self, sig, interval):
-        super(dbPoll, self).__init__()
+        super().__init__()
         self.sig = sig
         self.interval = interval
         self.daemon = True
@@ -39,7 +39,7 @@ class db(QtCore.QObject):
     readsig       = QtCore.pyqtSignal(int)
 
     def __init__(self):
-        super(db, self).__init__()
+        super().__init__()
         self.nameedits = {}
         self.errordialog = dialogs.errordialog()
         param.params.pobj = pmgrobj(param.params.table, param.params.hutch, 

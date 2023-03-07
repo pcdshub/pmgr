@@ -189,7 +189,7 @@ def createAlias(name):
 #     applyAllConfigs()
 #         - Apply the current configuration to all objects.
 
-class pmgrobj(object):
+class pmgrobj:
     DB_CONFIG = 1
     DB_OBJECT = 2
     DB_GROUP  = 4
@@ -308,7 +308,7 @@ class pmgrobj(object):
 
         self.objflds = []
         setflds = {}
-        setset = set([])
+        setset = set()
         for (f, t, nl, k) in locfld:
             n = fixName(f)
             so = setorder[f] & self.ORDER_MASK
@@ -429,7 +429,7 @@ class pmgrobj(object):
         else: # self.DB_CFGGRP
             ext = "_cfg_grp"
         try:
-            self.cur.execute("select * from %s%s" % (self.table, ext))
+            self.cur.execute("select * from {}{}".format(self.table, ext))
             return list(self.cur.fetchall())
         except:
             return []
@@ -609,7 +609,7 @@ class pmgrobj(object):
             fld = f['fld']
             try:
                 v = e[fld]           # We have a new value!
-                cmd += "%s%s = %%s" % (sep, fld)
+                cmd += "{}{} = %s".format(sep, fld)
                 sep = ", "
                 vlist.append(v)
             except:
@@ -726,7 +726,7 @@ class pmgrobj(object):
                 v = e[fld]           # We have a new value!
             except:
                 continue
-            cmd += "%s%s = %%s" % (sep, fld)
+            cmd += "{}{} = %s".format(sep, fld)
             sep = ", "
             vlist.append(v)
         cmd += ' where id = %s'

@@ -174,7 +174,7 @@ def createAlias(name):
 #         - Is this field is readonly?
 #
 
-class pmgrobj(object):
+class pmgrobj:
     DB_CONFIG = 1
     DB_OBJECT = 2
     DB_ALL    = 3
@@ -299,7 +299,7 @@ class pmgrobj(object):
 
         self.objflds = []
         setflds = {}
-        setset = set([])
+        setset = set()
         for (f, t, nl, k) in locfld:
             if f[0].isupper():
                 n = fixName(f)
@@ -449,7 +449,7 @@ class pmgrobj(object):
             else:
                 ext = " where owner = '%s' or id = 0" % self.hutch
         try:
-            self.cur.execute("select * from %s%s" % (self.table, ext))
+            self.cur.execute("select * from {}{}".format(self.table, ext))
             return list(self.cur.fetchall())
         except:
             return []
@@ -703,7 +703,7 @@ class pmgrobj(object):
             fld = f['fld']
             try:
                 v = e[fld]           # We have a new value!
-                cmd += "%s%s = %%s" % (sep, fld)
+                cmd += "{}{} = %s".format(sep, fld)
                 sep = ", "
                 vlist.append(v)
             except:
@@ -869,7 +869,7 @@ class pmgrobj(object):
                 v = e[fld]           # We have a new value!
             except:
                 continue
-            cmd += "%s%s = %%s" % (sep, fld)
+            cmd += "{}{} = %s".format(sep, fld)
             sep = ", "
             vlist.append(v)
         cmd += ' where id = %s'
@@ -1092,10 +1092,10 @@ class pmgrobj(object):
         clist : list
             A list of configuration names matching the pattern.
         """
-        p = pattern.replace("\.", "\DOT").replace("\*", "\SPLAT")
-        p = p.replace("_","\_").replace("%","\%")
+        p = pattern.replace(r"\.", r"\DOT").replace(r"\*", r"\SPLAT")
+        p = p.replace("_",r"\_").replace("%",r"\%")
         p = p.replace("*", "%").replace(".", "_")
-        p = p.replace("\DOT", ".").replace("\SPLAT", "*")
+        p = p.replace(r"\DOT", ".").replace(r"\SPLAT", "*")
         if substr:
             p = "%"+p+"%"
         if parent is not None:

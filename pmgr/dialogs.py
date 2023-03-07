@@ -95,7 +95,7 @@ class chowndialog(QtWidgets.QDialog):
         self.ui.setupUi(self)
 
     def exec_(self, cfg, hutch, hutchlist):
-        self.ui.mainLabel.setText("Current owner of %s is %s." % (cfg, hutch.upper()))
+        self.ui.mainLabel.setText("Current owner of {} is {}.".format(cfg, hutch.upper()))
         self.ui.comboBox.clear()
         for i in hutchlist:
             if i != hutch:

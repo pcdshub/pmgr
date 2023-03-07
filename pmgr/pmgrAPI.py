@@ -1,6 +1,6 @@
 from .pmgrobj import pmgrobj
 
-class pmgrAPI(object):
+class pmgrAPI:
     """
     An application interface to the parameter manager.
 

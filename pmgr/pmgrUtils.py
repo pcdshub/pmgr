@@ -87,12 +87,12 @@ def parsePVArguments(PVArguments):
                 start = int(splitArgs[0][-2:])
                 end = int(splitArgs[1])
                 while start <= end:
-                    PVs.add(basePV + "{:02}".format(start))
+                    PVs.add(basePV + f"{start:02}")
                     start += 1
             elif len(arg) > 3:
                 if getBasePV(arg) == basePV: PVs.add(arg)
             elif len(arg) < 3:
-                PVs.add(basePV + "{:02}".format(int(arg)))
+                PVs.add(basePV + f"{int(arg):02}")
             else: pass
         except: pass
         
@@ -101,14 +101,14 @@ def parsePVArguments(PVArguments):
     return PVs
 
 def message(z, d, msg, abort=True):
-    if z: os.system("zenity --width 500 --%s --text='%s'" % (d, msg))
+    if z: os.system("zenity --width 500 --{} --text='{}'".format(d, msg))
     if abort:
         exit(msg)
     else:
         print(msg)
 
 def exc_to_str(action, PV, e):
-    msg = "Failed to %s %s:\n" % (action, PV)
+    msg = "Failed to {} {}:\n".format(action, PV)
     if len(e.args) > 1:
         msg += "Error %d: %s\n" % (e.args[0], e.args[1])
     else:
@@ -173,21 +173,21 @@ def main():
     dialog = "info"
     for PV in motorPVs:
         # Print some motor info
-        print("Motor PV:          {0}".format(PV))
+        print(f"Motor PV:          {PV}")
         m_DESC = pv.get(PV + ".DESC")
-        print("Motor description: {0}".format(m_DESC))
+        print(f"Motor description: {m_DESC}")
 
         if args["get"]:
             try:
                 cfg = p.get_config(PV)
-                msg += "Configuration of %s is %s.\n" % (PV, cfg)
+                msg += "Configuration of {} is {}.\n".format(PV, cfg)
             except Exception as e:
                 msg += exc_to_str("get configuration of", PV, e)
                 dialog = "error"
         if args["set"]:
             try:
                 p.set_config(PV, cfgname=cfg)
-                msg += "Configuration of %s successfully set to %s.\n" % (PV, cfg)
+                msg += "Configuration of {} successfully set to {}.\n".format(PV, cfg)
             except Exception as e:
                 msg += exc_to_str("set configuration of", PV, e)
                 dialog = "error"
@@ -204,7 +204,7 @@ def main():
                 if len(d) == 0:
                     message(zenity, "info", "No differences for %s.\n" % PV)
                 else:
-                    m = "\n".join(["    %s: actual=%s, configured=%s" % (f, d[f][0], d[f][1]) 
+                    m = "\n".join(["    {}: actual={}, configured={}".format(f, d[f][0], d[f][1]) 
                                    for f in d.keys()])
                     message(zenity, "info", "Differences for %s:\n" % PV + m + "\n", abort=False)
             except Exception as e:
