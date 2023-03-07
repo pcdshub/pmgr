@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 import sys
-import threading
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 from psp.options import Options
 
 from .pmgr_ui import Ui_MainWindow

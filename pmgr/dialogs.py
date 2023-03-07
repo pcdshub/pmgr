@@ -6,7 +6,7 @@ from . import deriveddialog_ui
 from . import confirmdialog_ui
 from . import chown_ui
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 
 class cfgdialog(QtWidgets.QDialog):

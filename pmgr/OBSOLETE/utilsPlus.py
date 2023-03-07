@@ -7,7 +7,6 @@ from configparser import SafeConfigParser
 import logging
 import subprocess
 import os
-import string
 import datetime
 
 from pprint import pprint

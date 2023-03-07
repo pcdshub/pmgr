@@ -1,4 +1,3 @@
-import time
 import datetime
 import re
 
@@ -7,7 +6,6 @@ try:
     import _mysql_exceptions
 except ImportError:
     import MySQLdb._exceptions as _mysql_exceptions
-import pyca
 
 ####################
 #

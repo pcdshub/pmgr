@@ -1,10 +1,6 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
 import re
 import numpy as np
 
-from . import param
 
 #########################################################################
 #

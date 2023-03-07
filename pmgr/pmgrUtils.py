@@ -48,7 +48,7 @@ that hutch (so long as it is already in the pmgr).
 """
 
 from docopt import docopt
-import sys, os
+import os
 from .pmgrAPI import pmgrAPI
 from pcdsutils.ext_scripts import get_hutch_name
 import psp.Pv as pv
