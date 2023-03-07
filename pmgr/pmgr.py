@@ -1,18 +1,15 @@
 #!/usr/bin/env python
 import sys
 
-from PyQt5 import QtCore, QtWidgets
 from psp.options import Options
+from PyQt5 import QtCore, QtWidgets
 
-from .pmgr_ui import Ui_MainWindow
-from .ObjModel import ObjModel
+from . import auth_ui, dialogs, param, utils
 from .CfgModel import CfgModel
 from .db import db
 from .MyDelegate import MyDelegate
-from . import dialogs
-from . import param
-from . import auth_ui
-from . import utils
+from .ObjModel import ObjModel
+from .pmgr_ui import Ui_MainWindow
 
 ######################################################################
 
@@ -31,7 +28,7 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
 
         self.authdialog = authdialog(self)
         self.utimer = QtCore.QTimer()
-        
+
         param.params.ui = Ui_MainWindow()
         ui = param.params.ui
 
@@ -40,7 +37,7 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         # Not sure how to do this in designer, so we put it randomly and move it now.
         ui.statusbar.addWidget(ui.userLabel)
         self.setUser(param.params.myuid)
-        
+
         self.setWindowTitle("Parameter Manager for {} ({})".format(param.params.hutch.upper(), param.params.table))
 
         ui.objectTable.verticalHeader().hide()
@@ -52,7 +49,7 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         ui.configTable.horizontalHeader().setSectionsMovable(True)
 
         param.params.db = db()
-        
+
         ui.menuView.addAction(ui.configWidget.toggleViewAction())
         ui.configWidget.setWindowTitle(param.params.table + " configurations")
         param.params.cfgmodel = CfgModel()
@@ -180,13 +177,13 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
     def unauthenticate(self):
         self.utimer.stop()
         self.authenticate_user()
-        
+
 
 def main():
     #MCB QtWidgets.QApplication.setGraphicsSystem("raster")
     param.params = param.param_structure()
     app = QtWidgets.QApplication([''])
-  
+
     # Options( [mandatory list, optional list, switches list] )
     options = Options(['hutch', 'type'], [], ['debug', 'applyenable', 'dev', 'help'])
     try:

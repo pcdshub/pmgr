@@ -6,6 +6,7 @@
 
 from PyQt5 import QtCore, QtWidgets
 
+
 class Ui_Dialog:
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
@@ -37,4 +38,3 @@ class Ui_Dialog:
         Dialog.setWindowTitle(_translate("Dialog", "Change Configuration Owner"))
         self.mainLabel.setText(_translate("Dialog", "Current owner of XXX is XXX."))
         self.label_2.setText(_translate("Dialog", "New Owner:"))
-

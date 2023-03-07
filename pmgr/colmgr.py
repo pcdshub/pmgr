@@ -1,8 +1,6 @@
 from PyQt5 import QtCore, QtWidgets
 
-from . import utils
-from . import param
-from . import colchoose_ui
+from . import colchoose_ui, param, utils
 
 #
 # This is an attempt at a general purpose column manager for QTableViews.
@@ -31,7 +29,7 @@ def addColumnManagerMenu(table, extra = [], hideOK=True, cfgOK=True):
 
 def hidecol(table, index):
     table.horizontalHeader().hideSection(index)
-    
+
 def resetcol(table, index):
     for i in range(table.model().columnCount()):
         if table.isColumnHidden(i):
@@ -97,7 +95,7 @@ def savecol(table, index):
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
         settings.beginGroup(table.colmgr)
         settings.setValue(cfg, table.saveHeaderState())
-    
+
 def restorecol(table, index):
     settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
     settings.beginGroup(table.colmgr)

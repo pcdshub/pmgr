@@ -6,6 +6,7 @@
 
 from PyQt5 import QtCore, QtWidgets
 
+
 class Ui_Dialog:
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
@@ -35,4 +36,3 @@ class Ui_Dialog:
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.label.setText(_translate("Dialog", "Select configuration for XXXXX"))
-

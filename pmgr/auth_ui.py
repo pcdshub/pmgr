@@ -6,6 +6,7 @@
 
 from PyQt5 import QtCore, QtWidgets
 
+
 class Ui_Dialog:
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
@@ -41,4 +42,3 @@ class Ui_Dialog:
         Dialog.setWindowTitle(_translate("Dialog", "Authentication"))
         self.label.setText(_translate("Dialog", "Username:"))
         self.label_2.setText(_translate("Dialog", "Password:"))
-

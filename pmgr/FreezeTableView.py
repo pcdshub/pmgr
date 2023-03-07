@@ -59,7 +59,7 @@ class DropTableView(QtWidgets.QTableView):
         # tracking the selection, just clearing it when it isn't visible.
         # So just turn it off.
         self.horizontalHeader().setHighlightSections(False)
-        
+
         self.customContextMenuRequested.connect(self.showContextMenu)
         self.horizontalHeader().customContextMenuRequested.connect(self.showHeaderContextMenu)
 
@@ -80,7 +80,7 @@ class DropTableView(QtWidgets.QTableView):
         QtWidgets.QTableView.setModel(self, model)
         model.columnsInserted.connect(self.insertColumns)
         model.rowsInserted.connect(self.insertRows)
-        
+
     def insertColumns(self, parent, start, finish):
         if self.hidecols != -1:
             if self.model().columnCount() != self.horizontalHeader().count():
@@ -90,7 +90,7 @@ class DropTableView(QtWidgets.QTableView):
                 for col in range(start, finish+1):
                     if col >= self.hidecols:
                         self.setColumnHidden(col, True)
-    
+
     def insertRows(self, parent, start, finish):
         if self.hiderows != -1:
             if self.model().rowCount() != self.verticalHeader().count():
@@ -144,7 +144,7 @@ class DropTableView(QtWidgets.QTableView):
                 return
 
 ######################################################################
-    
+
 class FreezeTableView(DropTableView):
     def __init__(self, parent=None):
         DropTableView.__init__(self, parent, -1, -1, "main")
@@ -177,7 +177,7 @@ class FreezeTableView(DropTableView):
                 fTV.setRowHidden(row, True)
         fTV.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         fTV.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-    
+
         cTV = DropTableView(self, -1, self.fcols, "cTV")
         self.cTV = cTV
         cTV.setModel(self.model())
@@ -247,13 +247,13 @@ class FreezeTableView(DropTableView):
         self.fTV.setItemDelegate(delegate)
         self.cTV.setItemDelegate(delegate)
         self.rTV.setItemDelegate(delegate)
-        
+
         self.horizontalHeader().sectionResized.connect(self.updateSectionWidth)
         self.verticalHeader().sectionResized.connect(self.updateSectionHeight)
-        
+
         cTV.verticalScrollBar().valueChanged.connect(self.verticalScrollBar().setValue)
         self.verticalScrollBar().valueChanged.connect(cTV.verticalScrollBar().setValue)
-        
+
         rTV.horizontalScrollBar().valueChanged.connect(self.horizontalScrollBar().setValue)
         self.horizontalScrollBar().valueChanged.connect(rTV.horizontalScrollBar().setValue)
 
@@ -317,7 +317,7 @@ class FreezeTableView(DropTableView):
         self.cTV.setSortingEnabled(value)
         self.rTV.setSortingEnabled(value)
         self.fTV.setSortingEnabled(value)
-        
+
     def addHorizontalSectionWidget(self, logidx, w):
         self.itemDelegate().addSectionWidget(logidx, w, self)
 
@@ -394,19 +394,19 @@ class FreezeTableView(DropTableView):
         DropTableView.setHorizontalHeader(self, header)
         self.fTV.horizontalHeader().setShadowHeader(self.horizontalHeader())
         self.horizontalHeader().sectionResized.connect(self.updateSectionWidth)
-        
+
     def setItemDelegateForRow(self, row, delegate):
         DropTableView.setItemDelegateForRow(self, row, delegate)
         self.fTV.setItemDelegateForRow(row, delegate)
         self.cTV.setItemDelegateForRow(row, delegate)
         self.rTV.setItemDelegateForRow(row, delegate)
-        
+
     def setItemDelegateForColumn(self, column, delegate):
         DropTableView.setItemDelegateForColumn(self, column, delegate)
         self.fTV.setItemDelegateForColumn(column, delegate)
         self.cTV.setItemDelegateForColumn(column, delegate)
         self.rTV.setItemDelegateForColumn(column, delegate)
-        
+
     def setItemDelegate(self, delegate):
         DropTableView.setItemDelegate(self, delegate)
         self.fTV.setItemDelegate(delegate)

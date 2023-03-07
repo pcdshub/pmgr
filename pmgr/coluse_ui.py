@@ -6,6 +6,7 @@
 
 from PyQt5 import QtCore, QtWidgets
 
+
 class Ui_Dialog:
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
@@ -33,4 +34,3 @@ class Ui_Dialog:
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Use Saved Column Configuration"))
         self.label.setText(_translate("Dialog", "Saved Column Configuration:"))
-

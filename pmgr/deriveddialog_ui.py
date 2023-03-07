@@ -6,6 +6,7 @@
 
 from PyQt5 import QtCore, QtWidgets
 
+
 class Ui_deriveddialog:
     def setupUi(self, deriveddialog):
         deriveddialog.setObjectName("deriveddialog")
@@ -41,4 +42,3 @@ class Ui_deriveddialog:
         deriveddialog.setWindowTitle(_translate("deriveddialog", "Derived Quantity Selection"))
         self.label.setText(_translate("deriveddialog", "Please select which field is a derived quantity:"))
         self.groupBox.setTitle(_translate("deriveddialog", "Fields"))
-

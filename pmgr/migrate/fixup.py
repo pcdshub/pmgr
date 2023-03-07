@@ -1,13 +1,14 @@
 #!/usr/bin/env python
-import pmgrobj
 import sys
+
+import pmgrobj
 
 #from pmgrobj import pmgrobj
 
 # Check the raw object for number of Nones:
 #     0         - Everything specified, take one at random
 #     1         - That's our winner.
-#     2 or more - Check the inherited config the same way, 
+#     2 or more - Check the inherited config the same way,
 #                 except two or more is an error!
 def assign_mutex(p, cfg, m, full, cm):
     ff = []
@@ -79,7 +80,7 @@ def main():
                             if p.cfgs[i][f] is not None:
                                 e[f] = None
                             break
-        full['curmutex'] = "".join(cm)        
+        full['curmutex'] = "".join(cm)
         if full['curmutex'] != full['mutex']:
             e['mutex'] = full['curmutex']
         if e != {}:
@@ -139,4 +140,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

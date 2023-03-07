@@ -1,5 +1,7 @@
+import os
+import pwd
+
 from PyQt5 import QtCore, QtGui
-import pwd, os
 
 AUTH_FILE = "/reg/g/pcds/pyps/config/%s/pmgr.auth"
 params = None
@@ -69,7 +71,7 @@ class param_structure:
 
     def setTable(self, v):
         self.table = v
-            
+
     def setHutch(self, v):
         self.hutch = v
         lines = open(AUTH_FILE % v).readlines()

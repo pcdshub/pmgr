@@ -1,5 +1,6 @@
 from .pmgrobj import pmgrobj
 
+
 class pmgrAPI:
     """
     An application interface to the parameter manager.
@@ -46,12 +47,12 @@ class pmgrAPI:
     @staticmethod
     def _fixmutex(d, mutex):
         """
-        A private method to fix the configuration fields to match the 
+        A private method to fix the configuration fields to match the
         mutex condition.
 
         The "mutex" field is slightly complicated.  The general idea is
         that there can be sets of fields that when you set all but one
-        field in the set, the remaining field is calculated from the 
+        field in the set, the remaining field is calculated from the
         others.  For each such set, the "mutex" string indicates which
         field is the derived one.  (Derived fields should not have values
         assigned in the database.)
@@ -62,7 +63,7 @@ class pmgrAPI:
             A configuration dictionary.
 
         mutex: str
-            A string with one character per mutex set.  The character 
+            A string with one character per mutex set.  The character
             is a space if this set is not used.  Otherwise, the character
             encodes a field identified by column order, chr(colorder + 64).
 
@@ -150,7 +151,7 @@ class pmgrAPI:
         #
         # NOTE: o is a private parameter.  It is an object dictionary for the pv,
         # and is used internally to avoid an extra update and lookup.
-        # 
+        #
         if o is None:
             self.update_db()
             o = self._search(self.pm.objs, 'rec_base', pv)
@@ -239,11 +240,11 @@ class pmgrAPI:
             after it is saved.
 
         overwrite : boolean
-            If cfgname is not None and is an existing configuration, 
+            If cfgname is not None and is an existing configuration,
             overwrite it if this is True, otherwise throw an exception.
 
         parent : str
-            The name of the parent configuration, if this is a new 
+            The name of the parent configuration, if this is a new
             configuration.  If this is None, default to the uppercase
             hutch name.
 

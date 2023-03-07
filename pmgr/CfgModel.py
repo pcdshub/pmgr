@@ -2,10 +2,7 @@ import datetime
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from . import colmgr
-from . import param
-from . import utils
-
+from . import colmgr, param, utils
 
 try:
     QString = unicode
@@ -28,7 +25,7 @@ class CfgModel(QtGui.QStandardItemModel):
     """
     newname = QtCore.pyqtSignal(int, 'QString')
     cfgChanged = QtCore.pyqtSignal(int, 'QString')
-    
+
     layoutAboutToBeChanged = QtCore.pyqtSignal()
     layoutChanged = QtCore.pyqtSignal()
     cname   = ["Status", "Name", "Parent"]
@@ -40,7 +37,7 @@ class CfgModel(QtGui.QStandardItemModel):
     cfgcol  = 2
     mutable = 2   # The first non-frozen column
     fixflds = ["status", "cfgname"]
-    
+
     def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
         self.curidx = 0
@@ -120,7 +117,7 @@ class CfgModel(QtGui.QStandardItemModel):
                 self.status[idx] = self.status[idx].replace("M", "")
             statidx = self.index(index.row(), self.statcol)
             self.dataChanged.emit(statidx, statidx)
-    
+
     def haveNewName(self, idx, name):
         name = str(name)
         utils.fixName(param.params.pobj.cfgs.values(), idx, name)
@@ -243,7 +240,7 @@ class CfgModel(QtGui.QStandardItemModel):
         """
         Get the configuration dictionary for this index.
 
-        Negative indices have not been committed yet and are locally 
+        Negative indices have not been committed yet and are locally
         stored in self.cfgs.  Positive indices are in the database and
         are kept in the pmgrobj.
 
@@ -320,7 +317,7 @@ class CfgModel(QtGui.QStandardItemModel):
             except:
                 v = d[f]
             return v
-        
+
     def setData(self, index, v, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
             return QtGui.QStandardItemModel.setData(self, index, value, role)
@@ -440,7 +437,7 @@ class CfgModel(QtGui.QStandardItemModel):
         except:
             self.edits[idx] = {'mutex': e}
         return curmutex
-        
+
     def setCurIdx(self, id):
         self.curidx = id
         self.layoutAboutToBeChanged.emit()
@@ -460,7 +457,7 @@ class CfgModel(QtGui.QStandardItemModel):
 
     def selectConfig(self, cfg):
         param.params.ui.treeWidget.setCurrentItem(self.tree[cfg]['item'])
-        
+
     def treeNavigation(self, cur, prev):
         if cur != None:
             self.setCurIdx(cur.id)
@@ -513,7 +510,7 @@ class CfgModel(QtGui.QStandardItemModel):
         self.nextid -= 1
         now = datetime.datetime.now()
         d = {'name': "NewConfig%d" % id, 'config': parent,
-             'cfgname': param.params.db.getCfgName(parent), 'id': id, 
+             'cfgname': param.params.db.getCfgName(parent), 'id': id,
              'dt_created': now, 'dt_updated': now}
         self.status[id] = "N"
         param.params.db.setCfgName(id, d['name'])
@@ -735,7 +732,7 @@ class CfgModel(QtGui.QStandardItemModel):
         for idx in self.edits.keys():
             self.revertone(None, idx, True)
         self.layoutChanged.emit()
-        
+
     def revertone(self, table, index, doall=False):
         if doall:
             idx = index
@@ -759,7 +756,7 @@ class CfgModel(QtGui.QStandardItemModel):
         elif not doall:
             r = index.row()
             self.dataChanged.emit(self.index(r, 0), self.index(r, self.colcnt - 1))
-        
+
     def cfgChangeDone(self, idx=None):
         if idx != None:
             try:

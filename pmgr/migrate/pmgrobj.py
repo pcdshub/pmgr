@@ -2,6 +2,7 @@ import datetime
 import re
 
 import MySQLdb as mdb
+
 try:
     import _mysql_exceptions
 except ImportError:
@@ -84,7 +85,7 @@ def createAlias(name):
 #           and the configuration fields.  Note that due to inheritance
 #           and mutual exclusion, many of these fields could be "None".
 #     objs
-#         - An object ID to object dictionary mapping.  The keys are a 
+#         - An object ID to object dictionary mapping.  The keys are a
 #           few boilerplate keys (id, config, owner, etc.) and the
 #           object-only fields (the objflds with the 'obj' key value True).
 #     groupids
@@ -325,7 +326,7 @@ class pmgrobj:
             try:
                 d['enum'] = enum[f]
             except:
-                pass 
+                pass
             self.objflds.append(d)
         for (f, t, nl, k) in fld:
             n = fixName(f)
@@ -531,7 +532,7 @@ class pmgrobj:
             self.cur.execute("delete from %s_cfg where id = %%s" % self.table, (idx,))
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
- 
+
     def configInsert(self, d):
         cmd = "insert %s_cfg (name, config, owner, mutex, dt_updated" % self.table
         vals = d['_val']
@@ -566,7 +567,7 @@ class pmgrobj:
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
             return None
-            
+
     def configChange(self, idx, e, update=True):
         cmd = "update %s_cfg set " % self.table
         if update:

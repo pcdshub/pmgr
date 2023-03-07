@@ -1,13 +1,10 @@
-from functools import reduce
 import datetime
+from functools import reduce
 
-from PyQt5 import QtCore, QtGui, QtWidgets
 import pyca
+from PyQt5 import QtCore, QtGui, QtWidgets
 
-from . import colmgr
-from . import param
-from . import utils
-
+from . import colmgr, param, utils
 
 try:
     QString = unicode
@@ -43,7 +40,7 @@ class ObjModel(QtGui.QStandardItemModel):
     comcol  = 5
     mutable = 3  # The first non-frozen column
     fixflds = ["status", "cfgname", "owner"]
-    
+
     def __init__(self):
         QtGui.QStandardItemModel.__init__(self)
         self.pvdict = {}
@@ -126,7 +123,7 @@ class ObjModel(QtGui.QStandardItemModel):
             return self.objs[idx]
 
     #
-    # getCfg(idx, field, GetEdit=True) - 
+    # getCfg(idx, field, GetEdit=True) -
     #     This retrieves both configuration fields and object fields.  If it's a configuration
     #     field, we always return the most recent edited value of the *edited* config field
     #     for this object.  If it's an object field, we return an edit if GetEdit is true,
@@ -139,7 +136,7 @@ class ObjModel(QtGui.QStandardItemModel):
         Object fields and configuration fields are handled slightly
         differently.
 
-        If it's a configuration field, return the most recent edit if 
+        If it's a configuration field, return the most recent edit if
         one exists, otherwise return the configured value.
 
         If it's an object field, return the most recent edit if GetEdit
@@ -179,7 +176,7 @@ class ObjModel(QtGui.QStandardItemModel):
                 return param.params.cfgmodel.edits[cfg][f]
             except:
                 return param.params.cfgmodel.getCfg(cfg)[f]
-        
+
     def data(self, index, role = QtCore.Qt.DisplayRole):
         if (role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole and
             role != QtCore.Qt.ForegroundRole and role != QtCore.Qt.BackgroundRole and
@@ -227,7 +224,7 @@ class ObjModel(QtGui.QStandardItemModel):
             v = None
         v2 = self.getCfg(idx, f) # Configured value
         if f[:4] == 'FLD_' or f[:3] == 'PV_':
-            if (v == None or v2 == None or param.equal(v, v2) or 
+            if (v == None or v2 == None or param.equal(v, v2) or
                 param.params.pobj.fldmap[f]['readonly']):
                 try:
                     self.istatus[idx].remove(f) # If we don't have a value (either
@@ -360,9 +357,9 @@ class ObjModel(QtGui.QStandardItemModel):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
             return QtGui.QStandardItemModel.setData(self, index, value, role)
         (idx, f) = self.index2db(index)
-        
+
         self.setValue(idx, f, v)
-        
+
         if f == 'rec_base':
             self.connectPVs(idx)
             r = index.row()
@@ -423,7 +420,7 @@ class ObjModel(QtGui.QStandardItemModel):
             except:
                 self.edits[idx] = {'mutex': curmutex}
         return curmutex
-        
+
     def sortkey(self, idx, c):
         if c == self.statcol:
             return self.getStatus(idx)
@@ -479,7 +476,7 @@ class ObjModel(QtGui.QStandardItemModel):
         """
         Connect all of the PVs for the given index, and build a pv
         dictionary.  The dictionary has two mappings: field to PV and
-        pv name to PV.  We use the second to find PVs we are already 
+        pv name to PV.  We use the second to find PVs we are already
         connected to, and we use the first to find the PV when we apply.
 
         Parameters
@@ -678,7 +675,7 @@ class ObjModel(QtGui.QStandardItemModel):
                        lambda table, index: self.checkStatus(index, 'M'))
         table.addContextMenu(menu)
         colmgr.addColumnManagerMenu(table)
-    
+
     def setFromPV(self, table, index):
         (idx, f) = self.index2db(index)
         if idx >= 0:
@@ -702,7 +699,7 @@ class ObjModel(QtGui.QStandardItemModel):
                 vc = self.objs[idx]['_cfg'][f]
             if vc != None:
                 self.setData(self.index(index.row(), c), va)
-        
+
     def create(self, table, index):
         idx = self.nextid;
         self.nextid -= 1
@@ -710,7 +707,7 @@ class ObjModel(QtGui.QStandardItemModel):
         d = dict(param.params.pobj.objs[0])
         del d['_cfg']
         del d['connstat']
-        dd = {'id': idx, 'config': 0, 'owner': param.params.hutch, 
+        dd = {'id': idx, 'config': 0, 'owner': param.params.hutch,
               'rec_base': "DUMMY:"+str(-idx), 'dt_created': now, 'dt_updated': now, 'category': 'Manual',
               'cfgname': param.params.db.getCfgName(0) }
         d.update(dd)
@@ -826,7 +823,7 @@ class ObjModel(QtGui.QStandardItemModel):
                 pass
             s = self.checkSetMutex(d, e)
             if s != []:
-                param.params.pobj.transaction_error("Object %s does not have unique values for %s!" % 
+                param.params.pobj.transaction_error("Object %s does not have unique values for %s!" %
                                                     (name, str(s)))
                 return
             if 'N' in self.status[idx]:
@@ -1196,7 +1193,7 @@ class ObjModel(QtGui.QStandardItemModel):
 
     #
     # Check if the configuration idx is in use: either as an edit or as a database value.
-    #    
+    #
     def configInUse(self, idx):
         for (k, v) in param.params.pobj.objs.items():
             try:

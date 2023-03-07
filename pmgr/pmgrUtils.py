@@ -39,7 +39,7 @@ Options:
     -h|--help      Show this help message
 
 pmgrUtils allows certain parameter manager transactions to be done using
-the command line. 
+the command line.
 
 Hutches that are supported are listed in the pmgrUtils.cfg file. Adding
 a hutch to the list of hutches there should enable pmgrUtils support for
@@ -47,15 +47,18 @@ that hutch (so long as it is already in the pmgr).
 
 """
 
-from docopt import docopt
 import os
-from .pmgrAPI import pmgrAPI
-from pcdsutils.ext_scripts import get_hutch_name
+
 import psp.Pv as pv
+from docopt import docopt
+from pcdsutils.ext_scripts import get_hutch_name
+
+from .pmgrAPI import pmgrAPI
+
 
 def getBasePV(PVArguments):
     """
-    Returns the first base PV found in the list of PVArguments. It looks for the 
+    Returns the first base PV found in the list of PVArguments. It looks for the
     first colon starting from the right and then returns the string up until
     the colon. Takes as input a string or a list of strings.
     """
@@ -68,13 +71,13 @@ def getBasePV(PVArguments):
         except:
             pass
     return None
-        
+
 def parsePVArguments(PVArguments):
     """
     Parses PV input arguments and returns a set of motor PVs that will have
     the pmgrUtil functions applied to.
     """
-    
+
     PVs = set()
     if len(PVArguments) == 0: return None
     basePV = getBasePV(PVArguments)
@@ -95,7 +98,7 @@ def parsePVArguments(PVArguments):
                 PVs.add(basePV + f"{int(arg):02}")
             else: pass
         except: pass
-        
+
     PVs = list(PVs)
     PVs.sort()
     return PVs
@@ -124,19 +127,19 @@ def main():
     args = docopt(__doc__)
     PVarguments = args["<PV>"]
     pattern = args["<pattern>"]
-    if args["--zenity"] or args["-z"]: 
+    if args["--zenity"] or args["-z"]:
         zenity = True
     else:
         zenity = False
-    if args["--objtype"]: 
+    if args["--objtype"]:
         objType = args["--objtype"]
     else:
         objType = "ims_motor"
-    if args["--hutch"]: 
+    if args["--hutch"]:
         hutch = args["--hutch"]
     else:
         hutch = get_hutch_name()
-    if args["--parent"]: 
+    if args["--parent"]:
         parent = args["--parent"]
     else:
         parent = hutch.upper()
@@ -145,7 +148,7 @@ def main():
     p = pmgrAPI(objType, hutch)
 
     if args["find"]:
-        if args["--sensitive"] or args["-s"]: 
+        if args["--sensitive"] or args["-s"]:
             sensitive = True
         else:
             sensitive = False
@@ -204,7 +207,7 @@ def main():
                 if len(d) == 0:
                     message(zenity, "info", "No differences for %s.\n" % PV)
                 else:
-                    m = "\n".join(["    {}: actual={}, configured={}".format(f, d[f][0], d[f][1]) 
+                    m = "\n".join(["    {}: actual={}, configured={}".format(f, d[f][0], d[f][1])
                                    for f in d.keys()])
                     message(zenity, "info", "Differences for %s:\n" % PV + m + "\n", abort=False)
             except Exception as e:

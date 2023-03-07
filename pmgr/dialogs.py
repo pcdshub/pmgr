@@ -1,12 +1,7 @@
-from . import cfgdialog_ui
-from . import coluse_ui
-from . import colsave_ui
-from . import errordialog_ui
-from . import deriveddialog_ui
-from . import confirmdialog_ui
-from . import chown_ui
-
 from PyQt5 import QtCore, QtWidgets
+
+from . import (cfgdialog_ui, chown_ui, colsave_ui, coluse_ui, confirmdialog_ui,
+               deriveddialog_ui, errordialog_ui)
 
 
 class cfgdialog(QtWidgets.QDialog):
@@ -15,7 +10,7 @@ class cfgdialog(QtWidgets.QDialog):
         self.ui = cfgdialog_ui.Ui_Dialog()
         self.ui.setupUi(self)
         self.model = model
-      
+
     def exec_(self, prompt, idx=None):
         self.ui.label.setText(prompt)
         t = self.model.setupTree(self.ui.treeWidget, "ditem")

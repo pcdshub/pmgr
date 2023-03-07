@@ -3,15 +3,19 @@
 # A bizarre combination of code from IocManager, the parent/child IOC compilation process, and
 # ParameterManager.
 #
-import fcntl, re, sys, ast, os, operator
+import ast
+import fcntl
+import operator
+import os
+import re
+import sys
 from io import StringIO
 
+import pyca
 from psp.options import Options
 from psp.Pv import Pv
-import pyca
 
 from .pmgrobj import pmgrobj
-
 
 CONFIG_FILE    = "/reg/g/pcds/pyps/config/%s/iocmanager.cfg"
 EPICS_TOP      = "/reg/g/pcds/package/epics/"
@@ -177,20 +181,20 @@ class config():
         self.ddict = d
 
         # Now that we have the aliases, reprocess the config!
-        
+
         lines = origlines
         output = StringIO.StringIO()
         expand(self, lines, output)
         value = output.getvalue()
         output.close()
         lines = value.split("\n")
-        
+
         i = {}
         d = {"DIRNAME": self.dirname, "PATH": self.path}
         nd = {}
         newstyle = False
         ininst   = False
-        
+
         for l in lines:
             l = l.strip()
             m = inst2.search(l)
@@ -378,7 +382,7 @@ def expand(cfg, lines, f):
                 loc += m.end(2)      # Leave on the '{'!
             else:
                 loc += m.end(1)      # Leave on the '('!
-            
+
             if kw == "TRANSLATE":
                 argm = cfg.trargs.search(lines[i][loc:])
                 if argm != None:
@@ -408,7 +412,7 @@ def expand(cfg, lines, f):
                     # If the $$ directive is the entire line, don't add a newline!
                     loc = 0;
                     i += 1
-                    
+
             if argm != None:
                 if kw == "LOOP":
                     iname = argm.group(1)
@@ -538,7 +542,7 @@ def expand(cfg, lines, f):
                 print("Malformed $$%s statement?" % kw)
                 sys.exit(1)
             continue
-        
+
         # Just a variable reference!
         if lines[i][loc] == "(":
             m = cfg.parens.search(lines[i][loc:])

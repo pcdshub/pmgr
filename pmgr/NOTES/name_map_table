@@ -28,4 +28,3 @@ The *_name_map table has the following fields:
 			non-zero.  It is a bitmask of values in the interrelated
 			set.  Several bits can be 1 if this field is in several
 			sets.
-	

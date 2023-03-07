@@ -49,7 +49,7 @@
        </size>
       </property>
       <property name="toolTip">
-       <string>Click to select a configuration to display in the Configurations window. 
+       <string>Click to select a configuration to display in the Configurations window.
 All ancestors and all children of the selected configuration will be displayed.</string>
       </property>
       <attribute name="headerVisible">

@@ -21,7 +21,7 @@ be the only configuration with a null link.  This should be a "no-op" configurat
 
 After these, there will be many fields of various types all named "FLD_*" or
 "PV_*". The idea is that each configuration will be applied to a base PV name.
- The "_*" is what should be appended to the base PV name.  Any "__" will be 
+ The "_*" is what should be appended to the base PV name.  Any "__" will be
 changed to a single "_" in the actual name, and any single "_" will be changed
 to ":" with the exception of the last.  For "FLD", the last "_" will become "."
 while for "PV" it will become "_".

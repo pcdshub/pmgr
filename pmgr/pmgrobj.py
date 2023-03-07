@@ -2,6 +2,7 @@ import datetime
 import re
 
 import MySQLdb as mdb
+
 try:
     import _mysql_exceptions
 except ImportError:
@@ -129,7 +130,7 @@ def createAlias(name):
 #     cfgmap
 #         - A configuration name to ID dictionary mapping.
 #     objs
-#         - An object ID to object dictionary mapping.  The keys are a 
+#         - An object ID to object dictionary mapping.  The keys are a
 #           few boilerplate keys (id, config, etc.) and the object-only
 #           fields (the objflds with the 'obj' key value True).
 #
@@ -317,7 +318,7 @@ class pmgrobj:
                 try:
                     d['enum'] = enum[f]
                 except:
-                    pass 
+                    pass
                 self.objflds.append(d)
         for (f, t, nl, k) in fld:
             if f[0].isupper():
@@ -573,7 +574,7 @@ class pmgrobj:
 
     def configDelete(self, idx, namefunc=defaultNamefunc):
         """
-        Delete a configuration from the database.  Assumes inside a 
+        Delete a configuration from the database.  Assumes inside a
         transaction, but does not commit the change.
 
         Parameters
@@ -589,7 +590,7 @@ class pmgrobj:
         -------
         Nothing
 
-        If the deletion fails, errors are appended to the transaction 
+        If the deletion fails, errors are appended to the transaction
         errorlist.
         """
         try:
@@ -601,10 +602,10 @@ class pmgrobj:
             self.cur.execute("delete from %s_cfg where id = %%s" % self.table, (idx,))
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
- 
+
     def configInsert(self, d):
         """
-        Insert a new configuration into the database, assuming inside 
+        Insert a new configuration into the database, assuming inside
         a transaction.
 
         Parameters
@@ -647,7 +648,7 @@ class pmgrobj:
         except _mysql_exceptions.Error as e:
             self.errorlist.append(e)
             return None
-            
+
     def configChange(self, idx, e, update=True):
         """
         Modify a configuration in the database.
@@ -658,11 +659,11 @@ class pmgrobj:
             An id for a configuration entry in the database.
 
         e : dict
-            A dictionary containing updated values for some of the 
+            A dictionary containing updated values for some of the
             database fields.
 
         update : boolean
-            If True, update the timestamp on the entry.  (Defaults to 
+            If True, update the timestamp on the entry.  (Defaults to
             True.)
 
         Returns
@@ -718,7 +719,7 @@ class pmgrobj:
 
     def objectDelete(self, idx):
         """
-        Delete an object from the database.  Assumes inside a 
+        Delete an object from the database.  Assumes inside a
         transaction, but does not commit the change.
 
         Parameters
@@ -730,7 +731,7 @@ class pmgrobj:
         -------
         Nothing
 
-        If the deletion fails, errors are appended to the transaction 
+        If the deletion fails, errors are appended to the transaction
         errorlist.
         """
         try:
@@ -799,11 +800,11 @@ class pmgrobj:
             An id for a configuration entry in the database.
 
         e : dict
-            A dictionary containing updated values for some of the 
+            A dictionary containing updated values for some of the
             database fields.
 
         update : boolean
-            If True, update the timestamp on the entry.  (Defaults to 
+            If True, update the timestamp on the entry.  (Defaults to
             True.)
 
         Returns
@@ -935,7 +936,7 @@ class pmgrobj:
         for s in self.setflds:
             #
             # Write zeros.
-            # 
+            #
             for f in s:
                 if self.fldmap[f]['readonly'] or vals[f] == None:
                     continue
@@ -1002,7 +1003,7 @@ class pmgrobj:
         Returns
         -------
         diff : dict
-            A dictionary mapping field names (str) to (actual, 
+            A dictionary mapping field names (str) to (actual,
             configuration) tuples for each difference.
         """
         vals = {}

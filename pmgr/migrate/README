@@ -9,7 +9,7 @@ current version, run the following commands from the top directory:
 
 ----------------------------------------------------
 
-The first version of the parameter manager had several concepts that were 
+The first version of the parameter manager had several concepts that were
 ultimately found lacking:
     1. Inheritance of configuration values.
     2. Configuration groups.

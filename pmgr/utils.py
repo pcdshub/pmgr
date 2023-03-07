@@ -1,14 +1,14 @@
-from PyQt5 import QtWidgets
 import threading
 
 import kerberos
-from psp.Pv import Pv
 import pyca
+from psp.Pv import Pv
+from PyQt5 import QtWidgets
 
 from . import param
 
 ######################################################################
-       
+
 #
 # Class to support for context menus in DropTableView.  The API is:
 #     isActive(table, index)
@@ -72,7 +72,7 @@ class MyContextMenu(QtWidgets.QMenu):
             -------
             Nothing.
 
-        cond : function 
+        cond : function
             A function that makes this menu item conditional.
 
             Parameters
@@ -124,7 +124,7 @@ class MyContextMenu(QtWidgets.QMenu):
 
     def doMenu(self, table, pos, index):
         """
-        Display the menu at the specified position.  If an action is 
+        Display the menu at the specified position.  If an action is
         selected, execute it.
 
         table : TableView / HeaderView
@@ -252,7 +252,7 @@ def __getevt_callback(pv, e=None):
 
 def __monitor_callback(pv, e=None):
     pv.handler(pv, e)
-        
+
 def monitorPv(name,handler):
     try:
         pv = connectPv(name)

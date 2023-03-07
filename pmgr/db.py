@@ -3,13 +3,12 @@ import time
 
 from PyQt5 import QtCore
 
+from . import dialogs, param
 from .pmgrobj import pmgrobj
-from . import dialogs
-from . import param
 
 
 class dbPoll(threading.Thread):
-    
+
     def __init__(self, sig, interval):
         super().__init__()
         self.sig = sig
@@ -41,8 +40,8 @@ class db(QtCore.QObject):
         super().__init__()
         self.nameedits = {}
         self.errordialog = dialogs.errordialog()
-        param.params.pobj = pmgrobj(param.params.table, param.params.hutch, 
-                                    debug=param.params.debug, 
+        param.params.pobj = pmgrobj(param.params.table, param.params.hutch,
+                                    debug=param.params.debug,
                                     prod=param.params.prod)
         self.poll = None
         self.readTables()
@@ -173,4 +172,3 @@ class db(QtCore.QObject):
 
     def objIsValid(self, id):
         return id >= 0 or id in self.objmap.keys()
-    

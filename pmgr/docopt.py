@@ -6,9 +6,8 @@
  * Copyright (c) 2013 Vladimir Keleshev, vladimir@keleshev.com
 
 """
-import sys
 import re
-
+import sys
 
 __all__ = ['docopt']
 __version__ = '0.6.2'

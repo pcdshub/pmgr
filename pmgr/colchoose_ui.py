@@ -6,6 +6,7 @@
 
 from PyQt5 import QtCore, QtWidgets
 
+
 class Ui_Dialog:
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
@@ -40,4 +41,3 @@ class Ui_Dialog:
         self.allButton.setText(_translate("Dialog", "Select All"))
         self.noneButton.setText(_translate("Dialog", "Select None"))
         self.groupBox.setTitle(_translate("Dialog", "Columns"))
-

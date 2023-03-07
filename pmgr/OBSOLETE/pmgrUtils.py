@@ -15,14 +15,14 @@ Arguments
     <PV>          Motor PV(s). To do multiple motors, input the full PV as the
                   first argument, and then the numbers of the rest as single
                   entries, or in a range using a hyphen. An example would be the
-                  following: 
+                  following:
 
                       python pmgrUtils.py save SXR:EXP:MMS:01-05 10 12 14-16
 
                   This will apply the save function to motors 01, 02, 03, 04, 05
                   10, 12, 14, 15 and 16.
-    [<hutch>]     Hutch opr folder the function will import cfgs from. For 
-                  example, sxr will import from 
+    [<hutch>]     Hutch opr folder the function will import cfgs from. For
+                  example, sxr will import from
 
                       /reg/neh/operator/sxropr/device_config/ims/
 
@@ -39,26 +39,26 @@ Commands:
     changesn      Changes pmgr object/config serial number from old to new value
 
 Options:
-    --hutch=H     Save or apply the config using the pmgr of the specified 
+    --hutch=H     Save or apply the config using the pmgr of the specified
                   hutch. Valid entries are specified by the supportedHutches
-                  variable. Can handle multiple comma-separated hutch inputs. 
+                  variable. Can handle multiple comma-separated hutch inputs.
                   Will save and import into all inputted hutches, and will apply
-                  from the most recently updated pmgr. 
+                  from the most recently updated pmgr.
     --objtype=O   Perform the operation on the object assuming the inputted object
                   type. Must be a valid object type defined in the config file.
     -u|--update   When importing, if serial number is already in the pmgr, the
                   config is overwitten by the one in the ims folder.
-    --path=p      If path is specified when using import, the inputted path is 
+    --path=p      If path is specified when using import, the inputted path is
                   where the function will import cfgs from instead of the opr
                   locations.
     -v|--verbose  Print more info on active process
-    -z|--zenity   Enables zenity pop-up boxes indicating when routines have 
+    -z|--zenity   Enables zenity pop-up boxes indicating when routines have
                   errors and when they have completed.
     -h|--help     Show this help message
 
 pmgrUtils allows certain parameter manager transactions to be done using the
 command line. Fundamentally, it will perform these transactions on motors using
-their individual serial numbers (for smart motors) or associated names (dumb 
+their individual serial numbers (for smart motors) or associated names (dumb
 motors) allowing the same motor can be plugged into any digi port and the script
 will push the same configuration into that motor.
 Conversely, motor configurations can also be saved from any port.
@@ -68,28 +68,28 @@ to the list of hutches there should enable pmgrUtils support for that hutch (so
 long as it is already in the pmgr).
 """
 
-from pprint import pprint
-from os import system
-from docopt import docopt
-from sys import exit
 from difflib import get_close_matches
+from os import system
+from pprint import pprint
+from sys import exit
 
 import psp.Pv as pv
+from docopt import docopt
 
 from . import utilsPlus as utlp
 
 allHutches = {"sxr", "amo", "xpp", "cxi", "xcs", "mfx", "mec", "det", "usr"}
 
-def saveConfig(PV, hutch, pmgr, SN, verbose, zenity, dumb=False, 
+def saveConfig(PV, hutch, pmgr, SN, verbose, zenity, dumb=False,
                 dumb_cfg=None, dumb_confirm=True, rename=True):
     """
     Searches for the SN of the PV and then saves the live configuration values
-    to the pmgr. 
+    to the pmgr.
 
-    It will update the fields if the motor and configuration is already in the 
+    It will update the fields if the motor and configuration is already in the
     pmgr. It will create new motor and config objects if either is not found and
     make the correct links between them.
-    
+
     If a hutch is specified, the function will save the motor obj and cfg to the
     pmgr of that hutch. Otherwise it will save to the hutch listed on the PV.
     """
@@ -103,7 +103,7 @@ def saveConfig(PV, hutch, pmgr, SN, verbose, zenity, dumb=False,
         name = objDict["name"]
     else:
         name = pv.get(PV +".DESC")
-    
+
     # Look through pmgr objs for a motor with that id
     if verbose:
         print(f"Checking {hutch.upper()} pmgr SNs for this motor")
@@ -112,7 +112,7 @@ def saveConfig(PV, hutch, pmgr, SN, verbose, zenity, dumb=False,
         print(f"ObjID obtained from {hutch.upper()} pmgr: {objID}")
 
     # If an objID was found, update the obj
-    if objID: 
+    if objID:
         print("Saving motor information...")
         utlp.objUpdate(pmgr, objID, objDict)
         if verbose: print("\nMotor SN found in {} pmgr, motor information \
@@ -132,12 +132,12 @@ updated".format(hutch.upper()))
             if zenity:
                 system("zenity --error --text='Error: Failed to create new \
 object for {} pmgr'".format(hutch.upper()))
-            return 
+            return
 
     # Try to get the cfg id the obj uses
-    try: 
+    try:
         cfgID = pmgr.objs[objID]["config"]
-    except Exception as e: 
+    except Exception as e:
         cfgID = None
 
     # If there was a valid cfgID and it isnt the default one, try to update the cfg
@@ -146,7 +146,7 @@ object for {} pmgr'".format(hutch.upper()))
             PV, pmgr, objID, cfgID, objDict, cfgDict, allNames, verbose, rename)
         if not didWork:
             print("Failed to update the cfg with new values")
-            if zenity: 
+            if zenity:
                 system("zenity --error --text='Error: Failed to update config'")
             return
     # Else create a new configuration and try to set it to the objID
@@ -156,7 +156,7 @@ config.".format(SN))
         status = utlp.getAndSetConfig(PV, pmgr, objID, objDict, cfgDict)
         if not status:
             print(f"Motor '{name}' failed to be added to pmgr")
-            return 
+            return
         print(f"Motor '{name}' successfully added to pmgr")
 
     pmgr.updateTables()
@@ -168,7 +168,7 @@ config.".format(SN))
         cfg["name"] = utlp.nextCfgName(pmgr, obj["FLD_DESC"])
         utlp.transaction(pmgr, "objectChange", objID, obj)
         utlp.transaction(pmgr, "configChange", cfgID, cfg)
-    
+
     print("\nSuccessfully saved motor info and configuration into {} \
 pmgr".format(hutch))
     # Try to print the diffs
@@ -180,12 +180,12 @@ pmgr".format(hutch))
         if zenity: system('zenity --info --text="Motor configuration \
 successfully saved into {} pmgr"'.format(hutch.upper()))
 
-def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False, 
+def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False,
                 dumb_cfg=None, dumb_confirm=True, name=None):
     """
     Searches the pmgr for the correct SN and then applies the configuration
     currently associated with that motor.
-    
+
     If it fails to find either a SN or a configuration it will exit.
     """
     # Find the most recently updated obj in the pmgrs of each hutch inputted
@@ -195,7 +195,7 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False,
 
     # # Work-around for applyConfig
     # # applyObject uses the rec_base field of the obj to apply the PV values
-    # # so for it to work properly we have to set rec_base to the correct 
+    # # so for it to work properly we have to set rec_base to the correct
     # # PV value associated with that motor at the moment
     # Change rec_base field to the base PV and the port field to the live port
     obj = pmgr.objs[objID]
@@ -279,7 +279,7 @@ def applyConfig(PV, hutches, objType, SN, verbose, zenity, dumb=False,
     status = utlp.objApply(pmgr, objID)
     if not status:
         print("Failed to apply: pmgr transaction failure")
-        if zenity: 
+        if zenity:
             system("zenity --error --text='Error: pmgr transaction failure'")
         return
     print("Successfully completed apply")
@@ -303,10 +303,10 @@ def dumbMotorApply(PV, hutches, objType, SN, verbose, zenity):
 
 def importConfigs(hutch, pmgr, path, update = False, verbose = False):
     """
-    Imports all the configurations in the default directory for configs for the 
+    Imports all the configurations in the default directory for configs for the
     given hutch as long as there is a serial number given in the config file.
 
-    It first creates a dictionary of serial numbers to config paths, omitting 
+    It first creates a dictionary of serial numbers to config paths, omitting
     all configs that do not have a serial number. It then loops through each
     path, creating a field dictionary from the configs and then performs checks
     to determine if the motor should be added as a new motor, have its fields
@@ -354,11 +354,11 @@ def importConfigs(hutch, pmgr, path, update = False, verbose = False):
                 if cfgID is not None:
                     print("Config '{}' successfully added to pmgr".format(
                         cfgDict["FLD_DESC"]))
-                else: 
+                else:
                     print("Config '{}' failed to be added to pmgr".format(
                         cfgDict["FLD_DESC"]))
             pmgr.updateTables()
-            continue                    
+            continue
 
         # Check if the serial number is already in the pmgr
         if str(cfgDict["FLD_SN"]) in pmgr_SNs:
@@ -374,13 +374,13 @@ def importConfigs(hutch, pmgr, path, update = False, verbose = False):
             if cfgID and pmgr.cfgs[cfgID]["name"] != hutch.upper():
                 if cfgDict["FLD_DESC"] in allNames: allNames.remove(cfgDict["FLD_DESC"])
                 cfgDict["FLD_TYPE"] = pmgr.cfgs[cfgID]["FLD_TYPE"]
-                cfgDict["name"] = utlp.incrementMatching(str(name), 
-                                                         allNames,  
+                cfgDict["name"] = utlp.incrementMatching(str(name),
+                                                         allNames,
                                                          maxLength=42)
                 allNames.add(cfgDict["name"])
                 # print("test")
                 didWork = utlp.cfgChange(pmgr, cfgID, cfgDict)
-                if verbose: 
+                if verbose:
                     if didWork: print("        Completed update")
                     else: print("        Failed to update the cfg with new values")
             continue
@@ -396,13 +396,13 @@ def importConfigs(hutch, pmgr, path, update = False, verbose = False):
             ObjID = utlp.newObject(pmgr, objDict)
             pmgr.updateTables()
             # Set the obj to use the cfg settings
-            status = False            
+            status = False
             status = utlp.setObjCfg(pmgr, ObjID, cfgID)
             if verbose:
-                if status: 
+                if status:
                     print("Motor '{}' successfully added to pmgr".format(
                         objDict["name"]))
-                else: 
+                else:
                     print("Motor '{}' failed to be added to pmgr".format(
                         objDict["name"]))
         except:
@@ -412,7 +412,7 @@ def importConfigs(hutch, pmgr, path, update = False, verbose = False):
             continue
 
 def Diff(PV, hutch, pmgr, SN, verbose):
-    """ 
+    """
     Prints the differences between the live values and the values saved in the
     pmgr.
     """
@@ -420,7 +420,7 @@ def Diff(PV, hutch, pmgr, SN, verbose):
     cfgLive = utlp.getCfgVals(pmgr, PV, rename=False)
     objLive = utlp.getObjVals(pmgr, PV, rename=False)
     # Look through pmgr objs for a motor with that SN
-    if verbose: 
+    if verbose:
         print(f"Checking {hutch.upper()} pmgr SNs for this motor")
     objID = utlp.getObjWithSN(pmgr, objLive["FLD_SN"], verbose)
     if not objID:
@@ -431,23 +431,23 @@ def Diff(PV, hutch, pmgr, SN, verbose):
     if not cfgID:
         print(f"\nInvalid config associated with motor, cannot find diffs")
         return
-    
+
     # Get pmgr configurations
     cfgPmgr = pmgr.cfgs[cfgID]
     objPmgr = pmgr.objs[objID]
     # Print the diffs between the live and pmgr configs
     # Fix this so that it prints something sensible
-    
-    try: utlp.printDiff(pmgr, objLive, cfgLive, objPmgr, cfgPmgr, verbose, 
-                        name1 = "Pmgr", name2 = "Live") 
+
+    try: utlp.printDiff(pmgr, objLive, cfgLive, objPmgr, cfgPmgr, verbose,
+                        name1 = "Pmgr", name2 = "Live")
     except: pass
-        
+
 def parsePVArguments(PVArguments):
     """
     Parses PV input arguments and returns a set of motor PVs that will have
     the pmgrUtil functions applied to.
     """
-    
+
     PVs = set()
     if len(PVArguments) == 0: return None
     basePV = utlp.getBasePV(PVArguments)
@@ -468,11 +468,11 @@ def parsePVArguments(PVArguments):
                 PVs.add(basePV + f"{int(arg):02}")
             else: pass
         except: pass
-        
+
     PVs = list(PVs)
     PVs.sort()
     return PVs
-                                                                  
+
 ################################################################################
 ##                                   Main                                     ##
 ################################################################################
@@ -484,28 +484,28 @@ def main():
     PVArguments = arguments["<PV>"]
     oldSN = arguments["<old SN>"]
     newSN = arguments["<new SN>"]
-    if arguments["--path"]: 
+    if arguments["--path"]:
         path = arguments["--path"]
     else: path = []
-    if arguments["--verbose"] or arguments["-v"]: 
+    if arguments["--verbose"] or arguments["-v"]:
         verbose = True
     else: verbose = False
-    if arguments["--zenity"] or arguments["-z"]: 
+    if arguments["--zenity"] or arguments["-z"]:
         zenity = True
     else: zenity = False
-    if arguments["--update"] or arguments["-u"]: 
+    if arguments["--update"] or arguments["-u"]:
         update = True
     else: update = False
-    if arguments["--hutch"]: 
+    if arguments["--hutch"]:
         hutches = [hutch.lower() for hutch in arguments["--hutch"].split(',')]
     else: hutches = []
-    if arguments["--objtype"]: 
+    if arguments["--objtype"]:
         objType = arguments["--objtype"]
     else: objType = None
-    if arguments["--norename"]: 
+    if arguments["--norename"]:
         rename = False
     else: rename = True
-    
+
     # There seems to be a bug in docopt. It can't recognize that what is inputted
     # is <hutch> rather than <PV>
     # if arguments["<hutch>"]:
@@ -516,13 +516,13 @@ def main():
         for arg in PVArguments:
             if arg.lower() in allHutches:
                 hutchPaths.append(arg.lower())
-    elif len(path) > 0:  
+    elif len(path) > 0:
         hutchPaths = ['sxd']
     else: hutchPaths = []
 
     # Try import first
     if arguments["import"]:
-        # A hack to get the appropriate hutch list and hutch path without 
+        # A hack to get the appropriate hutch list and hutch path without
         # rewriting any new functions. The logic is pretty ugly so it would be
         # nice to redo at some point.
         hutches, objType, _ = utlp.motorPrelimChecks(
@@ -541,7 +541,7 @@ def main():
             if path: break
         exit()                            # Do not continue
 
-        
+
     # Try changesn next
     if arguments["changesn"]:
         if not oldSN or not newSN:
@@ -557,7 +557,7 @@ def main():
             if not pmgr: continue
             # Look for obj (default is ims_motor type) with previous serial no
             objID = utlp.getObjWithSN(pmgr, oldSN, verbose)
-            if not objID: continue 
+            if not objID: continue
             print(f"Motor found: ObjID = {objID}, hutch = {hutch.upper()}")
             # Create simple dict to change SN, then do it
             objDict = {'FLD_SN':newSN}
@@ -578,7 +578,7 @@ def main():
 
     # Run some preliminary checks
     if verbose: print("\nPerforming preliminary checks for pmgr paramters\n")
-    if arguments["--hutch"]: 
+    if arguments["--hutch"]:
         hutches = [hutch.lower() for hutch in arguments["--hutch"].split(',')]
     else: hutches = []
     hutches, objType, SNs = utlp.motorPrelimChecks(
@@ -598,7 +598,7 @@ def main():
             print("Skipping motor.\n")
             continue
         SN = SNs[PV]
-        if verbose: 
+        if verbose:
             print(f"Motor SN: {SN}\n")
 
         # If inputted apply, run apply routine and sure it is a smart motor
@@ -621,7 +621,7 @@ apply\n".format(PV))
                 if zenity:
                     system("zenity --error --text='Error: Smart motor detected'")
 
-        # Else loop through the hutches and check for diff and save 
+        # Else loop through the hutches and check for diff and save
         else:
             for hutch in hutches:
                 pmgr = utlp.getPmgr(objType, hutch, verbose)
@@ -630,7 +630,7 @@ apply\n".format(PV))
                     Diff(PV, hutch, pmgr, SN, verbose)
                     continue
                 if arguments["save"]:
-                    saveConfig(PV, hutch, pmgr, SN, verbose, zenity, 
+                    saveConfig(PV, hutch, pmgr, SN, verbose, zenity,
                                rename=rename)
                     continue
 
