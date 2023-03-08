@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtWidgets
 
-from . import colchoose_ui, param, utils
+from . import param, utils
+from .dialogs import load_ui_file
 
 #
 # This is an attempt at a general purpose column manager for QTableViews.
@@ -54,7 +55,7 @@ def choosecol(table, index):
         d = m.colchoosedialog
     except Exception:
         d = QtWidgets.QDialog()
-        d.ui = colchoose_ui.Ui_Dialog()
+        d.ui = load_ui_file("colchoose.ui").Ui_Dialog()
         d.ui.setupUi(d)
         c = []
         for i in range(m.mutable):

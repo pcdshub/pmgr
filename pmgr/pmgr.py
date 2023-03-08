@@ -4,12 +4,12 @@ import sys
 from psp.options import Options
 from PyQt5 import QtCore, QtWidgets
 
-from . import auth_ui, dialogs, param, utils
+from . import dialogs, param, utils
 from .CfgModel import CfgModel
 from .db import db
+from .dialogs import load_ui_file
 from .MyDelegate import MyDelegate
 from .ObjModel import ObjModel
-from .pmgr_ui import Ui_MainWindow
 
 ######################################################################
 
@@ -17,7 +17,7 @@ from .pmgr_ui import Ui_MainWindow
 class authdialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
-        self.ui = auth_ui.Ui_Dialog()
+        self.ui = load_ui_file("auth.ui").Ui_Dialog()
         self.ui.setupUi(self)
 
 
@@ -31,7 +31,7 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         self.authdialog = authdialog(self)
         self.utimer = QtCore.QTimer()
 
-        param.params.ui = Ui_MainWindow()
+        param.params.ui = load_ui_file("pmgr.ui")
         ui = param.params.ui
 
         ui.setupUi(self)

@@ -1,13 +1,35 @@
-from PyQt5 import QtCore, QtWidgets
+from __future__ import annotations
 
-from . import (cfgdialog_ui, chown_ui, colsave_ui, coluse_ui, confirmdialog_ui,
-               deriveddialog_ui, errordialog_ui)
+import functools
+import pathlib
+
+from PyQt5 import QtCore, QtWidgets, uic
+
+MODULE_PATH = pathlib.Path(__file__).resolve().parent
+
+
+@functools.lru_cache(maxsize=None)
+def load_ui_file(filename: str) -> type[QtWidgets.QWidget]:
+    """
+    Load the .ui file ``filename`` and return its widget class.
+
+    Parameters
+    ----------
+    filename : str
+        The filename of the .ui file, relative to the pmgr source directory.
+
+    Returns
+    -------
+    subclass of QtWidgets.QWidget
+    """
+    cls, _ = uic.loadUiType(MODULE_PATH / filename)
+    return cls
 
 
 class cfgdialog(QtWidgets.QDialog):
     def __init__(self, model, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = cfgdialog_ui.Ui_Dialog()
+        self.ui = load_ui_file("cfgdialog.ui").Ui_Dialog()
         self.ui.setupUi(self)
         self.model = model
 
@@ -29,35 +51,35 @@ class cfgdialog(QtWidgets.QDialog):
 class colusedialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = coluse_ui.Ui_Dialog()
+        self.ui = load_ui_file("coluse.ui").Ui_Dialog()
         self.ui.setupUi(self)
 
 
 class colsavedialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = colsave_ui.Ui_Dialog()
+        self.ui = load_ui_file("colsave.ui").Ui_Dialog()
         self.ui.setupUi(self)
 
 
 class errordialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = errordialog_ui.Ui_Dialog()
+        self.ui = load_ui_file("errordialog.ui").Ui_Dialog()
         self.ui.setupUi(self)
 
 
 class confirmdialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = confirmdialog_ui.Ui_Dialog()
+        self.ui = load_ui_file("confirmdialog.ui").Ui_Dialog()
         self.ui.setupUi(self)
 
 
 class deriveddialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = deriveddialog_ui.Ui_deriveddialog()
+        self.ui = load_ui_file("deriveddialog.ui").Ui_deriveddialog()
         self.ui.setupUi(self)
         self.buttonlist = []
 
@@ -92,7 +114,7 @@ class deriveddialog(QtWidgets.QDialog):
 class chowndialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = chown_ui.Ui_Dialog()
+        self.ui = load_ui_file("chown.ui").Ui_Dialog()
         self.ui.setupUi(self)
 
     def exec_(self, cfg, hutch, hutchlist):
