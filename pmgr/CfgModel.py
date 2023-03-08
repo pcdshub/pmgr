@@ -990,12 +990,11 @@ class CfgModel(QtGui.QStandardItemModel):
             except Exception:
                 pass
 
-        # TODO: this is commented out because 'index' is undefined
-        #       and this would do nothing:
-        # try:
-        #     self.root[index(self.root, old)] = new
-        # except Exception:
-        #     pass
+        try:
+            self.root[self.root.index(old)] = new
+        except Exception:
+            pass
+
         if old == self.curidx:
             self.setCurIdx(new)
 
