@@ -141,3 +141,22 @@ The *_name_map table has the following fields:
 			set.  Several bits can be 1 if this field is in several
 			sets.
 ```
+
+### Logging into MySQL
+
+```
+Log into MySQL with the following commands:
+
+Server is psdb.slac.stanford.edu, though you can log in from
+psdev because of the --host=psdb argument...
+
+
+(ADMIN MODE)
+
+> mysql --host=psdb --user=pscontrolsa --password=pcds pscontrols
+
+
+(USER MODE)
+
+> mysql --host=psdb --user=pscontrols --password=pcds pscontrols
+```
