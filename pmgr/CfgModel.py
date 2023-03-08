@@ -739,10 +739,11 @@ class CfgModel(QtGui.QStandardItemModel):
     # Commit all of the changes.  Again, we assume we're in a transaction
     # already.
     def commitall(self, verify=True):
-        # NOTE: the following was removed:
-        # todo = todo.union(set(self.edits.keys()))
-        # because 'todo' is not bound at the start of the method
-        todo = set()
+        try:
+            todo = set(self.edits.keys())
+        except Exception:
+            todo = set()
+
         # We only need to confirm the changes.  We forbid the deletion of a used config!
         if verify and not self.confirmCommit(list(todo)):
             return
