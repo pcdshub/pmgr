@@ -936,10 +936,10 @@ class CfgModel(QtGui.QStandardItemModel):
     def confirmCommit(self, l=None):
         if l is None:
             try:
-                todo = list(set(self.edits.keys()))
+                l = list(set(self.edits.keys()))
             except Exception:
-                todo = []
-            l = list(todo)
+                l = []
+
         chg = {}
         chgall = set()
         for idx in l:
