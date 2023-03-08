@@ -73,8 +73,6 @@ class pmgrAPI:
             The original configuration dictionary with the derived fields
             removed.
         """
-        # NOTE: fixed as this cannot be a staticmethod since it refers to 'self.pm'
-        # NOTE: fixed as ord() was used incorrectly
         for c in mutex:
             if c != " ":
                 try:
@@ -131,7 +129,7 @@ class pmgrAPI:
         A dictionary mapping field names to configured values.
         """
         d = self._search(self.pm.cfgs, 'name', cfgname)
-        d = d.copy() # Make a copy, since we don't know what the user is going to do with this!
+        d = d.copy()  # Make a copy, since we don't know what the user is going to do with this!
         return d
 
     def set_config(self, pv, cfgname, o=None):
