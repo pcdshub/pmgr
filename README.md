@@ -1,3 +1,81 @@
 ## Parameter Manager
 
-Package used in LCLS to manage motor parameters. Currently in use to manage configurations for IMS motors in the LCLS1 hard x-ray hutches.
+Package used in LCLS to manage motor parameters. Currently in use to manage
+configurations for IMS motors in the LCLS1 hard x-ray hutches.
+
+### Implementation Notes
+
+```
+We assume that there are a number of "classes" of things to be configured.
+If one such class is XXX, then we will have three mysql tables for it:
+    -- XXX_cfg is a table of configurations.
+    -- XXX_name_map is a table of field aliases.
+    -- XXX is a table of configured objects.
+
+The first set of fields in each of these tables is fixed, so we can operate
+generically on any configuration class.
+
+The configurations in XXX_cfg start with the following fields:
+  `id` int(11) NOT NULL AUTO_INCREMENT,          -- The primary key
+  `name` varchar(15) NOT NULL UNIQUE,            -- The name of the configuration
+  `config` int(11),                              -- The parent configuration
+  `security` varchar(30),
+  `owner` varchar(10),
+  `dt_updated` datetime NOT NULL,
+  `mutex` varchar(16),
+
+It is assumed that there will always be a "DEFAULT" configuration with id 0.  This will
+be the only configuration with a null link.  This should be a "no-op" configuration!
+
+After these, there will be many fields of various types all named "FLD_*" or
+"PV_*". The idea is that each configuration will be applied to a base PV name.
+ The "_*" is what should be appended to the base PV name.  Any "__" will be
+changed to a single "_" in the actual name, and any single "_" will be changed
+to ":" with the exception of the last.  For "FLD", the last "_" will become "."
+while for "PV" it will become "_".
+
+For example if the base is IOC:TST:01:CTRL,
+	FLD_XY       -> IOC:TST:01:CTRL.XY
+	PV_XY        -> IOC:TST:01:CTRL:XY
+	FLD_XY_Z     -> IOC:TST:01:CTRL:XY.Z
+	PV_XY_Z      -> IOC:TST:01:CTRL:XY:Z
+	FLD_XY__Z    -> IOC:TST:01:CTRL.XY_Z
+	PV_XY__Z     -> IOC:TST:01:CTRL:XY_Z
+
+This is implemented by the function fixName.
+
+The XXX_name_map table has fields:
+  `db_field_name` varchar(30) NOT NULL,      -- The FLD_* or PV_* field name.
+  `alias` varchar(16) NOT NULL,              -- A human-readable alias for this field.
+  `tooltip` varchar(60),                     -- A tooltip for the field.
+  `enum` varchar(120),                       -- If an enum type, possible names, separated by '|'.
+  `col_order` int(11) UNIQUE,                -- Where this field should be displayed (< = more left).
+  `set_order` int(11),                       -- How to set this field.  Low ten-bits are order (< = set earlier)
+					     -- 0x0200 flags this as a mutex group.
+					     -- 0x0400 flags a must-write PV.
+					     -- 0x0800 flags a write zero, then write value PV.
+					     -- 0x1000 flags the "autoconfiguration" PV (deprecated!!!).
+					     -- 0x2000 flags a read-only value.
+  `mutex_mask` int(10) unsigned              -- A bitmask of values that are interrelated.  Each bit is a different set,
+                                             -- so a field can be in several sets.
+
+The XXX table has fields:
+  `id` int(11) NOT NULL AUTO_INCREMENT,      -- The identifier of this object.
+  `config` int(11) NOT NULL,                 -- The configuration id of this object.
+  `owner` varchar(10),	                     -- Which hutch owns this object.
+  `name` varchar(30) NOT NULL,               -- The name of this object.
+  `category` varchar(10),
+  `rec_base` varchar(40) NOT NULL,           -- pv/field base prefix --
+  `mutex` varchar(16),
+  `dt_created` datetime NOT NULL,            -- When the record was created.
+  `dt_updated` datetime NOT NULL,            -- When the record was modified.
+  `comment`  varchar(80),
+
+After these fields, the XXX table may also have "FLD_*" and "PV_*" fields
+as described above.  (These should be object specific things that are always
+unique to the object, such as descriptions and digi port addresses.)
+
+mutex is magic in both XXX and XXX_cfg. There is one character for each mutex set,
+indicating the unset (derived) value in this set.  The coding is 0x40 + colorder,
+where each field must have a unique colorder value.
+```
