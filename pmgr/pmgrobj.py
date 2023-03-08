@@ -1170,14 +1170,14 @@ class pmgrobj:
     def hutchInsert(self, hutchname):
         """
         Add a new hutch.
-        
+
         Parameters
         ----------
         hutchname : str
             The new hutchname.  The owner will be all lowercase, the
             base config will be all uppercase.
         """
-        newowner  = hutchname.lower()
+        newowner = hutchname.lower()
         newconfig = hutchname.upper()
         d = self.cfgs[0].copy()
         d['name'] = newconfig
