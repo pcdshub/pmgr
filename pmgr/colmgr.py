@@ -55,7 +55,7 @@ def choosecol(table, index):
         d = m.colchoosedialog
     except Exception:
         d = QtWidgets.QDialog()
-        d.ui = load_ui_file("colchoose.ui").Ui_Dialog()
+        d.ui = load_ui_file("colchoose.ui")()
         d.ui.setupUi(d)
         c = []
         for i in range(m.mutable):

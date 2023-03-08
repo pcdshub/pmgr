@@ -29,7 +29,7 @@ def load_ui_file(filename: str) -> type[QtWidgets.QWidget]:
 class cfgdialog(QtWidgets.QDialog):
     def __init__(self, model, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = load_ui_file("cfgdialog.ui").Ui_Dialog()
+        self.ui = load_ui_file("cfgdialog.ui")()
         self.ui.setupUi(self)
         self.model = model
 
@@ -51,35 +51,35 @@ class cfgdialog(QtWidgets.QDialog):
 class colusedialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = load_ui_file("coluse.ui").Ui_Dialog()
+        self.ui = load_ui_file("coluse.ui")()
         self.ui.setupUi(self)
 
 
 class colsavedialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = load_ui_file("colsave.ui").Ui_Dialog()
+        self.ui = load_ui_file("colsave.ui")()
         self.ui.setupUi(self)
 
 
 class errordialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = load_ui_file("errordialog.ui").Ui_Dialog()
+        self.ui = load_ui_file("errordialog.ui")()
         self.ui.setupUi(self)
 
 
 class confirmdialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = load_ui_file("confirmdialog.ui").Ui_Dialog()
+        self.ui = load_ui_file("confirmdialog.ui")()
         self.ui.setupUi(self)
 
 
 class deriveddialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = load_ui_file("deriveddialog.ui").Ui_deriveddialog()
+        self.ui = load_ui_file("deriveddialog.ui")()
         self.ui.setupUi(self)
         self.buttonlist = []
 
@@ -114,7 +114,7 @@ class deriveddialog(QtWidgets.QDialog):
 class chowndialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = load_ui_file("chown.ui").Ui_Dialog()
+        self.ui = load_ui_file("chown.ui")()
         self.ui.setupUi(self)
 
     def exec_(self, cfg, hutch, hutchlist):

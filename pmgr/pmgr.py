@@ -17,7 +17,7 @@ from .ObjModel import ObjModel
 class authdialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
-        self.ui = load_ui_file("auth.ui").Ui_Dialog()
+        self.ui = load_ui_file("auth.ui")()
         self.ui.setupUi(self)
 
 
@@ -31,7 +31,7 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
         self.authdialog = authdialog(self)
         self.utimer = QtCore.QTimer()
 
-        param.params.ui = load_ui_file("pmgr.ui")
+        param.params.ui = load_ui_file("pmgr.ui")()
         ui = param.params.ui
 
         ui.setupUi(self)
