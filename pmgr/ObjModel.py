@@ -6,12 +6,6 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import colmgr, param, utils
 
-try:
-    QString = unicode
-except NameError:
-    # Python 3
-    QString = str
-
 
 class ObjModel(QtGui.QStandardItemModel):
     """
