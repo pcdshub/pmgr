@@ -30,6 +30,8 @@ requirements:
   - pcdsutils
 
 test:
+  requires:
+  - pytest
   commands:
   - pmgrLauncher.sh --help
   - pmgrUtils.sh --help
