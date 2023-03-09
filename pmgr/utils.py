@@ -1,14 +1,15 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
 import threading
 
 import kerberos
-from psp.Pv import Pv
 import pyca
+from psp.Pv import Pv
+from PyQt5 import QtWidgets
 
 from . import param
 
 ######################################################################
-       
+
+
 #
 # Class to support for context menus in DropTableView.  The API is:
 #     isActive(table, index)
@@ -42,6 +43,7 @@ class MyContextMenu(QtWidgets.QMenu):
         active : boolean
             Return True if the menu should be displayed.
     """
+
     def __init__(self, isAct=None):
         QtWidgets.QMenu.__init__(self)
         self.isAct = isAct
@@ -72,7 +74,7 @@ class MyContextMenu(QtWidgets.QMenu):
             -------
             Nothing.
 
-        cond : function 
+        cond : function
             A function that makes this menu item conditional.
 
             Parameters
@@ -88,7 +90,7 @@ class MyContextMenu(QtWidgets.QMenu):
             active : boolean
                 True if this menu item should be active.
         """
-        if cond != None:
+        if cond is not None:
             self.havecond = True
         self.actions.append((name, action, cond))
         QtWidgets.QMenu.addAction(self, name)
@@ -112,11 +114,11 @@ class MyContextMenu(QtWidgets.QMenu):
             Return True if this menu should be displayed, rebuilding it
             if necessary.
         """
-        if self.isAct == None or self.isAct(table, index):
+        if self.isAct is None or self.isAct(table, index):
             if self.havecond:
                 self.clear()
                 for name, action, cond in self.actions:
-                    if cond == None or cond(table, index):
+                    if cond is None or cond(table, index):
                         QtWidgets.QMenu.addAction(self, name)
             return True
         else:
@@ -124,7 +126,7 @@ class MyContextMenu(QtWidgets.QMenu):
 
     def doMenu(self, table, pos, index):
         """
-        Display the menu at the specified position.  If an action is 
+        Display the menu at the specified position.  If an action is
         selected, execute it.
 
         table : TableView / HeaderView
@@ -145,12 +147,13 @@ class MyContextMenu(QtWidgets.QMenu):
         else:
             gpos = table.viewport().mapToGlobal(pos)
         selectedItem = self.exec_(gpos)
-        if selectedItem != None:
+        if selectedItem is not None:
             txt = selectedItem.text()
             for name, action, cond in self.actions:
                 if txt == name:
                     action(table, index)
                     return
+
 
 ######################################################################
 
@@ -158,48 +161,52 @@ class MyContextMenu(QtWidgets.QMenu):
 # Utility functions to deal with PVs.
 #
 
-def caput(pvname,value,timeout=1.0,**kw):
+
+def caput(pvname, value, timeout=1.0, **kw):
     try:
         pv = Pv(pvname)
         pv.connect(timeout)
         pv.get(ctrl=False, timeout=timeout)
         try:
-            if kw['enum']:
+            if kw["enum"]:
                 pv.set_string_enum(True)
-        except:
+        except Exception:
             pass
         pv.put(value, timeout=timeout)
         pv.disconnect()
     except pyca.pyexc as e:
-        print('pyca exception: %s' %(e))
+        print("pyca exception: %s" % (e))
     except pyca.caexc as e:
-        print('channel access exception: %s' %(e))
+        print("channel access exception: %s" % (e))
 
-def caget(pvname,timeout=1.0,**kw):
+
+def caget(pvname, timeout=1.0, **kw):
     try:
         pv = Pv(pvname)
         pv.connect(timeout)
         try:
-            if kw['enum']:
+            if kw["enum"]:
                 pv.set_string_enum(True)
-        except:
+        except Exception:
             pass
         pv.get(ctrl=False, timeout=timeout)
         v = pv.value
         pv.disconnect()
         return v
     except pyca.pyexc as e:
-        print('pyca exception: %s' %(e))
+        print("pyca exception: %s" % (e))
         return None
     except pyca.caexc as e:
-        print('channel access exception: %s' %(e))
+        print("channel access exception: %s" % (e))
         return None
+
 
 def __get_callback(pv, e):
     if e is None:
         pv.get_done.set()
         pv.disconnect()
         pyca.flush_io()
+
 
 #
 # Do an asynchronous caget, but notify a threading.Event after it
@@ -214,11 +221,12 @@ def caget_async(pvname):
         pv.connect(-1)
         return pv
     except pyca.pyexc as e:
-        print('pyca exception: %s' %(e))
+        print("pyca exception: %s" % (e))
         return None
     except pyca.caexc as e:
-        print('channel access exception: %s' %(e))
+        print("channel access exception: %s" % (e))
         return None
+
 
 def connectPv(name, timeout=-1.0):
     try:
@@ -231,15 +239,17 @@ def connectPv(name, timeout=-1.0):
             pv.connect(timeout)
             pv.get(ctrl=False, timeout=timeout)
         return pv
-    except:
-      return None
+    except Exception:
+        return None
+
 
 def __connect_callback(pv, isconn):
-    if (isconn):
+    if isconn:
         pv.connect_cb = pv.save_connect_cb
         if pv.connect_cb:
             pv.connect_cb(isconn)
         pv.get(ctrl=False, timeout=-1.0)
+
 
 def __getevt_callback(pv, e=None):
     if pv.handler:
@@ -250,18 +260,21 @@ def __getevt_callback(pv, e=None):
         pv.monitor(pyca.DBE_VALUE)
         pyca.flush_io()
 
+
 def __monitor_callback(pv, e=None):
     pv.handler(pv, e)
-        
-def monitorPv(name,handler):
+
+
+def monitorPv(name, handler):
     try:
         pv = connectPv(name)
         pv.handler = handler
-        pv.getevt_cb = lambda  e=None: __getevt_callback(pv, e)
+        pv.getevt_cb = lambda e=None: __getevt_callback(pv, e)
         pv.monitor_cb = lambda e=None: __monitor_callback(pv, e)
         return pv
-    except:
+    except Exception:
         return None
+
 
 #
 # Go through a list of dictionaries and create a 'cfgname' name for the
@@ -270,16 +283,18 @@ def monitorPv(name,handler):
 def fixName(l, idx, name):
     for d in l:
         try:
-            if d['config'] == idx:
-                d['cfgname'] = name
-        except:
+            if d["config"] == idx:
+                d["cfgname"] = name
+        except Exception:
             pass
+
 
 #
 # Determine if the current user has the authority to modify a record.
 #
 def permission():
     return param.params.user in param.params.auth_users
+
 
 #
 # Check if the user/password pair is valid.  This is actually not terribly secure (the KDC can
@@ -289,8 +304,10 @@ def permission():
 #
 def authenticate_user(user, password):
     try:
-        if kerberos.checkPassword(user, password, "krbtgt/SLAC.STANFORD.EDU", "SLAC.STANFORD.EDU", False):
+        if kerberos.checkPassword(
+            user, password, "krbtgt/SLAC.STANFORD.EDU", "SLAC.STANFORD.EDU", False
+        ):
             return True
-    except:
+    except Exception:
         pass
     return False

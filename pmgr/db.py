@@ -1,18 +1,15 @@
 import threading
 import time
-import sys
 
 from PyQt5 import QtCore
 
+from . import dialogs, param
 from .pmgrobj import pmgrobj
-from . import dialogs
-from . import param
 
 
 class dbPoll(threading.Thread):
-    
     def __init__(self, sig, interval):
-        super(dbPoll, self).__init__()
+        super().__init__()
         self.sig = sig
         self.interval = interval
         self.daemon = True
@@ -33,18 +30,22 @@ class dbPoll(threading.Thread):
                 self.armed = False
                 self.sig.emit(v)
 
+
 class db(QtCore.QObject):
-    cfgchange     = QtCore.pyqtSignal()
-    objchange     = QtCore.pyqtSignal()
-    readsig       = QtCore.pyqtSignal(int)
+    cfgchange = QtCore.pyqtSignal()
+    objchange = QtCore.pyqtSignal()
+    readsig = QtCore.pyqtSignal(int)
 
     def __init__(self):
-        super(db, self).__init__()
+        super().__init__()
         self.nameedits = {}
         self.errordialog = dialogs.errordialog()
-        param.params.pobj = pmgrobj(param.params.table, param.params.hutch, 
-                                    debug=param.params.debug, 
-                                    prod=param.params.prod)
+        param.params.pobj = pmgrobj(
+            param.params.table,
+            param.params.hutch,
+            debug=param.params.debug,
+            prod=param.params.prod,
+        )
         self.poll = None
         self.readTables()
         self.readsig.connect(self.readTables)
@@ -55,39 +56,39 @@ class db(QtCore.QObject):
 
     def setCfgName(self, id, name):
         try:
-            if param.params.pobj.cfgs[id]['name'] == name:
-                del self.nameedits[id]['name']
+            if param.params.pobj.cfgs[id]["name"] == name:
+                del self.nameedits[id]["name"]
             else:
                 self.nameedits[id] = name
-        except:
+        except Exception:
             self.nameedits[id] = name
 
     def getCfgName(self, id):
         try:
             return self.nameedits[id]
-        except:
-            return param.params.pobj.cfgs[id]['name']
+        except Exception:
+            return param.params.pobj.cfgs[id]["name"]
 
     def getCfgId(self, name):
         for k, v in self.nameedits.items():
             if v == name:
                 return k
         for k, v in param.params.pobj.cfgs.items():
-            if v['name'] == name:
-                return v['id']
+            if v["name"] == name:
+                return v["id"]
         return None
 
     def setCfgNames(self, l):
         for o in l:
-            c = o['config']
-            if c == None:
-                o['cfgname'] = ""
+            c = o["config"]
+            if c is None:
+                o["cfgname"] = ""
             else:
-                o['cfgname'] = self.getCfgName(c)
+                o["cfgname"] = self.getCfgName(c)
 
     def readTables(self, mask=None, nosig=False):
-        if mask == None:
-            mask=param.params.pobj.DB_ALL
+        if mask is None:
+            mask = param.params.pobj.DB_ALL
         mask = param.params.pobj.updateTables(mask)
         if mask == 0:
             return
@@ -97,7 +98,7 @@ class db(QtCore.QObject):
             # ObjModel keeps actual (PV) values in this dictionary, so
             # we keep the configured values in a subdictionary.
             for o in param.params.pobj.objs.values():
-                o['_cfg'] = dict(o)
+                o["_cfg"] = dict(o)
             self.setCfgNames(param.params.pobj.objs.values())
         if not nosig:
             if (mask & param.params.pobj.DB_CONFIG) != 0:
@@ -138,31 +139,31 @@ class db(QtCore.QObject):
 
     def doMap(self, d):
         try:
-            oldcfg = d['config']
+            oldcfg = d["config"]
             newcfg = self.cfgmap[oldcfg]
             dd = {}
             dd.update(d)
-            dd['config'] = newcfg
+            dd["config"] = newcfg
             d = dd
-        except:
+        except Exception:
             pass
         try:
-            oldport = d['port']
+            oldport = d["port"]
             newport = self.objmap[oldport]
             dd = {}
             dd.update(d)
-            dd['port'] = newport
+            dd["port"] = newport
             d = dd
-        except:
+        except Exception:
             pass
         return d
 
     def applyCfgMap(self, obj):
-        for (old, new) in self.cfgmap.items():
+        for old, new in self.cfgmap.items():
             obj.cfgrenumber(old, new)
 
     def applyObjMap(self, obj):
-        for (old, new) in self.objmap.items():
+        for old, new in self.objmap.items():
             obj.objrenumber(old, new)
 
     def applyMaps(self):
@@ -174,4 +175,3 @@ class db(QtCore.QObject):
 
     def objIsValid(self, id):
         return id >= 0 or id in self.objmap.keys()
-    

@@ -17,8 +17,10 @@ jobs:
       # Extras that will be installed for both conda/pip:
       testing-extras: ""
       # Extras to be installed only for conda-based testing:
-      conda-testing-extras: "pip"
+      conda-testing-extras: ""
       # Extras to be installed only for pip-based testing:
       pip-testing-extras: ""
+      # System packages to be installed only for pip-based testing:
+      pip-system-packages: "mysql-server libmysqlclient-dev libkrb5-dev"
       # Set if using setuptools-scm for the conda-build workflow
       use-setuptools-scm: true

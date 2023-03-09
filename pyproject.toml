@@ -1,0 +1,42 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [ "setuptools>=45", "setuptools_scm[toml]>=6.2",]
+
+[project]
+classifiers = [ "Development Status :: 2 - Pre-Alpha", "Natural Language :: English", "Programming Language :: Python :: 3",]
+description = "Parameter Manager for LCLS Device Configurations"
+dynamic = [ "version", "readme", "dependencies", "optional-dependencies",]
+keywords = []
+name = "pmgr"
+requires-python = ">=3.9"
+[[project.authors]]
+name = "SLAC National Accelerator Laboratory"
+
+[options]
+zip_safe = false
+include_package_data = true
+
+[project.license]
+file = "LICENSE.md"
+
+[project.scripts]
+"pmgrLauncher.sh" = "pmgr.pmgr:main"
+"pmgrUtils.sh" = "pmgr.pmgrUtils:main"
+
+[tool.setuptools_scm]
+write_to = "pmgr/_version.py"
+tag_regex = "^(?:[\\w-]+-)?[rR]?(?P<version>\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*)?$"
+
+[tool.setuptools.packages.find]
+where = [ ".",]
+include = [ "pmgr*",]
+namespaces = false
+
+[tool.setuptools.dynamic.readme]
+file = "README.md"
+
+[tool.setuptools.dynamic.dependencies]
+file = [ "requirements.txt",]
+
+[tool.setuptools.dynamic.optional-dependencies.test]
+file = "dev-requirements.txt"

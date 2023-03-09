@@ -19,7 +19,7 @@ CREATE TABLE `ims_motor` (
   foreign key (config) references ims_motor_cfg(id)
 );
 
-INSERT INTO `ims_motor` VALUES 
+INSERT INTO `ims_motor` VALUES
 (-1, 0, 'none', 'Manual','DUMMY', '    ', now(), now(), '', '', '');
 
 /* Sigh. id = 0 in the file does an auto-increment, so we set it to -1 and fix it here. */

@@ -39,7 +39,7 @@ Options:
     -h|--help      Show this help message
 
 pmgrUtils allows certain parameter manager transactions to be done using
-the command line. 
+the command line.
 
 Hutches that are supported are listed in the pmgrUtils.cfg file. Adding
 a hutch to the list of hutches there should enable pmgrUtils support for
@@ -47,15 +47,18 @@ that hutch (so long as it is already in the pmgr).
 
 """
 
-from docopt import docopt
-import sys, os
-from .pmgrAPI import pmgrAPI
-from pcdsutils.ext_scripts import get_hutch_name
+import os
+
 import psp.Pv as pv
+from docopt import docopt
+from pcdsutils.ext_scripts import get_hutch_name
+
+from .pmgrAPI import pmgrAPI
+
 
 def getBasePV(PVArguments):
     """
-    Returns the first base PV found in the list of PVArguments. It looks for the 
+    Returns the first base PV found in the list of PVArguments. It looks for the
     first colon starting from the right and then returns the string up until
     the colon. Takes as input a string or a list of strings.
     """
@@ -64,79 +67,86 @@ def getBasePV(PVArguments):
     for arg in PVArguments:
         try:
             i = arg.rindex(":")
-            return arg[:i+1]
-        except:
+            return arg[: i + 1]
+        except Exception:
             pass
     return None
-        
+
+
 def parsePVArguments(PVArguments):
     """
     Parses PV input arguments and returns a set of motor PVs that will have
     the pmgrUtil functions applied to.
     """
-    
+
     PVs = set()
-    if len(PVArguments) == 0: return None
+    if len(PVArguments) == 0:
+        return None
     basePV = getBasePV(PVArguments)
-    if not basePV: return None
+    if not basePV:
+        return None
     for arg in PVArguments:
         try:
-            if '-' in arg:
-                splitArgs = arg.split('-')
-                if getBasePV(splitArgs[0]) == basePV: PVs.add(splitArgs[0])
+            if "-" in arg:
+                splitArgs = arg.split("-")
+                if getBasePV(splitArgs[0]) == basePV:
+                    PVs.add(splitArgs[0])
                 start = int(splitArgs[0][-2:])
                 end = int(splitArgs[1])
                 while start <= end:
-                    PVs.add(basePV + "{:02}".format(start))
+                    PVs.add(basePV + f"{start:02}")
                     start += 1
             elif len(arg) > 3:
-                if getBasePV(arg) == basePV: PVs.add(arg)
+                if getBasePV(arg) == basePV:
+                    PVs.add(arg)
             elif len(arg) < 3:
-                PVs.add(basePV + "{:02}".format(int(arg)))
-            else: pass
-        except: pass
-        
+                PVs.add(basePV + f"{int(arg):02}")
+            else:
+                pass
+        except Exception:
+            pass
+
     PVs = list(PVs)
     PVs.sort()
     return PVs
 
+
 def message(z, d, msg, abort=True):
-    if z: os.system("zenity --width 500 --%s --text='%s'" % (d, msg))
+    if z:
+        os.system("zenity --width 500 --{} --text='{}'".format(d, msg))
     if abort:
         exit(msg)
     else:
         print(msg)
 
+
 def exc_to_str(action, PV, e):
-    msg = "Failed to %s %s:\n" % (action, PV)
+    msg = "Failed to {} {}:\n".format(action, PV)
     if len(e.args) > 1:
         msg += "Error %d: %s\n" % (e.args[0], e.args[1])
     else:
         msg += "Error: %s\n" % e.args[0]
     return msg
 
-################################################################################
-##                                   Main                                     ##
-################################################################################
 
 def main():
     # Parse docopt variables
     args = docopt(__doc__)
     PVarguments = args["<PV>"]
     pattern = args["<pattern>"]
-    if args["--zenity"] or args["-z"]: 
+    if args["--zenity"] or args["-z"]:
         zenity = True
     else:
         zenity = False
-    if args["--objtype"]: 
+    if args["--objtype"]:
         objType = args["--objtype"]
     else:
         objType = "ims_motor"
-    if args["--hutch"]: 
+    if args["--hutch"]:
         hutch = args["--hutch"]
     else:
         hutch = get_hutch_name()
-    if args["--parent"]: 
+    if args["--parent"]:
         parent = args["--parent"]
     else:
         parent = hutch.upper()
@@ -145,7 +155,7 @@ def main():
     p = pmgrAPI(objType, hutch)
 
     if args["find"]:
-        if args["--sensitive"] or args["-s"]: 
+        if args["--sensitive"] or args["-s"]:
             sensitive = True
         else:
             sensitive = False
@@ -153,41 +163,43 @@ def main():
         if len(l) == 0:
             message(zenity, "error", 'No matches for "%s" found.' % pattern)
         else:
-            message(zenity, "info", 'Possible matches for "%s":\n' % pattern + "\n".join(l))
-        return 0;
+            message(
+                zenity, "info", 'Possible matches for "%s":\n' % pattern + "\n".join(l)
+            )
+        return 0
 
     # Parse the PV input into full PV names, exit if none input
     if len(PVarguments) > 0:
         motorPVs = parsePVArguments(PVarguments)
     else:
-        message(zenity, "error", 'No PV input.  Try --help')
+        message(zenity, "error", "No PV input.  Try --help")
 
     # Sanity check arguments.
-    if args['save'] and cfg and len(motorPVs) > 1:
-        message(zenity, "error", 'Save with --cfg must be for a single motor.')
+    if args["save"] and cfg and len(motorPVs) > 1:
+        message(zenity, "error", "Save with --cfg must be for a single motor.")
     if args["set"] and cfg is None:
-        message(zenity, "error", 'Set must specify a configuration!')
+        message(zenity, "error", "Set must specify a configuration!")
 
     # Loop through each of the motorPVs
     msg = ""
     dialog = "info"
     for PV in motorPVs:
         # Print some motor info
-        print("Motor PV:          {0}".format(PV))
+        print(f"Motor PV:          {PV}")
         m_DESC = pv.get(PV + ".DESC")
-        print("Motor description: {0}".format(m_DESC))
+        print(f"Motor description: {m_DESC}")
 
         if args["get"]:
             try:
                 cfg = p.get_config(PV)
-                msg += "Configuration of %s is %s.\n" % (PV, cfg)
+                msg += "Configuration of {} is {}.\n".format(PV, cfg)
             except Exception as e:
                 msg += exc_to_str("get configuration of", PV, e)
                 dialog = "error"
         if args["set"]:
             try:
                 p.set_config(PV, cfgname=cfg)
-                msg += "Configuration of %s successfully set to %s.\n" % (PV, cfg)
+                msg += "Configuration of {} successfully set to {}.\n".format(PV, cfg)
             except Exception as e:
                 msg += exc_to_str("set configuration of", PV, e)
                 dialog = "error"
@@ -204,11 +216,27 @@ def main():
                 if len(d) == 0:
                     message(zenity, "info", "No differences for %s.\n" % PV)
                 else:
-                    m = "\n".join(["    %s: actual=%s, configured=%s" % (f, d[f][0], d[f][1]) 
-                                   for f in d.keys()])
-                    message(zenity, "info", "Differences for %s:\n" % PV + m + "\n", abort=False)
+                    m = "\n".join(
+                        [
+                            "    {}: actual={}, configured={}".format(
+                                f, d[f][0], d[f][1]
+                            )
+                            for f in d.keys()
+                        ]
+                    )
+                    message(
+                        zenity,
+                        "info",
+                        "Differences for %s:\n" % PV + m + "\n",
+                        abort=False,
+                    )
             except Exception as e:
-                message(zenity, "error", exc_to_str("find differences of", PV, e), abort=False)
+                message(
+                    zenity,
+                    "error",
+                    exc_to_str("find differences of", PV, e),
+                    abort=False,
+                )
         if args["save"]:
             try:
                 p.save_config(PV, cfgname=cfg, overwrite=True, parent=parent)
@@ -219,6 +247,7 @@ def main():
     if args["diff"]:
         exit()
     message(zenity, dialog, msg)
+
 
 if __name__ == "__main__":
     main()

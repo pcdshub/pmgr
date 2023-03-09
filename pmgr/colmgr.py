@@ -1,8 +1,7 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
-from . import utils
-from . import param
-from . import colchoose_ui
+from . import param, utils
+from .dialogs import load_ui_file
 
 #
 # This is an attempt at a general purpose column manager for QTableViews.
@@ -15,23 +14,26 @@ from . import colchoose_ui
 # in our QSettings.  The QSettings parameters are in param.params.settings.
 #
 
-def addColumnManagerMenu(table, extra = [], hideOK=True, cfgOK=True):
+
+def addColumnManagerMenu(table, extra=[], hideOK=True, cfgOK=True):
     menu = utils.MyContextMenu()
     if hideOK:
-        menu.addAction("Hide column",        hidecol)
-        menu.addAction("Reset columns",      resetcol)
+        menu.addAction("Hide column", hidecol)
+        menu.addAction("Reset columns", resetcol)
         menu.addAction("Run column chooser", choosecol)
-    menu.addAction("Autosize columns",   sizecol)
+    menu.addAction("Autosize columns", sizecol)
     if cfgOK:
         menu.addAction("Save column config", savecol)
-        menu.addAction("Use column config",  restorecol)
-    for (t, f) in extra:
+        menu.addAction("Use column config", restorecol)
+    for t, f in extra:
         menu.addAction(t, f)
     table.addHeaderContextMenu(menu)
 
+
 def hidecol(table, index):
     table.horizontalHeader().hideSection(index)
-    
+
+
 def resetcol(table, index):
     for i in range(table.model().columnCount()):
         if table.isColumnHidden(i):
@@ -41,17 +43,19 @@ def resetcol(table, index):
         if h.visualIndex(i) != i:
             h.moveSection(h.visualIndex(i), i)
 
+
 def sizecol(table, index):
     table.resizeColumnsToContents()
+
 
 def choosecol(table, index):
     m = table.model()
     h = table.horizontalHeader()
     try:
         d = m.colchoosedialog
-    except:
+    except Exception:
         d = QtWidgets.QDialog()
-        d.ui = colchoose_ui.Ui_Dialog()
+        d.ui = load_ui_file("colchoose.ui")()
         d.ui.setupUi(d)
         c = []
         for i in range(m.mutable):
@@ -61,10 +65,10 @@ def choosecol(table, index):
             cb.setText(m.horizontalHeaderItem(i).text())
             c.append(cb)
             d.ui.gridLayout.addWidget(cb, (i - m.mutable) / 5, (i - m.mutable) % 5)
-        d.ui.allButton.clicked.connect(lambda : doAllButton(d))
-        d.ui.noneButton.clicked.connect(lambda : doNoneButton(d))
+        d.ui.allButton.clicked.connect(lambda: doAllButton(d))
+        d.ui.noneButton.clicked.connect(lambda: doNoneButton(d))
         d.cols = c
-        d.resize(0,0)
+        d.resize(0, 0)
         m.colchoosedialog = d
     c = d.cols
     for i in range(m.mutable, m.columnCount()):
@@ -76,15 +80,18 @@ def choosecol(table, index):
             else:
                 h.hideSection(i)
 
+
 def doAllButton(d):
     for c in d.cols:
-        if c != None:
+        if c is not None:
             c.setChecked(True)
+
 
 def doNoneButton(d):
     for c in d.cols:
-        if c != None:
+        if c is not None:
             c.setChecked(False)
+
 
 def savecol(table, index):
     d = param.params.colsavedialog
@@ -97,11 +104,12 @@ def savecol(table, index):
         settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
         settings.beginGroup(table.colmgr)
         settings.setValue(cfg, table.saveHeaderState())
-    
+
+
 def restorecol(table, index):
     settings = QtCore.QSettings(param.params.settings[0], param.params.settings[1])
     settings.beginGroup(table.colmgr)
-    d = param.params.colusedialog;
+    d = param.params.colusedialog
     d.ui.comboBox.clear()
     for x in list(settings.childKeys()):
         d.ui.comboBox.addItem(x)

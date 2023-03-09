@@ -1,8 +1,10 @@
-{% set data = load_setup_py_data() %}
+{% set package_name = "pmgr" %}
+{% set import_name = "pmgr" %}
+{% set version = load_file_regex(load_file=os.path.join(import_name, "_version.py"), regex_pattern=".*version = '(\S+)'").group(1) %}
 
 package:
-  name: pmgr
-  version : {{ data.get('version') }}
+  name: {{ package_name }}
+  version: {{ version }}
 
 source:
   path: ..
@@ -10,32 +12,33 @@ source:
 build:
   number: 0
   noarch: python
-  script:
-    python setup.py install --single-version-externally-managed --record=record.txt
+  script: {{ PYTHON }} -m pip install . -vv
 
 requirements:
   build:
-    - python >=3.6
-    - setuptools
-
+  - python >=3.9
+  - setuptools_scm
+  - pip
   run:
-    - python >=3.6
-    - pyqt >=5,<5.15
-    - pyca =3.2.0
-    - epicscorelibs =7.0.6.99.2.0
-    - pykerberos >=1.1.14
-    - mysqlclient =1.3.12|>=2.0.3
-    - docopt
-    - pcdsutils
+  - python >=3.9
+  - pyqt >=5
+  - pyca =3.2.0
+  - epicscorelibs =7.0.6.99.2.0
+  - pykerberos >=1.1.14
+  - mysqlclient =1.3.12|>=2.0.3
+  - docopt
+  - pcdsutils
 
 test:
-  imports:
-    - pmgr
+  requires:
+  - pytest
   commands:
-    - pmgrLauncher.sh --help
-    - pmgrUtils.sh --help
+  - pmgrLauncher.sh --help
+  - pmgrUtils.sh --help
+  imports:
+  - pmgr
 
 about:
   home: https://github.com/pcdshub/pmgr
   license: SLAC Open License
-  summary:  Parameter Manager for LCLS Device Configurations
+  summary: Parameter Manager for LCLS Device Configurations

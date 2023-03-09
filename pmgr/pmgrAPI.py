@@ -1,6 +1,7 @@
 from .pmgrobj import pmgrobj
 
-class pmgrAPI(object):
+
+class pmgrAPI:
     """
     An application interface to the parameter manager.
 
@@ -12,6 +13,7 @@ class pmgrAPI(object):
     hutch : str
         The name of the hutch used to retrieve objects from the database.
     """
+
     def __init__(self, table, hutch):
         self.hutch = hutch.upper()
         self.pm = pmgrobj(table, hutch)
@@ -43,15 +45,14 @@ class pmgrAPI(object):
                 return d
         raise Exception("%s not found!" % v)
 
-    @staticmethod
-    def _fixmutex(d, mutex):
+    def _fixmutex(self, d, mutex):
         """
-        A private method to fix the configuration fields to match the 
+        A private method to fix the configuration fields to match the
         mutex condition.
 
         The "mutex" field is slightly complicated.  The general idea is
         that there can be sets of fields that when you set all but one
-        field in the set, the remaining field is calculated from the 
+        field in the set, the remaining field is calculated from the
         others.  For each such set, the "mutex" string indicates which
         field is the derived one.  (Derived fields should not have values
         assigned in the database.)
@@ -62,7 +63,7 @@ class pmgrAPI(object):
             A configuration dictionary.
 
         mutex: str
-            A string with one character per mutex set.  The character 
+            A string with one character per mutex set.  The character
             is a space if this set is not used.  Otherwise, the character
             encodes a field identified by column order, chr(colorder + 64).
 
@@ -73,10 +74,10 @@ class pmgrAPI(object):
             removed.
         """
         for c in mutex:
-            if c != ' ':
+            if c != " ":
                 try:
-                    del d[self.pm.objflds[ord[c]-65]['name']]
-                except:
+                    del d[self.pm.objflds[ord(c) - 65]["name"]]
+                except Exception:
                     pass
         return d
 
@@ -111,8 +112,8 @@ class pmgrAPI(object):
         Throws an exception if the PV is not in the database.
         """
         self.update_db()
-        d = self._search(self.pm.objs, 'rec_base', pv)
-        return self.pm.cfgs[d['config']]['name']
+        d = self._search(self.pm.objs, "rec_base", pv)
+        return self.pm.cfgs[d["config"]]["name"]
 
     def get_config_values(self, cfgname):
         """
@@ -128,7 +129,7 @@ class pmgrAPI(object):
         A dictionary mapping field names to configured values.
         """
         d = self._search(self.pm.cfgs, 'name', cfgname)
-        d = d.copy() # Make a copy, since we don't know what the user is going to do with this!
+        d = d.copy()  # Make a copy, since we don't know what the user is going to do with this!
         return d
 
     def set_config(self, pv, cfgname, o=None):
@@ -150,13 +151,13 @@ class pmgrAPI(object):
         #
         # NOTE: o is a private parameter.  It is an object dictionary for the pv,
         # and is used internally to avoid an extra update and lookup.
-        # 
+        #
         if o is None:
             self.update_db()
-            o = self._search(self.pm.objs, 'rec_base', pv)
-        d = self._search(self.pm.cfgs, 'name', cfgname)
+            o = self._search(self.pm.objs, "rec_base", pv)
+        d = self._search(self.pm.cfgs, "name", cfgname)
         self.pm.start_transaction()
-        self.pm.objectChange(o['id'], {'config': d['id']})
+        self.pm.objectChange(o["id"], {"config": d["id"]})
         el = self.pm.end_transaction()
         if el != []:
             raise Exception("DB Errors", el)
@@ -181,17 +182,17 @@ class pmgrAPI(object):
         self.update_db()
         try:
             # See if the object is in the database.
-            o = self._search(self.pm.objs, 'rec_base', pv)
-        except:
+            o = self._search(self.pm.objs, "rec_base", pv)
+        except Exception:
             # It isn't.  So use the alternative form of applyConfig.
-            c = self._search(self.pm.cfgs, 'name', cfgname)
-            self.pm.applyConfig(pv, cfg=c['id'])
+            c = self._search(self.pm.cfgs, "name", cfgname)
+            self.pm.applyConfig(pv, cfg=c["id"])
             return
         # The object is in the database!  Set its config, and apply!
         if cfgname is not None:
             self.set_config(pv, cfgname, o=o)
             self.update_db()
-        self.pm.applyConfig(o['id'])
+        self.pm.applyConfig(o["id"])
 
     def diff_config(self, pv, cfgname=None):
         """
@@ -216,12 +217,12 @@ class pmgrAPI(object):
         Raises an exception if the comparison fails for any reason.
         """
         self.update_db()
-        o = self._search(self.pm.objs, 'rec_base', pv)
+        o = self._search(self.pm.objs, "rec_base", pv)
         if cfgname is None:
             cfgidx = None
         else:
-            cfgidx = self._search(self.pm.cfgs, 'name', cfgname)['id']
-        return self.pm.diffConfig(o['id'], cfgidx)
+            cfgidx = self._search(self.pm.cfgs, "name", cfgname)["id"]
+        return self.pm.diffConfig(o["id"], cfgidx)
 
     def save_config(self, pv, cfgname=None, overwrite=False, parent=None):
         """
@@ -239,11 +240,11 @@ class pmgrAPI(object):
             after it is saved.
 
         overwrite : boolean
-            If cfgname is not None and is an existing configuration, 
+            If cfgname is not None and is an existing configuration,
             overwrite it if this is True, otherwise throw an exception.
 
         parent : str
-            The name of the parent configuration, if this is a new 
+            The name of the parent configuration, if this is a new
             configuration.  If this is None, default to the uppercase
             hutch name.
 
@@ -252,25 +253,25 @@ class pmgrAPI(object):
         Nothing.  Raises an exception if the this fails for any reason.
         """
         self.update_db()
-        o = self._search(self.pm.objs, 'rec_base', pv)
+        o = self._search(self.pm.objs, "rec_base", pv)
         if cfgname is None:
             # Default to overwriting the existing configuration.
-            do = self.pm.cfgs[o['config']]
-            cfgname = do['name']
+            do = self.pm.cfgs[o["config"]]
+            cfgname = do["name"]
             overwrite = True
         else:
             try:
-                do = self._search(self.pm.cfgs, 'name', cfgname)
-            except:
+                do = self._search(self.pm.cfgs, "name", cfgname)
+            except Exception:
                 do = None
                 overwrite = False
             if do is not None and not overwrite:
                 raise Exception("Configuration %s already exists!" % cfgname)
-        d = self.pm.getActualConfig(o['id'])
+        d = self.pm.getActualConfig(o["id"])
         if overwrite:
-            d = self._fixmutex(d, do['mutex'])
+            d = self._fixmutex(d, do["mutex"])
             self.pm.start_transaction()
-            self.pm.configChange(o['config'], d)
+            self.pm.configChange(o["config"], d)
             el = self.pm.end_transaction()
             if el != []:
                 raise Exception("DB Errors", el)
@@ -278,11 +279,11 @@ class pmgrAPI(object):
             # Add a new configuration
             if parent is None:
                 parent = self.hutch
-            p = self._search(self.pm.cfgs, 'name', parent)
-            d['mutex'] = p['mutex']
-            d['config'] = p['id']
-            d = self._fixmutex(d, p['mutex'])
-            d['name'] = cfgname
+            p = self._search(self.pm.cfgs, "name", parent)
+            d["mutex"] = p["mutex"]
+            d["config"] = p["id"]
+            d = self._fixmutex(d, p["mutex"])
+            d["name"] = cfgname
             self.pm.start_transaction()
             self.pm.configInsert(d)
             el = self.pm.end_transaction()

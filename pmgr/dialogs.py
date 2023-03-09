@@ -1,63 +1,85 @@
-from . import cfgdialog_ui
-from . import coluse_ui
-from . import colsave_ui
-from . import errordialog_ui
-from . import deriveddialog_ui
-from . import confirmdialog_ui
-from . import chown_ui
+from __future__ import annotations
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+import functools
+import pathlib
+
+from PyQt5 import QtCore, QtWidgets, uic
+
+MODULE_PATH = pathlib.Path(__file__).resolve().parent
+
+
+@functools.lru_cache(maxsize=None)
+def load_ui_file(filename: str) -> type[QtWidgets.QWidget]:
+    """
+    Load the .ui file ``filename`` and return its widget class.
+
+    Parameters
+    ----------
+    filename : str
+        The filename of the .ui file, relative to the pmgr source directory.
+
+    Returns
+    -------
+    subclass of QtWidgets.QWidget
+    """
+    cls, _ = uic.loadUiType(MODULE_PATH / filename)
+    return cls
 
 
 class cfgdialog(QtWidgets.QDialog):
     def __init__(self, model, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = cfgdialog_ui.Ui_Dialog()
+        self.ui = load_ui_file("cfgdialog.ui")()
         self.ui.setupUi(self)
         self.model = model
-      
+
     def exec_(self, prompt, idx=None):
         self.ui.label.setText(prompt)
         t = self.model.setupTree(self.ui.treeWidget, "ditem")
-        if idx != None:
-            self.ui.treeWidget.setCurrentItem(t[idx]['ditem'])
-            self.ui.treeWidget.expandItem(t[idx]['ditem'])
+        if idx is not None:
+            self.ui.treeWidget.setCurrentItem(t[idx]["ditem"])
+            self.ui.treeWidget.expandItem(t[idx]["ditem"])
         code = QtWidgets.QDialog.exec_(self)
         if code == QtWidgets.QDialog.Accepted:
             try:
                 self.result = self.ui.treeWidget.currentItem().id
-            except:
+            except Exception:
                 return QtWidgets.QDialog.Rejected  # No selection made!
         return code
+
 
 class colusedialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = coluse_ui.Ui_Dialog()
+        self.ui = load_ui_file("coluse.ui")()
         self.ui.setupUi(self)
+
 
 class colsavedialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = colsave_ui.Ui_Dialog()
+        self.ui = load_ui_file("colsave.ui")()
         self.ui.setupUi(self)
+
 
 class errordialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = errordialog_ui.Ui_Dialog()
+        self.ui = load_ui_file("errordialog.ui")()
         self.ui.setupUi(self)
+
 
 class confirmdialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = confirmdialog_ui.Ui_Dialog()
+        self.ui = load_ui_file("confirmdialog.ui")()
         self.ui.setupUi(self)
+
 
 class deriveddialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = deriveddialog_ui.Ui_deriveddialog()
+        self.ui = load_ui_file("deriveddialog.ui")()
         self.ui.setupUi(self)
         self.buttonlist = []
 
@@ -88,14 +110,17 @@ class deriveddialog(QtWidgets.QDialog):
         QtCore.QTimer.singleShot(100, self.fixSize)
         return QtWidgets.QDialog.exec_(self)
 
+
 class chowndialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
-        self.ui = chown_ui.Ui_Dialog()
+        self.ui = load_ui_file("chown.ui")()
         self.ui.setupUi(self)
 
     def exec_(self, cfg, hutch, hutchlist):
-        self.ui.mainLabel.setText("Current owner of %s is %s." % (cfg, hutch.upper()))
+        self.ui.mainLabel.setText(
+            "Current owner of {} is {}.".format(cfg, hutch.upper())
+        )
         self.ui.comboBox.clear()
         for i in hutchlist:
             if i != hutch:
@@ -104,6 +129,6 @@ class chowndialog(QtWidgets.QDialog):
         if code == QtWidgets.QDialog.Accepted:
             try:
                 self.result = self.ui.comboBox.currentText().lower()
-            except:
+            except Exception:
                 return QtWidgets.QDialog.Rejected  # No selection made!
         return code

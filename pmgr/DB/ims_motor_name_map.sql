@@ -17,7 +17,7 @@ CREATE TABLE `ims_motor_name_map` (
 -- Dumping data for table `ims_motor_name_map`
 --
 
-INSERT INTO `ims_motor_name_map` VALUES 
+INSERT INTO `ims_motor_name_map` VALUES
 ('FLD_PN', 'PN', 'Part number', '',1,8192,0),
 ('FLD_SN', 'SN', 'Serial number', '',2,12288,0),
 ('FLD_DESC','DESC',   'Description', '',3,0,0),

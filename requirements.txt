@@ -1,0 +1,8 @@
+docopt
+epicscorelibs
+mysqlclient >=2.0.3
+pcdsutils
+pykerberos >=1.1.14
+pyqt5
+# LCLS's pyca is not on pypi:
+# pyca =3.1.1
