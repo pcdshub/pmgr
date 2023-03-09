@@ -27,8 +27,6 @@ requirements:
   - pykerberos >=1.1.14
   - mysqlclient =1.3.12|>=2.0.3
   - docopt
-  - epicscorelibs =7.0.4.99.1.2
-  - mysqlclient =1.3.12|>=2.0.3
   - pcdsutils
 
 test:
