@@ -25,6 +25,7 @@ file = "LICENSE.md"
 
 [tool.setuptools_scm]
 write_to = "pmgr/_version.py"
+tag_regex = "^(?:[\\w-]+-)?[rR]?(?P<version>\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*)?$"
 
 [tool.setuptools.packages.find]
 where = [ ".",]
