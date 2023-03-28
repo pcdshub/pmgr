@@ -10,6 +10,8 @@ except ImportError:
 
 from . import utils
 
+CREDENTIALS = "/cds/group/pcds/admin/pmgr/%s"
+
 ####################
 #
 # Utility Functions
@@ -213,12 +215,7 @@ class pmgrobj:
         self.errorlist = []
         self.autoconfig = None
         self.in_trans = False
-        if prod:
-            print("Using production server.")
-            self.con = mdb.connect("psdb", "pscontrols", "pcds", "pscontrols")
-        else:
-            print("Using development server.")
-            self.con = mdb.connect("psdbdev01", "mctest", "mctest", "pscontrols")
+        self.con = self.connect(prod)
         self.con.autocommit(False)
         self.cur = self.con.cursor(mdb.cursors.DictCursor)
         self.cur.execute("call init_pcds()")
@@ -229,6 +226,15 @@ class pmgrobj:
         self.hutchlist = self.getHutchList()
         self.checkForUpdate()
         self.updateTables()
+
+    def connect(self, prod):
+        d = {}
+        with open(CREDENTIALS % ("prod" if prod else "dev")) as f:
+            for x in [l.strip().split("=") for l in f.readlines()]:
+                d[x[0]] = x[1]
+            print("Using %s server." % ("production" if prod else "development"))
+        print(d)
+        return mdb.connect(d['host'], d['user'], d['password'], d['db'])
 
     def readFormat(self):
         """
