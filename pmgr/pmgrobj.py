@@ -1,3 +1,4 @@
+import configparser
 import datetime
 import re
 
@@ -9,6 +10,8 @@ except ImportError:
     import MySQLdb._exceptions as _mysql_exceptions
 
 from . import utils
+
+CREDENTIALS = "/cds/group/pcds/admin/pmgr/pmgr.ini"
 
 ####################
 #
@@ -213,12 +216,7 @@ class pmgrobj:
         self.errorlist = []
         self.autoconfig = None
         self.in_trans = False
-        if prod:
-            print("Using production server.")
-            self.con = mdb.connect("psdb", "pscontrols", "pcds", "pscontrols")
-        else:
-            print("Using development server.")
-            self.con = mdb.connect("psdbdev01", "mctest", "mctest", "pscontrols")
+        self.con = self.connect(prod)
         self.con.autocommit(False)
         self.cur = self.con.cursor(mdb.cursors.DictCursor)
         self.cur.execute("call init_pcds()")
@@ -229,6 +227,13 @@ class pmgrobj:
         self.hutchlist = self.getHutchList()
         self.checkForUpdate()
         self.updateTables()
+
+    def connect(self, prod):
+        conf = configparser.ConfigParser(defaults={})
+        conf.read(CREDENTIALS)
+        cfg = "production" if prod else "development"
+        print("Using %s server." % cfg)
+        return mdb.connect(conf[cfg]['host'], conf[cfg]['user'], conf[cfg]['password'], conf[cfg]['db'])
 
     def readFormat(self):
         """

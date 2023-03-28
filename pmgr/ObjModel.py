@@ -783,6 +783,12 @@ class ObjModel(QtGui.QStandardItemModel):
         self.objs[idx] = d
         self.rowmap.append(idx)
         self.adjustSize()
+        ni = self.rowmap.index(idx)
+        # Sigh. 0 doesn't work because of a decision in FreezeTableView.
+        newidx = self.index(ni, 1)
+        param.params.ui.objectTable.setCurrentIndex(newidx)
+        param.params.ui.objectTable.scrollTo(newidx,
+                                             QtWidgets.QAbstractItemView.EnsureVisible)
 
     def adjustSize(self):
         self.setRowCount(len(self.rowmap))
