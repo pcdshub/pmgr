@@ -1,26 +1,37 @@
 #!/bin/bash
 #
-# This script is used to make standalone releases.  It does an install
-# of the repository in the current working directory into the directory
-# specified by $1.  It also creates a script "$1/pmgr" that sets up the
-# conda environment and runs the installed pmgr script.
+# This script is used to make standalone releases into a named directory.
 #
 unset PYTHONPATH
 unset LD_LIBRARY_PATH
-source /reg/g/pcds/pyps/conda/py36/etc/profile.d/conda.sh
-VER="pcds-4.0.1"
-conda activate "${VER}"
-mkdir --parents $1/lib/python3.8/site-packages/
-export PYTHONPATH=$1/lib/python3.8/site-packages/
-python setup.py install --prefix=$1
-EGG=`ls $1/lib/python3.8/site-packages/pmgr*egg`
-cat >$1/pmgr <<END
+export PCDS_CONDA_VER=5.1.1
+source /cds/group/pcds/pyps/conda/pcds_conda
+mkdir -p $1/src
+git clone https://github.com/mcb64/pmgr.git $1/src
+cd $1/src
+git checkout $2
+pip wheel . --no-deps
+export WHEEL=`ls $1/src/*whl`
+cd ..
+mkdir bin
+cat >bin/pmgrLauncher.sh <<END
 #!/bin/bash
 unset PYTHONPATH
 unset LD_LIBRARY_PATH
-source /reg/g/pcds/pyps/conda/py36/etc/profile.d/conda.sh
-conda activate "${VER}"
-export PYTHONPATH=${EGG}
-$1/bin/pmgrLauncher.sh \$*
+export PCDS_CONDA_VER=5.1.1
+source /cds/group/pcds/pyps/conda/pcds_conda
+export PYTHONPATH=$WHEEL
+python -m pmgr \$*
 END
-chmod guo+x $1/pmgr
+chmod guo+x bin/pmgrLauncher.sh
+cat >bin/pmgrUtils.sh <<END
+#!/bin/bash
+unset PYTHONPATH
+unset LD_LIBRARY_PATH
+export PCDS_CONDA_VER=5.1.1
+source /cds/group/pcds/pyps/conda/pcds_conda
+export PYTHONPATH=$WHEEL
+python -m pmgr.pmgrUtils \$*
+END
+chmod guo+x bin/pmgrUtils.sh
+cp bin/pmgrLauncher.sh pmgr
