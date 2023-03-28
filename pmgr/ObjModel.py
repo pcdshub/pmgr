@@ -787,7 +787,7 @@ class ObjModel(QtGui.QStandardItemModel):
         # Sigh. 0 doesn't work because of a decision in FreezeTableView.
         newidx = self.index(ni, 1)
         param.params.ui.objectTable.setCurrentIndex(newidx)
-        param.params.ui.objectTable.scrollTo(newidx, 
+        param.params.ui.objectTable.scrollTo(newidx,
                                              QtWidgets.QAbstractItemView.EnsureVisible)
 
     def adjustSize(self):
