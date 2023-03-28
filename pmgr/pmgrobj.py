@@ -233,7 +233,6 @@ class pmgrobj:
             for x in [l.strip().split("=") for l in f.readlines()]:
                 d[x[0]] = x[1]
             print("Using %s server." % ("production" if prod else "development"))
-        print(d)
         return mdb.connect(d['host'], d['user'], d['password'], d['db'])
 
     def readFormat(self):
