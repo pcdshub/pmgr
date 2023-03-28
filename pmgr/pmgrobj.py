@@ -2,6 +2,7 @@ import datetime
 import re
 
 import MySQLdb as mdb
+import configparser
 
 try:
     import _mysql_exceptions
@@ -10,7 +11,7 @@ except ImportError:
 
 from . import utils
 
-CREDENTIALS = "/cds/group/pcds/admin/pmgr/%s"
+CREDENTIALS = "/cds/group/pcds/admin/pmgr/pmgr.ini"
 
 ####################
 #
@@ -228,12 +229,11 @@ class pmgrobj:
         self.updateTables()
 
     def connect(self, prod):
-        d = {}
-        with open(CREDENTIALS % ("prod" if prod else "dev")) as f:
-            for x in [l.strip().split("=") for l in f.readlines()]:
-                d[x[0]] = x[1]
-            print("Using %s server." % ("production" if prod else "development"))
-        return mdb.connect(d['host'], d['user'], d['password'], d['db'])
+        conf = configparser.ConfigParser(defaults={})
+        conf.read(CREDENTIALS)
+        cfg = "production" if prod else "development"
+        print("Using %s server." % cfg)
+        return mdb.connect(conf[cfg]['host'], conf[cfg]['user'], conf[cfg]['password'], conf[cfg]['db'])
 
     def readFormat(self):
         """
