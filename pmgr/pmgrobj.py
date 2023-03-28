@@ -1,8 +1,7 @@
+import configparser
 import datetime
 import re
-
 import MySQLdb as mdb
-import configparser
 
 try:
     import _mysql_exceptions
