@@ -1,5 +1,4 @@
 docopt
-epicscorelibs
 mysqlclient >=2.0.3
 pcdsutils
 pykerberos >=1.1.14
