@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import sys
+import os
+import grp
 
 from psp.options import Options
 from PyQt5 import QtCore, QtWidgets
@@ -10,6 +12,8 @@ from .db import db
 from .dialogs import load_ui_file
 from .MyDelegate import MyDelegate
 from .ObjModel import ObjModel
+
+AUTHGROUP = None
 
 ######################################################################
 
@@ -197,6 +201,8 @@ class GraphicUserInterface(QtWidgets.QMainWindow):
 
 
 def main():
+    if AUTHGROUP is not None and grp.getgrnam(AUTHGROUP).gr_gid not in os.getgroups():
+        raise Exception("You are not a member of %s and are not authorized to run the parameter manager!" % AUTHGROUP)
     # MCB QtWidgets.QApplication.setGraphicsSystem("raster")
     param.params = param.param_structure()
     app = QtWidgets.QApplication([""])
