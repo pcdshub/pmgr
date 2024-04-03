@@ -1,5 +1,5 @@
 from .pmgrobj import pmgrobj
-
+from datetime import datetime
 
 class pmgrAPI:
     """
@@ -339,3 +339,57 @@ class pmgrAPI:
         el = self.pm.end_transaction()
         if el != []:
             raise Exception("DB Errors", el)
+
+    @staticmethod
+    def _get_datetime(s):
+        """
+        Try to convert a string into a datetime object.  The following
+        conversions are attempted:
+             ISO format
+             mm/dd/yyyy
+             mm/dd/yyyy hh:mm
+        If all three fail, a ValueError exception is raised.
+        """
+        try:
+            return datetime.fromisoformat(s)
+        except ValueError:
+            pass
+        try:
+            return datetime.strptime(s, "%m/%d/%Y %H:%M")
+        except ValueError:
+            pass
+        try:
+            return datetime.strptime(s, "%m/%d/%Y")
+        except ValueError:
+            pass
+        raise ValueError("Not a valid date: %s" % s)
+
+    def config_history(self, cfgname, start=None, finish=None, diff=False):
+        """
+        Return the history of a configuration.
+
+        Parameters
+        ----------
+        config : str
+            The name of the configuration.
+
+        start, finish: date
+            The date range of interest (None == no limit).  These can be datetime
+            objects, or strings that are interpreted as either isoformat dates,
+            "mm/dd/yyyy" dates, or "mm/dd/yyyy hh:mm".  Formatting is rather
+            strict.
+
+        diff: boolean
+            Should updates be listed in full, or as a difference from the previous?
+
+        Returns
+        -------
+        A list of dictionaries mapping field names to configured values.  The "action"
+        keyword indicates what has been done here: "insert", "update" or "delete"
+        """
+        if type(start) == str:
+            start = self._get_datetime(start)
+        if type(finish) == str:
+            finish = self._get_datetime(start)
+        d = self._search(self.pm.cfgs, 'name', cfgname)
+        return self.pm.configHistory(d['id'], start, finish, diff)

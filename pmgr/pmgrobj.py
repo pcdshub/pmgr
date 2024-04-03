@@ -778,6 +778,59 @@ class pmgrobj:
         except _mysql_exceptions.Error as err:
             self.errorlist.append(err)
 
+    def _cleanHistory(self, cur, prev, diff):
+        """
+        Clean up the history a little for user display.
+
+        Get rid of internal fields, and generate a diff if
+        requested.
+        """
+        d = {'action': cur['action'], 'date': cur['dt_updated'], 'name': cur['name']}
+        if cur['action'] == 'delete':
+            return d
+        if cur['action'] == 'insert' or prev is None or not diff:
+            for fi in self.cfgflds:
+                f = fi['fld']
+                d[f] = cur[f]
+            return d
+        else:
+            # Generate a diff!
+            for fi in self.cfgflds:
+                f = fi['fld']
+                if prev[f] != cur[f]:
+                    d[f] = cur[f]
+            return d
+
+    def configHistory(self, idx, start=None, finish=None, diff=True):
+        """
+        Retrieve the history of the specified configuration between 
+        the specified dates.
+
+        start and finish are assumed to be datetime objects.  If
+        either or both is None, there is no time limit on that end.
+
+        If diff is true, only list how values have changed between
+        successive entries, otherwise give all field values.
+        """
+        try:
+            cmd = "select * from %s_cfg_log where id = %d" % (self.table, idx)
+            if start is not None:
+                if finish is not None:
+                    cmd = cmd + " and dt_updated between '%s' and '%s'" % (start, finish)
+                else:
+                    cmd = cmd + " and dt_updated >= '%s'" % start
+            elif finish is not None:
+                    cmd = cmd + " and dt_updated <= '%s'" % finish
+            self.cur.execute(cmd)
+            l = []
+            p = None
+            for r in self.cur.fetchall():
+                l.append(self._cleanHistory(r, p, diff))
+                p = r
+            return l
+        except Exception:
+            return []
+
     def objectDelete(self, idx):
         """
         Delete an object from the database.  Assumes inside a
