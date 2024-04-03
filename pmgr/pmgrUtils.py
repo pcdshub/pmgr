@@ -5,6 +5,7 @@
     pmgrUtils.py apply [<PV>]... [--cfg=C] [-z|--zenity] [--objtype=O] [--hutch=H]
     pmgrUtils.py diff [<PV>]...  [-z|--zenity] [--objtype=O] [--hutch=H]
     pmgrUtils.py find [<pattern>] [-s|--sensitive] [--objtype=O] [--hutch=H]
+    pmgrUtils.py history --cfg=C [--start=datetime] [--end=datetime] [--csv=FILE]
     pmgrUtils.py [-h | --help]
 
 Arguments
@@ -30,6 +31,9 @@ Commands:
     apply          Apply the saved motor configuration to live values
     diff           Prints differences between pmgr and live values
     find           Find the configurations matching the given pattern
+    history        Give the history of the configuration between the start
+                   and end dates.  Save a full listing as a CSV file,
+                   or get a difference between successive changes.
 
 Options:
     -v|--verbose   Print more info on active process
@@ -53,8 +57,7 @@ import psp.Pv as pv
 from docopt import docopt
 from pcdsutils.ext_scripts import get_hutch_name
 
-from .pmgrAPI import pmgrAPI
-
+from .pmgrAPI import pmgrAPI 
 
 def getBasePV(PVArguments):
     """
@@ -153,6 +156,28 @@ def main():
     cfg = args["--cfg"]
 
     p = pmgrAPI(objType, hutch)
+
+    if args["history"]:
+        h = p.config_history(cfg, start=args['--start'], finish=args['--end'], diff=args['--csv'] is None)
+        if args['--csv'] is None:
+            for e in h:
+                print('%s - %s config "%s"' % (e['date'].strftime("%d/%m/%Y %H:%M"), e['action'], e['name']))
+                for k,v in e.items():
+                    if k == 'date' or k == 'action' or k == 'name':
+                        continue
+                    print("    %s: %s" % (k, v))
+        else:
+            kl = [k for k in h[0].keys() if k not in ['date', 'action', 'name']]
+            with open(args['--csv'], "w") as f:
+                f.write("date,action,name,"+",".join(kl)+"\n")
+                for e in h:
+                    f.write('"%s","%s","%s",' % (e['date'].strftime("%d/%m/%Y %H:%M"), e['action'], e['name']))
+                    for k in kl:
+                        if type(e[k]) == str:
+                            f.write('"%s"%s' % (e[k], "\n" if k == kl[-1] else ","))
+                        else:
+                            f.write('%s%s' % (e[k], "\n" if k == kl[-1] else ","))
+        return 0
 
     if args["find"]:
         if args["--sensitive"] or args["-s"]:
