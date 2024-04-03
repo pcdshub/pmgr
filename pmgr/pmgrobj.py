@@ -828,7 +828,7 @@ class pmgrobj:
                 l.append(self._cleanHistory(r, p, diff))
                 p = r
             return l
-        except:
+        except Exception:
             return []
 
     def objectDelete(self, idx):

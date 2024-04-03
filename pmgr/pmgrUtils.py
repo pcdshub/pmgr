@@ -32,8 +32,10 @@ Commands:
     diff           Prints differences between pmgr and live values
     find           Find the configurations matching the given pattern
     history        Give the history of the configuration between the start
-                   and end dates.  Save a full listing as a CSV file,
-                   or get a difference between successive changes.
+                   and end dates.  Dates can be one of three formats:
+                   "2024-04-15 13:15", "3/24/2023", or "7/15/2022 15:27".
+                   Save a full listing as a CSV file, or get a difference 
+                   between successive changes.
 
 Options:
     -v|--verbose   Print more info on active process

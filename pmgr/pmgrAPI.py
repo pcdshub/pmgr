@@ -352,16 +352,17 @@ class pmgrAPI:
         """
         try:
             return datetime.fromisoformat(s)
-        except:
+        except ValueError:
             pass
         try:
             return datetime.strptime(s, "%m/%d/%Y %H:%M")
-        except:
+        except ValueError:
             pass
         try:
             return datetime.strptime(s, "%m/%d/%Y")
-        except:
+        except ValueError:
             pass
+        raise ValueError("Not a valid date: %s" % s)
 
     def config_history(self, cfgname, start=None, finish=None, diff=False):
         """
